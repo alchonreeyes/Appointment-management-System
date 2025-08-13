@@ -34,16 +34,18 @@ nav {
     padding: 10px 20px;
 }
 
-.logo img {
-    height: 40px;
-    transition: ease-in-out 0.3s;
-}
 
 .nav-links {
     display: flex;
     align-items: center;
     gap: 20px;
 }
+
+.logo img {
+    height: 40px;
+    transition: ease-in-out 0.3s;
+}
+
 
 .nav-links ul {
     display: flex;
@@ -95,16 +97,50 @@ nav {
 }
 
 .dropdown{
-    display: block;
-    background: #ccc;
+    display: none;
+    top: 11%;
+    left: 0%;
+    background: #ececec;
     width: 100%;
-    height: 14vh;
+    height: 48vh;
     position: absolute;
+    border: 1px solid black;    
 }
+.nav-section:hover .dropdown{
+    display: block;
+}
+
+
 .dropdown-content{
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100%;
-    gap: 40px;
+    gap: 70px;
+    
+}
+
+.dropdown .dropdown-content ul {
+    list-style: none;
+    padding: 0;
+}
+
+.dropdown .dropdown-content ul li {
+    margin: 15px 0;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 0.8rem;
+}
+
+h4{
+    font-size: 1.1rem;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-weight: bold;
+}
+
+.dropdown .dropdown-content ul li a{
+    text-decoration: none;
+    color: black;
+}
+.dropdown .dropdown-content ul li a:nth-child(2){
+    text-decoration: none;
 }
