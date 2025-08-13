@@ -37,15 +37,17 @@
                 <a href="#" class="book-btn">Book Appointment</a>
             </div>
         </div>
-        <div class="dropdown-content">
-            <ul class="brands">
-                asd
-                <br>
-                adfbasdf
-            </ul>
-            <ul class="brands">
-                asd
-            </ul>
+        <div class="dropdown">
+            <div class="dropdown-content">
+                <ul class="brands">
+                    example header 
+                    <br>
+                    example child anchor tag
+                </ul>
+                <ul class="brands">
+                    example
+                </ul>
+            </div>
         </div>
     </nav>
 </body>
