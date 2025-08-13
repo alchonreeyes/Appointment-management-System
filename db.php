@@ -8,7 +8,7 @@ class Database{
 
     public function __construct(){
         try {
-            //code...
+            
         
         $this->pdo = new PDO("mysql:host={$this->server};dbname={$this->dbname};", $this->username, $this->password);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
