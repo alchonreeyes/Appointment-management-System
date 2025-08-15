@@ -1,5 +1,5 @@
 <?php
-
+include '../actions/login-action.php';
 
 ?>
 
@@ -12,11 +12,28 @@
     <title>Login</title>
     <link rel="stylesheet" href="../assets//login.css">
 </head>
-<body   >
+<body>
     <?php include '../includes/navbar.php' ?>
-    <div>
-        asdasd
+    <div class="login-wrapper"> 
+
+        <form class="login-form" action="../actions/login-action.php" method="POST">
+            <h1>Login</h1>            
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" placeholder="Enter Your Email..." required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter Your Password..." required>
+            </div>
+            <button type="submit" name="login">Login</button>
+            
+            <p class="register-link" style="color: black;">
+            Don't have an account? <a href="register.php" style="color: blue;">Sign Up</a>
+            </p>
     </div>
+    </form>
     <?php include '../includes/footer.php' ?>
 </body>
 </html>

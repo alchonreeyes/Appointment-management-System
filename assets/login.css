@@ -6,5 +6,72 @@ body{
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+main{
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.login-wrapper{
+    display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 160px);
+    padding: 20px;
+}
 
+.login-form{
+    width: 100%;
+    max-width: 400px;
+    background: white;
+    border: solid black 1px;
+    border-radius: 14px;
+    padding: 40px;
+    height: 450px;
+    
+}
+h1{
+    text-align: center;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    color: red;
+    font-weight: 600;
+    font-size: 2rem;
+}
+
+.form-group label{
+    display: block;
+    font-size: 14px;
+    margin-bottom: 8px;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+
+}
+.form-group{
+    padding: 10px;
+}
+.form-group input{
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e1e5e9;
+            border-radius: 25px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+}
+.form-group input:focus {
+            outline: none;
+            border-color: #e60023;
+            box-shadow: 0 0 0 3px rgba(230, 0, 35, 0.1);
+            transform: translateY(-2px);
+}
+
+button{
+    width: 100%;
+    margin-top: 20px;
+    outline: none;
+    border: solid 1px black;
+    background-color: white;
+    border-radius: 14px;
+    padding: 15px 20px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
 }
