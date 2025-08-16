@@ -20,12 +20,12 @@ include '../actions/login-action.php';
             <h1>Login</h1>            
             <div class="form-group">
                 <label for="email">Email</label>
-                <input type="email" id="email" placeholder="Enter Your Email..." required>
+                <input type="email" name="email" id="email" placeholder="Enter Your Email..." autocomplete="on" required>
             </div>
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" placeholder="Enter Your Password..." required>
+                <input type="password" name="password" id="password" placeholder="Enter Your Password..." autocomplete="off" required>
             </div>
             <button type="submit" name="login">Login</button>
             

@@ -17,7 +17,7 @@
     <nav>
         <div class="nav-section">
             <div class="logo">
-                <img src="your-logo.png" alt="Logo">
+                <img src="" alt="Logo">
             </div>
 
             <div class="nav-links">
