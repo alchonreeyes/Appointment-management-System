@@ -1,4 +1,7 @@
-<?php ?>
+<?php 
+include '../actions/register-action.php';
+
+?>
 
 
 <!DOCTYPE html>
