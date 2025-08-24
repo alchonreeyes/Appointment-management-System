@@ -43,6 +43,7 @@ nav {
 .logo {
     cursor: pointer;
     transition: transform 0.3s ease-in-out;
+    color: #333;
 }
 
 .logo:hover {
