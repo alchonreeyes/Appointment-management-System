@@ -17,6 +17,9 @@
     <nav>
         <div class="nav-section">
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> feature-navbar
             <!-- Logo container with dropdown - CHANGED -->
             <div class="logo-container">
                 <div class="logo">
@@ -76,10 +79,13 @@
                         </ul>    
                     </div>
                 </div>
+<<<<<<< HEAD
 =======
             <div class="logo">
                 <img src="" alt="Logo">
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+>>>>>>> feature-navbar
             </div>
 
             <div class="nav-links">
@@ -151,10 +157,13 @@
             </div>
         </div>
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
         </div>
        
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+>>>>>>> feature-navbar
     </nav>
 </body>
 </html>

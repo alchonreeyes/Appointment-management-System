@@ -35,6 +35,9 @@ nav {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> feature-navbar
 /* Logo container - NEW */
 .logo-container {
     position: relative;
@@ -119,6 +122,9 @@ nav {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> feature-navbar
 /* Dropdown styles - REVISED */
 .dropdown {
     display: none;
@@ -143,6 +149,7 @@ nav {
 }
 
 .dropdown-content {
+<<<<<<< HEAD
 =======
 .dropdown{
     display: none;
@@ -161,15 +168,20 @@ nav {
 
 .dropdown-content{
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+>>>>>>> feature-navbar
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100%;
     gap: 70px;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
     
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+>>>>>>> feature-navbar
 }
 
 .dropdown .dropdown-content ul {
@@ -184,16 +196,23 @@ nav {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 h4 {
 =======
 h4{
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+h4 {
+>>>>>>> feature-navbar
     font-size: 1.1rem;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
     font-weight: bold;
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> feature-navbar
 .dropdown .dropdown-content ul li a {
     text-decoration: none;
     color: black;
@@ -205,6 +224,7 @@ h4{
 }
 
 .dropdown .dropdown-content ul li a:nth-child(2) {
+<<<<<<< HEAD
 =======
 .dropdown .dropdown-content ul li a{
     text-decoration: none;
@@ -212,5 +232,7 @@ h4{
 }
 .dropdown .dropdown-content ul li a:nth-child(2){
 >>>>>>> 65cb1bbdee153c107f4426ad9b4be1548d227da1
+=======
+>>>>>>> feature-navbar
     text-decoration: none;
 }
