@@ -15,36 +15,45 @@ include '../config/db.php';
 <body>
 <?php include '../includes/navbar.php'; ?>
 
-<div class="appointment-container">
-  <div class="header">
-    <h4>eye glasses exam form</h4>
-    <h4>Request an Appointment</h4>
-  </div>
-  <div class="gray-line"></div>
-  <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">
-
-        <!-- Step 1: Patient Info -->
+<div class="form-container">
+     <div class="header">
+            <h4>eye glasses exam form</h4>
+            <h4>Request an Appointment</h4>
+        </div>
+        <div class="gray-line"></div>
+    <div class="appointment-container">
+       
+        <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">
+            
+            <!-- Step 1: Patient Info -->
         <div class="form-step active">
             <h3>Patient’s Information</h3>
-            <div class="row">
-                <input type="text" name="full_name" placeholder="Enter Your Name" required>
-                <input type="text" name="suffix" placeholder="Suffix (Optional)">
-            </div>
-            <div class="row">
-                <select name="gender" required>
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                </select>
-                <input type="number" name="age" placeholder="Enter Your Age" required>
-            </div>
-            <div class="row">
-                <input type="text" name="phone_number" placeholder="Contact Number" required>
-                <input type="text" name="occupation" placeholder="Occupation">
-            </div>
+            <div class="form-row name-row">
+  <input type="text" placeholder="Enter Your Name..." name="full_name">
+  <select name="suffix">
+    <option value="">Suffix (Optional)</option>
+    <option value="Jr">Jr</option>
+    <option value="Sr">Sr</option>
+  </select>
+</div>
+
+            <div class="form-row three-cols">
+  <select name="gender">
+    <option value="">Select Gender...</option>
+    <option value="Male">Male</option>
+    <option value="Female">Female</option>
+  </select>
+
+  <input type="number" name="age" placeholder="Enter your Age...">
+  <input type="text" name="contact_number" placeholder="ex: 63+">
+</div>
+<div class="form-row single">
+  <input type="text" name="occupation" placeholder="Enter your Occupation...">
+</div>
+
             <button type="button" class="next-btn">Next</button>
         </div>
-
+        
         <!-- Step 2: Choose Provider & Time -->
         <div class="form-step">
             <h3>Choose Provider & Time</h3>
@@ -55,14 +64,14 @@ include '../config/db.php';
             <button type="button" class="prev-btn">Back</button>
             <button type="button" class="next-btn">Next</button>
         </div>
-
+        
         <!-- Step 3: Symptoms -->
         <div class="form-step">
             <h3>Eye Health Information</h3>
             <p>Do you currently wear Eye Glasses or Contact Lenses?</p>
             <label><input type="radio" name="wear_glasses" value="Yes"> Yes</label>
             <label><input type="radio" name="wear_glasses" value="No"> No</label>
-
+            
             <p>Are you experiencing any eye discomfort?</p>
             <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
             <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
@@ -87,6 +96,7 @@ include '../config/db.php';
         </div>
 
     </form>
+</div>
 </div>
 
 <script src="../actions/appointment.js"></script>
