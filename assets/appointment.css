@@ -12,6 +12,72 @@
     position: relative;
     padding: 0 1rem; /* Add horizontal padding for smaller screens */
 }
+/* Step 2 Styling */
+.date-row input[type="date"] {
+    width: 100%;
+    padding: 12px;
+    border-radius: 25px;
+    border: 1px solid #ccc;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+/* Date Strip */
+.date-strip {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 1rem 0;
+}
+.date-strip .day {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: #f9f9f9;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+.date-strip .day.active {
+    background: #003399;
+    color: white;
+    font-weight: bold;
+}
+
+/* Time Slots */
+.time-slots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 1rem 0;
+}
+.time-slot {
+    flex: 1 1 calc(33% - 10px);
+    padding: 12px;
+    border-radius: 25px;
+    border: 2px solid #003399;
+    background: white;
+    color: #003399;
+    cursor: pointer;
+    text-align: center;
+    transition: 0.2s;
+}
+.time-slot:hover, .time-slot.selected {
+    background: #003399;
+    color: white;
+}
+
+/* Next Available Bar */
+.next-available {
+    text-align: center;
+    padding: 12px;
+    margin-top: 1rem;
+    background: #003399;
+    color: white;
+    border-radius: 25px;
+    font-weight: bold;
+}
+
 
 /* Header Styles */
 .header {
@@ -70,6 +136,21 @@ form {
     flex-direction: column; /* Default to column */
     gap: 1rem;
 }
+h2{
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    word-spacing: -5px;
+    color: blue;
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+}
+.gray-line:nth-child(2){
+    width: 50%;
+    height: 1px;
+    background-color: lightgray;
+    margin-top: 10px;
+    margin-bottom: 20px;
+    margin-bottom: 20px;
+}
 
 /* On larger screens, use flex row */
 @media (min-width: 768px) {
@@ -82,6 +163,7 @@ form {
 .form-row.name-row input {
   flex: 3;
 }
+
 
 .form-row.name-row select {
   flex: 1;
@@ -105,7 +187,7 @@ form {
 
 /* Input, Select, and Button Styles */
 input, select {
-    width: 100%; /* Ensure they take full width of their container */
+    width: 10%; /* Ensure they take full width of their container */
     padding: 12px;
     border: 1px solid #ccc;
     border-radius: 8px;

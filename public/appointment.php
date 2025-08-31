@@ -22,12 +22,14 @@ include '../config/db.php';
         </div>
         <div class="gray-line"></div>
     <div class="appointment-container">
-       
-        <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">
-            
+     
+        <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
             <!-- Step 1: Patient Info -->
         <div class="form-step active">
-            <h3>Patient’s Information</h3>
+              <h2>Let's get you scheduled</h2>
+
+       <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
+            
             <div class="form-row name-row">
   <input type="text" placeholder="Enter Your Name..." name="full_name">
   <select name="suffix">
@@ -55,15 +57,47 @@ include '../config/db.php';
         </div>
         
         <!-- Step 2: Choose Provider & Time -->
-        <div class="form-step">
-            <h3>Choose Provider & Time</h3>
-            <label>Date</label>
-            <input type="date" name="appointment_date" required>
-            <label>Time</label>
-            <input type="time" name="appointment_time" required>
-            <button type="button" class="prev-btn">Back</button>
-            <button type="button" class="next-btn">Next</button>
-        </div>
+<div class="form-step">
+    <h2>Choose your provider & time</h2>
+    <p>Browse through the list of providers and check their upcoming appointment availability with just a glance. 
+       If you need more details, like specific time slots, just click on their name in the table.</p>
+
+    <!-- Date Picker -->
+    <div class="date-row">
+        <input type="date" name="appointment_date" required>
+    </div>
+
+    <!-- Date Strip (static for now) -->
+    <div class="date-strip">
+        <button class="day">Mon<br>09 Sep</button>
+        <button class="day">Tue<br>10 Sep</button>
+        <button class="day">Wed<br>11 Sep</button>
+        <button class="day active">Thu<br>12 Sep</button>
+        <button class="day">Fri<br>13 Sep</button>
+        <button class="day">Sat<br>14 Sep</button>
+        <button class="day">Sun<br>15 Sep</button>
+    </div>
+
+    <!-- Time Slots -->
+    <div class="time-slots">
+        <button type="button" class="time-slot">10:00 AM</button>
+        <button type="button" class="time-slot">11:00 AM</button>
+        <button type="button" class="time-slot">1:30 PM</button>
+        <button type="button" class="time-slot">2:30 PM</button>
+        <button type="button" class="time-slot">3:30 PM</button>
+        <button type="button" class="time-slot">4:30 PM</button>
+        <button type="button" class="time-slot">5:30 PM</button>
+    </div>
+
+    <!-- Next Available -->
+    <div class="next-available">
+        Next Available: Sep 12, 10:00 AM
+    </div>
+
+    <button type="button" class="prev-btn">Back</button>
+    <button type="button" class="next-btn">Next</button>
+</div>
+
         
         <!-- Step 3: Symptoms -->
         <div class="form-step">
