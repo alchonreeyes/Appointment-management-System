@@ -56,51 +56,59 @@ include '../config/db.php';
             <button type="button" class="next-btn">Next</button>
         </div>
         
-        <!-- Step 2: Choose Provider & Time -->
+  <!-- Step 2: Choose Provider & Time -->
 <div class="form-step">
-    <h2>Choose your provider & time</h2>
-    <p>Browse through the list of providers and check their upcoming appointment availability with just a glance. 
-       If you need more details, like specific time slots, just click on their name in the table.</p>
+  <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
+  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
 
-    <!-- Date Picker -->
-    <div class="date-row">
-        <input type="date" name="appointment_date" required>
-    </div>
+  <!-- Native Date Picker (syncs with strip) -->
+  <label>Select Date</label>
+  <input type="date" id="nativeDate">
 
-    <!-- Date Strip (static for now) -->
-    <div class="date-strip">
-        <button class="day">Mon<br>09 Sep</button>
-        <button class="day">Tue<br>10 Sep</button>
-        <button class="day">Wed<br>11 Sep</button>
-        <button class="day active">Thu<br>12 Sep</button>
-        <button class="day">Fri<br>13 Sep</button>
-        <button class="day">Sat<br>14 Sep</button>
-        <button class="day">Sun<br>15 Sep</button>
-    </div>
+  <!-- Date Strip -->
+   
+  <div class="date-strip">
+    <button data-date="2025-09-09">Mon 09 Sep</button>
+    <button data-date="2025-09-10">Tue 10 Sep</button>
+    <button data-date="2025-09-11">Wed 11 Sep</button>
+    <button data-date="2025-09-12">Thu 12 Sep</button>
+    <button data-date="2025-09-13">Fri 13 Sep</button>
+    <button data-date="2025-09-14">Sat 14 Sep</button>
+    <button data-date="2025-09-15">Sun 15 Sep</button>
+  </div>
 
-    <!-- Time Slots -->
-    <div class="time-slots">
-        <button type="button" class="time-slot">10:00 AM</button>
-        <button type="button" class="time-slot">11:00 AM</button>
-        <button type="button" class="time-slot">1:30 PM</button>
-        <button type="button" class="time-slot">2:30 PM</button>
-        <button type="button" class="time-slot">3:30 PM</button>
-        <button type="button" class="time-slot">4:30 PM</button>
-        <button type="button" class="time-slot">5:30 PM</button>
-    </div>
+  <!-- Time Slots -->
+  <div class="time-slots">
+    <button data-time="10:00 AM">10:00 AM</button>
+    <button data-time="11:00 AM">11:00 AM</button>
+    <button data-time="1:30 PM">1:30 PM</button>
+    <button data-time="2:30 PM">2:30 PM</button>
+    <button data-time="3:30 PM">3:30 PM</button>
+    <button data-time="4:30 PM">4:30 PM</button>
+    <button data-time="5:30 PM">5:30 PM</button>
+  </div>
 
-    <!-- Next Available -->
-    <div class="next-available">
-        Next Available: Sep 12, 10:00 AM
-    </div>
+  <!-- Next Available -->
+  <div class="next-available" id="nextAvailable">
+    Next Available: —
+  </div>
 
-    <button type="button" class="prev-btn">Back</button>
-    <button type="button" class="next-btn">Next</button>
+  <!-- Hidden Inputs for PHP -->
+  <input type="hidden" name="appointment_date" id="appointmentDate">
+  <input type="hidden" name="appointment_time" id="appointmentTime">
+
+  <button type="button" class="prev-btn">Back</button>
+  <button type="button" class="next-btn">Next</button>
 </div>
+
+
 
         
         <!-- Step 3: Symptoms -->
         <div class="form-step">
+            <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
+  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
+
             <h3>Eye Health Information</h3>
             <p>Do you currently wear Eye Glasses or Contact Lenses?</p>
             <label><input type="radio" name="wear_glasses" value="Yes"> Yes</label>

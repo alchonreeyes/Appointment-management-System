@@ -12,6 +12,38 @@
     position: relative;
     padding: 0 1rem; /* Add horizontal padding for smaller screens */
 }
+.date-strip, .time-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.date-strip button, .time-slots button {
+  padding: 10px 18px;
+  border: 2px solid #444;
+  border-radius: 20px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-strip button.active, .time-slots button.active {
+  background: #1a2ac9;
+  color: white;
+  border-color: #1a2ac9;
+}
+
+.next-available {
+  margin-top: 15px;
+  padding: 12px;
+  background: #1a2ac9;
+  color: white;
+  text-align: center;
+  border-radius: 10px;
+  font-weight: bold;
+}
+
 /* Step 2 Styling */
 .date-row input[type="date"] {
     width: 100%;
@@ -65,6 +97,41 @@
 .time-slot:hover, .time-slot.selected {
     background: #003399;
     color: white;
+}
+.nativeDate{
+    width: 100%;
+    
+}
+.date-strip {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+.date-box{
+    border: solid black 3px;
+}
+
+.date-box {
+    padding: 10px 15px;
+    border-radius: 8px;
+    background: #f4f4f4;
+    cursor: pointer;
+    font-size: 14px;
+    text-align: center;
+    flex: 1;
+}
+
+.date-box.today {
+    border: 2px solid blue;
+}
+
+.date-box.weekend {
+    opacity: 0.5;
+}
+
+.date-box.selected {
+    background: #007bff;
+    color: #fff;
 }
 
 /* Next Available Bar */
