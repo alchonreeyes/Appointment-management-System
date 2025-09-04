@@ -2,23 +2,65 @@ const steps = document.querySelectorAll(".form-step");
 const nextBtns = document.querySelectorAll(".next-btn");
 const prevBtns = document.querySelectorAll(".prev-btn");
 
-let formStepIndex = 0;
+const progressSteps = document.querySelectorAll(".progress-step");
+const progressLines = document.querySelectorAll(".progress-line");
 
+let formStepIndex = 0; // This is our single source of truth
+
+// Function to update progress bar
+function updateProgress(stepIndex) {
+    progressSteps.forEach((step, i) => {
+            if (i < stepIndex) {
+            step.classList.add("completed");
+            step.classList.remove("active");
+        } else if (i === stepIndex) {
+            step.classList.add("active");
+            step.classList.remove("completed");
+        } else {
+            step.classList.remove("active", "completed");
+        }
+    });
+
+    progressLines.forEach((line, i) => {
+        if (i < stepIndex) {
+            line.classList.add("completed");
+        } else {
+            line.classList.remove("completed");
+        }
+    });
+}
+
+// Show the current form step
+function showStep(index) {
+    steps.forEach((s, i) => {
+        s.classList.toggle("active", i === index);
+    });
+    updateProgress(index);
+}
+
+// Next button
 nextBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-        steps[formStepIndex].classList.remove("active");
-        formStepIndex++;
-        steps[formStepIndex].classList.add("active");
+        if (formStepIndex < steps.length - 1) {
+            formStepIndex++;
+            showStep(formStepIndex);
+        }
     });
 });
 
+// Prev button
 prevBtns.forEach(btn => {
     btn.addEventListener("click", () => {
-        steps[formStepIndex].classList.remove("active");
-        formStepIndex--;
-        steps[formStepIndex].classList.add("active");
+        if (formStepIndex > 0) {
+            formStepIndex--;
+            showStep(formStepIndex);
+        }
     });
 });
+
+// Initialize
+showStep(formStepIndex);
+
 const dateButtons = document.querySelectorAll(".date-strip button");
 const timeButtons = document.querySelectorAll(".time-slots button");
 const nativeDate = document.getElementById("nativeDate");
@@ -30,8 +72,6 @@ const appointmentTime = document.getElementById("appointmentTime");
 let selectedDate = "";
 let selectedTime = "";
 
-// This block is no longer necessary as the logic is moved to generateDateStrip
-// dateButtons.forEach(btn => { ... });
 
 // Handle Native Date Picker
 nativeDate.addEventListener("change", (e) => {

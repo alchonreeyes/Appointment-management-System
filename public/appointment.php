@@ -22,7 +22,16 @@ include '../config/db.php';
         </div>
         <div class="gray-line"></div>
     <div class="appointment-container">
-     
+     <div class="progress-container">
+  <div class="progress-step active">1</div>
+  <div class="progress-line"></div>
+  <div class="progress-step">2</div>
+  <div class="progress-line"></div>
+  <div class="progress-step">3</div>
+  <div class="progress-line"></div>
+  <div class="progress-step">4</div>
+</div>
+
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
             <!-- Step 1: Patient Info -->
         <div class="form-step active">

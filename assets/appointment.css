@@ -102,6 +102,8 @@
     width: 100%;
     
 }
+
+
 .date-strip {
     display: flex;
     gap: 10px;
@@ -219,112 +221,162 @@ h2{
     margin-bottom: 20px;
 }
 
+.progress-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 30px 0;
+}
+
+.progress-step {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: lightgray;
+  color: white;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.progress-step.active {
+    background: #ff0008; /* Blue for current step */
+}
+
+.progress-step.completed {
+    background: rgb(255, 0, 0); /* Completed steps */
+}
+
+.progress-line {
+    flex: 1;
+    height: 4px;
+    background: lightgray;
+    margin: 0 10px;
+}
+
+.progress-line.completed {
+    background: rgb(255, 0, 4);
+}
+
+
 /* On larger screens, use flex row */
 @media (min-width: 768px) {
-    .form-row {
-        flex-direction: row;
-        gap: 10px;
-    }
+        .form-row {
+                flex-direction: row;
+                gap: 10px;
+        }
 }
 
 .form-row.name-row input {
-  flex: 3;
+    flex: 3;
 }
 
 
 .form-row.name-row select {
-  flex: 1;
-  max-width: 100%; /* Let it be flexible on mobile */
+    flex: 1;
+    max-width: 100%; /* Let it be flexible on mobile */
 }
 
 @media (min-width: 768px) {
-    .form-row.name-row select {
-        max-width: 120px; /* Cap width on larger screens */
-    }
+        .form-row.name-row select {
+                max-width: 120px; /* Cap width on larger screens */
+        }
 }
 
 .form-row.three-cols select,
 .form-row.three-cols input {
-  flex: 1;
+    flex: 1;
 }
 
 .form-row.single input {
-  width: 100%;
+    width: 100%;
 }
 
 /* Input, Select, and Button Styles */
 input, select {
-    width: 10%; /* Ensure they take full width of their container */
-    padding: 12px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    height: 50px;
-    box-sizing: border-box; /* Important for consistent sizing */
-    font-size: 1rem;
+        width: 10%; /* Ensure they take full width of their container */
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        height: 50px;
+        box-sizing: border-box; /* Important for consistent sizing */
+        font-size: 1rem;
 }
 
 /* Specific styles for checkboxes and radios */
 .form-step label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
 }
 
 .form-step input[type="checkbox"],
 .form-step input[type="radio"] {
-    width: auto; /* Override full width for these inputs */
-    height: auto;
-    flex-shrink: 0;
+        width: auto; /* Override full width for these inputs */
+        height: auto;
+        flex-shrink: 0;
 }
 
 button {
-    padding: 12px 20px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    margin-top: 1rem;
-    font-size: 1rem;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    width: 100%; /* Full width for easier tapping on mobile */
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 1rem;
+        font-size: 1rem;
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+        width: 100%; /* Full width for easier tapping on mobile */
 }
 
 @media (min-width: 768px) {
-    button {
-        width: auto; /* Auto width on larger screens */
-    }
-    .next-btn {
-        min-width: 150px; /* Give it a minimum width */
-    }
+        button {
+                width: auto; /* Auto width on larger screens */
+        }
+        .next-btn {
+                min-width: 150px; /* Give it a minimum width */
+        }
 }
 
 .next-btn, button[type="submit"] {
-    background: #007bff;
-    color: white;
+        background: #007bff;
+        color: white;
 }
 
 .prev-btn {
-    background: #6c757d;
-    color: white;
+        background: #6c757d;
+        color: white;
 }
 
 /* Media Query for smaller screens */
 @media (max-width: 767px) {
-    .appointment-container {
-        margin: 1rem auto;
-        padding: 1.5rem;
-    }
+        .appointment-container {
+                margin: 1rem auto;
+                padding: 1.5rem;
+        }
 
-    .header {
-        flex-direction: column;
-        gap: 0.5rem;
-        margin-top: 20px;
-    }
+        .header {
+                flex-direction: column;
+                gap: 0.5rem;
+                margin-top: 20px;
+        }
 
-    .header h4 {
-        font-size: 20px;
-    }
+        .header h4 {
+                font-size: 20px;
+        }
 
-    .gray-line {
-        width: 80%;
-    }
+        .gray-line {
+                width: 80%;
+        }
+
+        .progress-step {
+                width: 30px;
+                height: 30px;
+                font-size: 0.9rem;
+        }
+
+        .progress-line {
+                margin: 0 5px;
+        }
 }
