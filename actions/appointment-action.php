@@ -1,9 +1,11 @@
 <?php
+session_start();
 include '../config/db.php';
+
 $db = new Database();
 $pdo = $db->getConnection();
 
-class Appointment{
+class Appointment {
 
     private $pdo;
 
@@ -14,11 +16,33 @@ class Appointment{
 
     public function bookAppointment($data){
         try {
-            $sql = "INSERT INTO appointments (full_name, suffix, gender, age, phone_number, occupation, appointment_date, appointment_time, wear_glasses, symptoms, concern, consent_info, consent_reminders, consent_terms) 
-                    VALUES (:full_name, :suffix, :gender, :age, :phone_number, :occupation, :appointment_date, :appointment_time, :wear_glasses, :symptoms, :concern, :consent_info, :consent_reminders, :consent_terms)";
+            $sql = "INSERT INTO appointments (
+                        client_id, staff_id, service_id, status_id,
+                        full_name, suffix, gender, age, phone_number, occupation,
+                        appointment_date, appointment_time,
+                        wear_glasses, symptoms, concern,
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, :staff_id, :service_id, :status_id,
+                        :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                        :appointment_date, :appointment_time,
+                        :wear_glasses, :symptoms, :concern,
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
             
             $stmt = $this->pdo->prepare($sql);
 
+            // Required links
+            $stmt->bindParam(':client_id', $data['client_id'], PDO::PARAM_INT);
+
+            // Optional until features are ready
+            $stmt->bindParam(':staff_id', $data['staff_id'], PDO::PARAM_NULL);
+            $stmt->bindParam(':service_id', $data['service_id'], PDO::PARAM_NULL);
+
+            // Default = Pending (1)
+            $stmt->bindParam(':status_id', $data['status_id'], PDO::PARAM_INT);
+
+            // Form fields
             $stmt->bindParam(':full_name', $data['full_name']);
             $stmt->bindParam(':suffix', $data['suffix']);
             $stmt->bindParam(':gender', $data['gender']);
@@ -35,11 +59,9 @@ class Appointment{
             $stmt->bindParam(':consent_terms', $data['consent_terms']);
 
             if ($stmt->execute()) {
-                // Optionally, you can redirect or show a success message
-                header("Location: ../success.php"); // Create a success page
+                header("Location: ../public/success.php");
                 exit();
             } else {
-                // Handle error
                 echo "Error: Could not book appointment.";
             }
         } catch (PDOException $e) {
@@ -47,7 +69,25 @@ class Appointment{
         }
     }
 }
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_SESSION['user_id'])) {
+        header("Location: ../public/login.php");
+        exit();
+    }
+
+    // 🔑 Get client_id from clients table
+    $stmt = $pdo->prepare("SELECT client_id FROM clients WHERE user_id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $client = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$client) {
+        die("Error: Client record not found for this user. Please contact support.");
+    }
+
+    $client_id = $client['client_id'];
+
+    // Collect form data
     $full_name = trim($_POST['full_name']);
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
@@ -58,10 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $appointment_date = trim($_POST['appointment_date'] ?? '');
     $appointment_time = trim($_POST['appointment_time'] ?? '');
 
-    // Radio (may not exist if not chosen)
     $wear_glasses = $_POST['wear_glasses'] ?? null;
 
-    // Checkbox array → convert to string
     $symptoms = $_POST['symptoms'] ?? [];
     $symptoms_str = implode(", ", $symptoms);
 
@@ -70,9 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $consent_reminders = isset($_POST['consent_reminders']) ? 1 : 0;
     $consent_terms = isset($_POST['consent_terms']) ? 1 : 0;
 
-    // Pass to your OOP Appointment class
+    // Defaults for foreign keys
+    $staff_id = null; // No staff assigned yet
+    $service_id = null; // No service assigned yet
+    $status_id = 1; // Pending
+
     $appointment = new Appointment($pdo);
     $appointment->bookAppointment([
+        'client_id' => $client_id,
+        'staff_id' => $staff_id,
+        'service_id' => $service_id,
+        'status_id' => $status_id,
         'full_name' => $full_name,
         'suffix' => $suffix,
         'gender' => $gender,
@@ -89,5 +135,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'consent_terms' => $consent_terms
     ]);
 }
-
 ?>
