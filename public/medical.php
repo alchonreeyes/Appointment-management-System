@@ -23,7 +23,7 @@ include '../config/db.php';
 
 <div class="form-container">
      <div class="header">
-            <h4>eye glasses exam form</h4>
+            <h4>Medical Appointment</h4>
             <h4>Request an Appointment</h4>
         </div>
         <div class="gray-line"></div>
