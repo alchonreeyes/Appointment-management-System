@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $client_id = $client['client_id'];
 
-    // Collect form data
+
     $full_name = trim($_POST['full_name']);
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
