@@ -86,10 +86,10 @@ include '../config/db.php';
 
         <!-- Step 3: Consent -->
         <div class="form-step">
-            <h3>Consent & Confirmation</h3>
-            <label><input type="checkbox" name="consent_info" value="1" required> I certify that the above information is correct.</label>
-            <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
-            <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
+             <h3>Consent & Confirmation</h3>
+    <label><input type="checkbox" name="consent_info" value="1"> I certify that the above information is correct.</label>
+    <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
+    <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label><label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
 
             <button type="button" class="prev-btn">Back</button>
             <button type="submit" name="submit">Make a Appointment</button>
