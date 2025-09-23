@@ -1,6 +1,6 @@
 <?php
-session_start();
 
+session_start();
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
   // Not logged in → redirect back to login
@@ -92,7 +92,7 @@ include '../config/db.php';
             <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
 
             <button type="button" class="prev-btn">Back</button>
-            <button type="submit" name="submit">Make an Appointment</button>
+            <button type="submit" name="submit">Make a Appointment</button>
         </div>
 
     </form>
@@ -102,4 +102,5 @@ include '../config/db.php';
 <script src="../actions/appointment.js"></script>
 <?php include '../includes/footer.php'; ?>
 </body>
+
 </html>
