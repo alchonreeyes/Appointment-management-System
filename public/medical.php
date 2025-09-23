@@ -35,7 +35,6 @@ include '../config/db.php';
   <div class="progress-line"></div>
   <div class="progress-step">3</div>
   <div class="progress-line"></div>
-  <div class="progress-step">4</div>
 </div>
 
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
@@ -73,75 +72,19 @@ include '../config/db.php';
         
   <!-- Step 2: Choose Provider & Time -->
 <div class="form-step">
-  <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
-  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
-
-  <!-- Native Date Picker (syncs with strip) -->
-  <label>Select Date</label>
-  <input type="date" id="nativeDate">
-
-  <!-- Date Strip -->
-   
-  <div class="date-strip">
-    <button data-date="2025-09-09">Mon 09 Sep</button>
-    <button data-date="2025-09-10">Tue 10 Sep</button>
-    <button data-date="2025-09-11">Wed 11 Sep</button>
-    <button data-date="2025-09-12">Thu 12 Sep</button>
-    <button data-date="2025-09-13">Fri 13 Sep</button>
-    <button data-date="2025-09-14">Sat 14 Sep</button>
-    <button data-date="2025-09-15">Sun 15 Sep</button>
-  </div>
-
-  <!-- Time Slots -->
-  <div class="time-slots">
-    <button data-time="10:00 AM">10:00 AM</button>
-    <button data-time="11:00 AM">11:00 AM</button>
-    <button data-time="1:30 PM">1:30 PM</button>
-    <button data-time="2:30 PM">2:30 PM</button>
-    <button data-time="3:30 PM">3:30 PM</button>
-    <button data-time="4:30 PM">4:30 PM</button>
-    <button data-time="5:30 PM">5:30 PM</button>
-  </div>
-
-  <!-- Next Available -->
-  <div class="next-available" id="nextAvailable">
-    Next Available: —
-  </div>
-
-  <!-- Hidden Inputs for PHP -->
-  <input type="hidden" name="appointment_date" id="appointmentDate">
-  <input type="hidden" name="appointment_time" id="appointmentTime">
-
-  <button type="button" class="prev-btn">Back</button>
-  <button type="button" class="next-btn">Next</button>
+    <h3>Medical Certificate Purpose</h3>
+    <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
+    <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
+    <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
+    <label><input type="radio" name="certificate_purpose" value="Other"> Other</label>
+    <input type="text" name="certificate_other" placeholder="If other, please specify...">
+    
+    <button type="button" class="prev-btn">Back</button>
+    <button type="button" class="next-btn">Next</button>
 </div>
 
 
-
-        
-        <!-- Step 3: Symptoms -->
-        <div class="form-step">
-            <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
-  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
-
-            <h3>Eye Health Information</h3>
-            <p>Do you currently wear Eye Glasses or Contact Lenses?</p>
-            <label><input type="radio" name="wear_glasses" value="Yes"> Yes</label>
-            <label><input type="radio" name="wear_glasses" value="No"> No</label>
-            
-            <p>Are you experiencing any eye discomfort?</p>
-            <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
-            <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
-            <label><input type="checkbox" name="symptoms[]" value="Redness"> Eye Redness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Other"> Other</label>
-            <input type="text" name="concern" placeholder="Write a concern...">
-
-            <button type="button" class="prev-btn">Back</button>
-            <button type="button" class="next-btn">Next</button>
-        </div>
-
-        <!-- Step 4: Consent -->
+        <!-- Step 3: Consent -->
         <div class="form-step">
             <h3>Consent & Confirmation</h3>
             <label><input type="checkbox" name="consent_info" value="1" required> I certify that the above information is correct.</label>
