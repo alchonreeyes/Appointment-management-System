@@ -14,73 +14,76 @@ class Appointment {
          $this->pdo = $pdo;
     }
 
-    public function bookAppointment($data, $isMedical){
-        try {
-            if ($isMedical) {
-                // Insert for MEDICAL CERTIFICATE
-                $sql = "INSERT INTO appointments (
-                            client_id, 
-                            full_name, suffix, gender, age, phone_number, occupation,
-                            certificate_purpose, certificate_other,
-                            consent_info, consent_reminders, consent_terms
-                        ) VALUES (
-                            :client_id, 
-                            :full_name, :suffix, :gender, :age, :phone_number, :occupation,
-                            :certificate_purpose, :certificate_other,
-                            :consent_info, :consent_reminders, :consent_terms
-                        )";
-            } else {
-                // Insert for REGULAR APPOINTMENT
-                $sql = "INSERT INTO appointments (
-                            client_id, 
-                            full_name, suffix, gender, age, phone_number, occupation,
-                            appointment_date, appointment_time, 
-                            wear_glasses, symptoms, concern,
-                            consent_info, consent_reminders, consent_terms
-                        ) VALUES (
-                            :client_id, 
-                            :full_name, :suffix, :gender, :age, :phone_number, :occupation,
-                            :appointment_date, :appointment_time, 
-                            :wear_glasses, :symptoms, :concern,
-                            :consent_info, :consent_reminders, :consent_terms
-                        )";
-            }
-            
-            $stmt = $this->pdo->prepare($sql);
-
-            // Common binds
-            $stmt->bindParam(':client_id', $data['client_id']);
-            $stmt->bindParam(':full_name', $data['full_name']);
-            $stmt->bindParam(':suffix', $data['suffix']);
-            $stmt->bindParam(':gender', $data['gender']);
-            $stmt->bindParam(':age', $data['age']);
-            $stmt->bindParam(':phone_number', $data['phone_number']);
-            $stmt->bindParam(':occupation', $data['occupation']);
-            $stmt->bindParam(':consent_info', $data['consent_info']);
-            $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
-            $stmt->bindParam(':consent_terms', $data['consent_terms']);
-
-            if ($isMedical) {
-                $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
-                $stmt->bindParam(':certificate_other', $data['certificate_other']);
-            } else {
-                $stmt->bindParam(':appointment_date', $data['appointment_date']);
-                $stmt->bindParam(':appointment_time', $data['appointment_time']);
-                $stmt->bindParam(':wear_glasses', $data['wear_glasses']);
-                $stmt->bindParam(':symptoms', $data['symptoms']);
-                $stmt->bindParam(':concern', $data['concern']);
-            }
-
-            if ($stmt->execute()) {
-                header("Location: ../public/success.php"); // redirect on success
-                exit();
-            } else {
-                echo "Error: Could not book appointment.";
-            }
-        } catch (PDOException $e) {
-            die("Database error: " . $e->getMessage());
+    public function bookAppointment($data, $isMedical = false){
+    try {
+        if ($isMedical) {
+            // Insert for MEDICAL CERTIFICATE
+            $sql = "INSERT INTO appointments (
+                        client_id, 
+                        full_name, suffix, gender, age, phone_number, occupation, 
+                        certificate_purpose, certificate_other, 
+                        appointment_date, appointment_time,
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, 
+                        :full_name, :suffix, :gender, :age, :phone_number, :occupation, 
+                        :certificate_purpose, :certificate_other,
+                        :appointment_date, :appointment_time,
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
+        } else {
+            // Insert for NORMAL APPOINTMENT
+            $sql = "INSERT INTO appointments (
+                        client_id, 
+                        full_name, suffix, gender, age, phone_number, occupation, 
+                        appointment_date, appointment_time, 
+                        wear_glasses, symptoms, concern, 
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, 
+                        :full_name, :suffix, :gender, :age, :phone_number, :occupation, 
+                        :appointment_date, :appointment_time, 
+                        :wear_glasses, :symptoms, :concern, 
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
         }
+
+        $stmt = $this->pdo->prepare($sql);
+
+        // Common binds
+        $stmt->bindParam(':client_id', $data['client_id']);
+        $stmt->bindParam(':full_name', $data['full_name']);
+        $stmt->bindParam(':suffix', $data['suffix']);
+        $stmt->bindParam(':gender', $data['gender']);
+        $stmt->bindParam(':age', $data['age']);
+        $stmt->bindParam(':phone_number', $data['phone_number']);
+        $stmt->bindParam(':occupation', $data['occupation']);
+        $stmt->bindParam(':appointment_date', $data['appointment_date']);
+        $stmt->bindParam(':appointment_time', $data['appointment_time']);
+        $stmt->bindParam(':consent_info', $data['consent_info']);
+        $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
+        $stmt->bindParam(':consent_terms', $data['consent_terms']);
+
+        if ($isMedical) {
+            $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
+            $stmt->bindParam(':certificate_other', $data['certificate_other']);
+        } else {
+            $stmt->bindParam(':wear_glasses', $data['wear_glasses']);
+            $stmt->bindParam(':symptoms', $data['symptoms']);
+            $stmt->bindParam(':concern', $data['concern']);
+        }
+
+        if ($stmt->execute()) {
+            header("Location: ../public/success.php");
+            exit();
+        } else {
+            echo "Error: Could not book appointment.";
+        }
+    } catch (PDOException $e) {
+        die("Database error: " . $e->getMessage());
     }
+}
+
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
