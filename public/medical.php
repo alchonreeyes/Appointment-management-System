@@ -71,7 +71,7 @@ include '../config/db.php';
             <button type="button" class="next-btn">Next</button>
         </div>
         
-  <!-- Step 2: Choose Provider & Time -->
+  <!-- Step 2: medical certificate purpose -->
 <div class="form-step">
     <h3 style="color: black;">Medical Certificate Purpose</h3>
     <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
@@ -84,6 +84,7 @@ include '../config/db.php';
     <button type="button" class="next-btn">Next</button>
 </div>
 
+  <!-- Step 3: Choose Provider & Time -->
 <div class="form-step">
   <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
   <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>

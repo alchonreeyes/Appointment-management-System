@@ -14,7 +14,7 @@ class Appointment {
          $this->pdo = $pdo;
     }
 
-    public function bookAppointment($data, $isMedical = false){
+    public function bookAppointment($data, $isMedical, $isIshihara = false){
     try {
         if ($isMedical) {
             // Insert for MEDICAL CERTIFICATE
@@ -63,7 +63,7 @@ class Appointment {
         $stmt->bindParam(':consent_info', $data['consent_info']);
         $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
         $stmt->bindParam(':consent_terms', $data['consent_terms']);
-
+    
         if ($isMedical) {
             $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
             $stmt->bindParam(':certificate_other', $data['certificate_other']);
@@ -163,6 +163,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $appointment = new Appointment($pdo);
-    $appointment->bookAppointment($data, $isMedical);
+    $appointment->bookAppointment($data, $isMedical, $isIshihara);
 }
 ?>
