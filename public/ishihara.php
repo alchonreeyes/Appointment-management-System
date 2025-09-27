@@ -19,8 +19,13 @@ if($_SERVER['REQUEST_METHOD'] === 'POST'){
 </head>
 <body>
     <?php include '../includes/navbar.php'; ?>
+    
+    
+
+
+
+
+    
     <?php include '../includes/footer.php'; ?>
-
-
 </body>
 </html>
