@@ -8,6 +8,10 @@
     box-shadow: 0 3px 8px rgba(0,0,0,0.1);
 }
 
+p{
+    font-size: 15px;
+    color: black;
+}
 .form-container {
     position: relative;
     padding: 0 1rem; /* Add horizontal padding for smaller screens */

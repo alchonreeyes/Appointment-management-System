@@ -73,13 +73,14 @@ include '../config/db.php';
         
   <!-- Step 2: medical certificate purpose -->
 <div class="form-step">
-    <h3 style="color: black;">Medical Certificate Purpose</h3>
-    <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
-    <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
-    <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
-    <label><input type="radio" name="certificate_purpose" value="Other"> Other</label>
-    <input type="text" name="certificate_other" placeholder="If other, please specify...">
-    
+    <h3 style="color: blue;">Ishihara Test Purpose</h3>
+    <p style="color: black;">Please select the type of Ishihara test you require for color vision deficiency screening.</p>
+   <h5>Ishihara Test Type</h5>
+    <label><input type="radio" name="ishihara_test_type" value="Basic-screening" required>basic screening</label>
+   <label><input type="radio" name="ishihara_test_type" value="Complete-assessment" >complete assessment</label>
+   <label><input type="radio" name="ishihara_test_type" value="Follow-up" >follow up</label>
+
+
     <button type="button" class="prev-btn">Back</button>
     <button type="button" class="next-btn">Next</button>
 </div>
