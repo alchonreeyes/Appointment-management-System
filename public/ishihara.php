@@ -79,7 +79,9 @@ include '../config/db.php';
     <label><input type="radio" name="ishihara_test_type" value="Basic-screening" required>basic screening</label>
    <label><input type="radio" name="ishihara_test_type" value="Complete-assessment" >complete assessment</label>
    <label><input type="radio" name="ishihara_test_type" value="Follow-up" >follow up</label>
-
+   <label><input type="text" name="ishihara_reason" placeholder="enter your ishihara reason" style="width: 90%;"></label>
+   <label><input type="text" name="previous_color_issues" placeholder="enter your previous color issues" style="width: 90%;"></label>
+   <label><input type="text" name="ishihara_notes" placeholder="enter your ishihara notes" style="width: 90%;"></label>
 
     <button type="button" class="prev-btn">Back</button>
     <button type="button" class="next-btn">Next</button>

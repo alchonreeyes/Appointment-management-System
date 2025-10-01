@@ -14,77 +14,91 @@ class Appointment {
          $this->pdo = $pdo;
     }
 
-    public function bookAppointment($data, $isMedical, $isIshihara = false){
-    try {
-        if ($isMedical) {
-            // Insert for MEDICAL CERTIFICATE
-            $sql = "INSERT INTO appointments (
-                        client_id, 
-                        full_name, suffix, gender, age, phone_number, occupation, 
-                        certificate_purpose, certificate_other, 
-                        appointment_date, appointment_time,
-                        consent_info, consent_reminders, consent_terms
-                    ) VALUES (
-                        :client_id, 
-                        :full_name, :suffix, :gender, :age, :phone_number, :occupation, 
-                        :certificate_purpose, :certificate_other,
-                        :appointment_date, :appointment_time,
-                        :consent_info, :consent_reminders, :consent_terms
-                    )";
-        } else {
-            // Insert for NORMAL APPOINTMENT
-            $sql = "INSERT INTO appointments (
-                        client_id, 
-                        full_name, suffix, gender, age, phone_number, occupation, 
-                        appointment_date, appointment_time, 
-                        wear_glasses, symptoms, concern, 
-                        consent_info, consent_reminders, consent_terms
-                    ) VALUES (
-                        :client_id, 
-                        :full_name, :suffix, :gender, :age, :phone_number, :occupation, 
-                        :appointment_date, :appointment_time, 
-                        :wear_glasses, :symptoms, :concern, 
-                        :consent_info, :consent_reminders, :consent_terms
-                    )";
-        }
+    public function bookAppointment($data, $type){
+        try {
+            if ($type === 'medical') {
+                // ✅ MEDICAL CERTIFICATE
+                $sql = "INSERT INTO appointments (
+                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            certificate_purpose, certificate_other,
+                            appointment_date, appointment_time,
+                            consent_info, consent_reminders, consent_terms
+                        ) VALUES (
+                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :certificate_purpose, :certificate_other,
+                            :appointment_date, :appointment_time,
+                            :consent_info, :consent_reminders, :consent_terms
+                        )";
+            } elseif ($type === 'ishihara') {
+                // ✅ ISHIHARA TEST
+                $sql = "INSERT INTO appointments (
+                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            appointment_date, appointment_time,
+                            ishihara_test_type, ishihara_reason, previous_color_issues, ishihara_notes,
+                            consent_info, consent_reminders, consent_terms
+                        ) VALUES (
+                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :appointment_date, :appointment_time,
+                            :ishihara_test_type, :ishihara_reason, :previous_color_issues, :ishihara_notes,
+                            :consent_info, :consent_reminders, :consent_terms
+                        )";
+            } else {
+                // ✅ NORMAL APPOINTMENT
+                $sql = "INSERT INTO appointments (
+                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            appointment_date, appointment_time,
+                            wear_glasses, symptoms, concern,
+                            consent_info, consent_reminders, consent_terms
+                        ) VALUES (
+                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :appointment_date, :appointment_time,
+                            :wear_glasses, :symptoms, :concern,
+                            :consent_info, :consent_reminders, :consent_terms
+                        )";
+            }
 
-        $stmt = $this->pdo->prepare($sql);
+            $stmt = $this->pdo->prepare($sql);
 
-        // Common binds
-        $stmt->bindParam(':client_id', $data['client_id']);
-        $stmt->bindParam(':full_name', $data['full_name']);
-        $stmt->bindParam(':suffix', $data['suffix']);
-        $stmt->bindParam(':gender', $data['gender']);
-        $stmt->bindParam(':age', $data['age']);
-        $stmt->bindParam(':phone_number', $data['phone_number']);
-        $stmt->bindParam(':occupation', $data['occupation']);
-        $stmt->bindParam(':appointment_date', $data['appointment_date']);
-        $stmt->bindParam(':appointment_time', $data['appointment_time']);
-        $stmt->bindParam(':consent_info', $data['consent_info']);
-        $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
-        $stmt->bindParam(':consent_terms', $data['consent_terms']);
-    
-        if ($isMedical) {
-            $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
-            $stmt->bindParam(':certificate_other', $data['certificate_other']);
-        } else {
-            $stmt->bindParam(':wear_glasses', $data['wear_glasses']);
-            $stmt->bindParam(':symptoms', $data['symptoms']);
-            $stmt->bindParam(':concern', $data['concern']);
-        }
+            // Common binds
+            $stmt->bindParam(':client_id', $data['client_id']);
+            $stmt->bindParam(':full_name', $data['full_name']);
+            $stmt->bindParam(':suffix', $data['suffix']);
+            $stmt->bindParam(':gender', $data['gender']);
+            $stmt->bindParam(':age', $data['age']);
+            $stmt->bindParam(':phone_number', $data['phone_number']);
+            $stmt->bindParam(':occupation', $data['occupation']);
+            $stmt->bindParam(':appointment_date', $data['appointment_date']);
+            $stmt->bindParam(':appointment_time', $data['appointment_time']);
+            $stmt->bindParam(':consent_info', $data['consent_info']);
+            $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
+            $stmt->bindParam(':consent_terms', $data['consent_terms']);
 
-        if ($stmt->execute()) {
-            header("Location: ../public/success.php");
-            exit();
-        } else {
-            echo "Error: Could not book appointment.";
+            if ($type === 'medical') {
+                $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
+                $stmt->bindParam(':certificate_other', $data['certificate_other']);
+            } elseif ($type === 'ishihara') {
+                $stmt->bindParam(':ishihara_test_type', $data['ishihara_test_type']);
+                $stmt->bindParam(':ishihara_reason', $data['ishihara_reason']);
+                $stmt->bindParam(':previous_color_issues', $data['previous_color_issues']);
+                $stmt->bindParam(':ishihara_notes', $data['ishihara_notes']);
+            } else {
+                $stmt->bindParam(':wear_glasses', $data['wear_glasses']);
+                $stmt->bindParam(':symptoms', $data['symptoms']);
+                $stmt->bindParam(':concern', $data['concern']);
+            }
+
+            if ($stmt->execute()) {
+                header("Location: ../public/success.php");
+                exit();
+            } else {
+                echo "Error: Could not book appointment.";
+            }
+        } catch (PDOException $e) {
+            die("Database error: " . $e->getMessage());
         }
-    } catch (PDOException $e) {
-        die("Database error: " . $e->getMessage());
     }
 }
 
-}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_SESSION['user_id'])) {
@@ -116,8 +130,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Check if it's a MEDICAL APPOINTMENT
     $isMedical = isset($_POST['certificate_purpose']);
-
-    if ($isMedical) {
+    $isIshihara = isset($_POST['ishihara_test_type']);
+    
+    if ($isIshihara) {
+        # code...
+        $ishihara_test_type = $_POST['ishihara_test_type'] ?? '';
+        $ishihara_reason = trim($_POST['ishihara_reason'] ?? '');
+        $previous_color_issues = trim($_POST['previous_color_issues'] ?? '');
+        $ishihara_notes = trim($_POST['ishihara_notes'] ?? '');
+        
+        $data = [
+            'client_id' => $client_id,
+            'full_name' => $full_name,
+            'suffix' => $suffix,
+            'gender' => $gender,
+            'age' => $age,
+            'phone_number' => $phone_number,
+            'occupation' => $occupation,
+            'appointment_date' => $appointment_date,
+            'appointment_time' => $appointment_time,
+            'wear_glasses' => $wear_glasses,
+            'symptoms' => $symptoms_str,
+            'concern' => $concern,
+            'consent_info' => $consent_info,
+            'consent_reminders' => $consent_reminders,
+            'consent_terms' => $consent_terms
+        ];
+        
+    }
+    
+    else if ($isMedical) {
         $certificate_purpose = $_POST['certificate_purpose'] ?? '';
         $certificate_other = trim($_POST['certificate_other'] ?? '');
 
@@ -161,8 +203,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'consent_terms' => $consent_terms
         ];
     }
+$type = 'normal';
+if (isset($_POST['certificate_purpose'])) {
+    $type = 'medical';
+} elseif (isset($_POST['ishihara_test_type'])) {
+    $type = 'ishihara';
+}
 
-    $appointment = new Appointment($pdo);
-    $appointment->bookAppointment($data, $isMedical, $isIshihara);
+$appointment = new Appointment($pdo);
+$appointment->bookAppointment($data, $type);
+
 }
 ?>
