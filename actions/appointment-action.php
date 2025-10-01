@@ -59,7 +59,7 @@ class Appointment {
 
             $stmt = $this->pdo->prepare($sql);
 
-            // Common binds
+            // 🔹 Common fields
             $stmt->bindParam(':client_id', $data['client_id']);
             $stmt->bindParam(':full_name', $data['full_name']);
             $stmt->bindParam(':suffix', $data['suffix']);
@@ -73,6 +73,7 @@ class Appointment {
             $stmt->bindParam(':consent_reminders', $data['consent_reminders']);
             $stmt->bindParam(':consent_terms', $data['consent_terms']);
 
+            // 🔹 Extra per type
             if ($type === 'medical') {
                 $stmt->bindParam(':certificate_purpose', $data['certificate_purpose']);
                 $stmt->bindParam(':certificate_other', $data['certificate_other']);
@@ -117,101 +118,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $client_id = $client['client_id'];
 
-    // Common fields
+    // 🔹 Common fields
     $full_name = trim($_POST['full_name']);
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
     $age = intval($_POST['age'] ?? 0);
     $phone_number = trim($_POST['contact_number'] ?? '');
     $occupation = trim($_POST['occupation'] ?? '');
+    $appointment_date = trim($_POST['appointment_date'] ?? '');
+    $appointment_time = trim($_POST['appointment_time'] ?? '');
     $consent_info = isset($_POST['consent_info']) ? 1 : 0;
     $consent_reminders = isset($_POST['consent_reminders']) ? 1 : 0;
     $consent_terms = isset($_POST['consent_terms']) ? 1 : 0;
 
-    // Check if it's a MEDICAL APPOINTMENT
-    $isMedical = isset($_POST['certificate_purpose']);
-    $isIshihara = isset($_POST['ishihara_test_type']);
-    
-    if ($isIshihara) {
-        # code...
-        $ishihara_test_type = $_POST['ishihara_test_type'] ?? '';
-        $ishihara_reason = trim($_POST['ishihara_reason'] ?? '');
-        $previous_color_issues = trim($_POST['previous_color_issues'] ?? '');
-        $ishihara_notes = trim($_POST['ishihara_notes'] ?? '');
-        
-        $data = [
-            'client_id' => $client_id,
-            'full_name' => $full_name,
-            'suffix' => $suffix,
-            'gender' => $gender,
-            'age' => $age,
-            'phone_number' => $phone_number,
-            'occupation' => $occupation,
-            'appointment_date' => $appointment_date,
-            'appointment_time' => $appointment_time,
-            'wear_glasses' => $wear_glasses,
-            'symptoms' => $symptoms_str,
-            'concern' => $concern,
-            'consent_info' => $consent_info,
-            'consent_reminders' => $consent_reminders,
-            'consent_terms' => $consent_terms
-        ];
-        
+    // 🔹 Detect type
+    $type = 'normal';
+    if (isset($_POST['certificate_purpose'])) {
+        $type = 'medical';
+    } elseif (isset($_POST['ishihara_test_type'])) {
+        $type = 'ishihara';
     }
-    
-    else if ($isMedical) {
-        $certificate_purpose = $_POST['certificate_purpose'] ?? '';
-        $certificate_other = trim($_POST['certificate_other'] ?? '');
 
-        $data = [
-            'client_id' => $client_id,
-            'full_name' => $full_name,
-            'suffix' => $suffix,
-            'gender' => $gender,
-            'age' => $age,
-            'phone_number' => $phone_number,
-            'occupation' => $occupation,
-            'certificate_purpose' => $certificate_purpose,
-            'certificate_other' => $certificate_other,
-            'consent_info' => $consent_info,
-            'consent_reminders' => $consent_reminders,
-            'consent_terms' => $consent_terms
-        ];
+    // 🔹 Build data
+    $data = [
+        'client_id' => $client_id,
+        'full_name' => $full_name,
+        'suffix' => $suffix,
+        'gender' => $gender,
+        'age' => $age,
+        'phone_number' => $phone_number,
+        'occupation' => $occupation,
+        'appointment_date' => $appointment_date,
+        'appointment_time' => $appointment_time,
+        'consent_info' => $consent_info,
+        'consent_reminders' => $consent_reminders,
+        'consent_terms' => $consent_terms
+    ];
+
+    // 🔹 Add per type
+    if ($type === 'medical') {
+        $data['certificate_purpose'] = $_POST['certificate_purpose'] ?? '';
+        $data['certificate_other'] = trim($_POST['certificate_other'] ?? '');
+    } elseif ($type === 'ishihara') {
+        $data['ishihara_test_type'] = $_POST['ishihara_test_type'] ?? '';
+        $data['ishihara_reason'] = trim($_POST['ishihara_reason'] ?? '');
+        $data['previous_color_issues'] = $_POST['previous_color_issues'] ?? 'Unknown';
+        $data['ishihara_notes'] = trim($_POST['ishihara_notes'] ?? '');
     } else {
-        $appointment_date = trim($_POST['appointment_date'] ?? '');
-        $appointment_time = trim($_POST['appointment_time'] ?? '');
-        $wear_glasses = $_POST['wear_glasses'] ?? null;
+        $data['wear_glasses'] = $_POST['wear_glasses'] ?? null;
         $symptoms = $_POST['symptoms'] ?? [];
-        $symptoms_str = implode(", ", $symptoms);
-        $concern = trim($_POST['concern'] ?? '');
-
-        $data = [
-            'client_id' => $client_id,
-            'full_name' => $full_name,
-            'suffix' => $suffix,
-            'gender' => $gender,
-            'age' => $age,
-            'phone_number' => $phone_number,
-            'occupation' => $occupation,
-            'appointment_date' => $appointment_date,
-            'appointment_time' => $appointment_time,
-            'wear_glasses' => $wear_glasses,
-            'symptoms' => $symptoms_str,
-            'concern' => $concern,
-            'consent_info' => $consent_info,
-            'consent_reminders' => $consent_reminders,
-            'consent_terms' => $consent_terms
-        ];
+        $data['symptoms'] = implode(", ", $symptoms);
+        $data['concern'] = trim($_POST['concern'] ?? '');
     }
-$type = 'normal';
-if (isset($_POST['certificate_purpose'])) {
-    $type = 'medical';
-} elseif (isset($_POST['ishihara_test_type'])) {
-    $type = 'ishihara';
-}
 
-$appointment = new Appointment($pdo);
-$appointment->bookAppointment($data, $type);
-
+    // 🔹 Save
+    $appointment = new Appointment($pdo);
+    $appointment->bookAppointment($data, $type);
 }
 ?>
