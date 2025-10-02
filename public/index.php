@@ -14,7 +14,7 @@
 </style>
 <body>
     <?php include "../includes/navbar.php" ?>
-
+hello
     <?php include "../includes/footer.php" ?>
 </body>
 </html>
