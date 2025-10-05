@@ -69,12 +69,12 @@
   </style>
 </head>
 <body>
-    <?php include '../includes/navbar.php'; ?>
+
   <div class="carousel">
     <div class="carousel-track">
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
+      <div class="slide"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4" alt="Mountain landscape"></div>
+      <div class="slide"><img src="https://images.unsplash.com/photo-1511593358241-7eea1f3c84e5" alt="Desert landscape"></div>
+      <div class="slide"><img src="https://images.unsplash.com/photo-1501594907352-04cda38ebc29" alt="Ocean landscape"></div>
       <!-- Clone first slide for seamless loop -->
       <div class="slide"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4" alt="Mountain landscape"></div>
     </div>
@@ -85,7 +85,6 @@
     </div>
   </div>
 
-  <?php include '../includes/footer.php'; ?>
   <script>
     const track = document.querySelector('.carousel-track');
     const slides = document.querySelectorAll('.slide');
