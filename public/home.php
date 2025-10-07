@@ -86,8 +86,19 @@
       <div class="dot"></div>
     </div>
   </div>
+
+  <div class="gray-line-area">
+    <div class="gray-line"></div>
+  </div>
+
   
     <section class="brand-and-feature">
+      <div class="brand-and-feature-description">
+        <h2>asdnasd</h2>
+        <p>
+          Lorem ipsum dolor sit amet consectetur adipisicing elit. Esse minima dicta placeat sint et ullam voluptas, reprehenderit aperiam dolore magni quo laboriosam qui sapiente fuga, cum incidunt ipsum ratione laborum.
+        </p>
+      </div>
   <div class="features">
     <div class="brand-logo">
       <img src="../assets/src/image-section.jpg" alt="Brand Logo">
@@ -110,6 +121,10 @@
         <button>Explore</button>
       </div>
     </div>
+  </div>
+  <h1>sdkfasdfsbd</h1>
+  <div class="gray-line-area">
+    <div class="gray-line"></div>
   </div>
 </section>
 

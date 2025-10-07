@@ -39,9 +39,11 @@ body {
   width: 100%;
   min-height: 90vh;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  align-items: center;  /* This keeps horizontal centering */
+  justify-content: flex-start;  /* ADD THIS - aligns to top */
   gap: 40px;
+  padding-top: 40px;  /* ADD THIS - gives breathing room from top */
 }
 
 .brand-logo {
@@ -68,12 +70,30 @@ body {
   gap: 20px;
   flex-wrap: wrap;
 }
+.gray-line-area{
+    width: 100%;
+    max-width: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-left: 1rem;
+    padding-right: 1rem;
+
+}
+.gray-line{
+    width: 100%;
+    height: 2px;
+    background-color: gray;
+    margin-top: 20px;
+    opacity: 0.2;
+    margin-bottom: 20px;
+}
 .card {
     width: 250px;
     background: white;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 5px 6px 9px rgba(0, 0, 0, 0.3);
     display: flex;
     flex-direction: column;
     justify-content: space-between;
