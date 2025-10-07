@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Endless Carousel</title>
+  <title>Home</title>
   <link rel="stylesheet" href="../assets/card.css">
+  <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
   <style>
     * {
       margin: 0;
@@ -130,7 +131,19 @@
 
       <div class="concern-consults">
 
-  </div>
+        <div class="card-consult">
+          <img src="../assets/src/image-consult.png" alt="">
+          <h1>Non-Graded</h1>
+        </div>
+
+        
+        <div class="card-consult">
+          <img src="../assets/src/image-consult.png" alt="">
+          <h1>Non-Graded</h1>
+        </div>
+
+
+      </div>
 
 
   <?php include '../includes/footer.php'; ?>
