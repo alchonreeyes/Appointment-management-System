@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Endless Carousel</title>
+  <link rel="stylesheet" href="../assets/card.css">
   <style>
     * {
       margin: 0;
@@ -66,6 +67,7 @@
     .dot.active {
       background: rgba(255, 255, 255, 1);
     }
+    
   </style>
 </head>
 <body>
@@ -84,6 +86,35 @@
       <div class="dot"></div>
     </div>
   </div>
+  
+    <section class="brand-and-feature">
+  <div class="features">
+    <div class="brand-logo">
+      <img src="../assets/src/image-section.jpg" alt="Brand Logo">
+    </div>
+    <div class="product-feature-row">
+      <div class="card">
+        <img src="../assets/src/image-section1.jpg" alt="Product 1">
+        <button>Explore</button>
+      </div>
+      <div class="card">
+        <img src="../assets/src/product2.jpg" alt="Product 2">
+        <button>Explore</button>
+      </div>
+      <div class="card">
+        <img src="../assets/src/product3.jpg" alt="Product 3">
+        <button>Explore</button>
+      </div>
+      <div class="card">
+        <img src="../assets/src/product4.jpg" alt="Product 4">
+        <button>Explore</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
 
   <?php include '../includes/footer.php'; ?>
   <script src="../actions/home-imageCarousel.js">

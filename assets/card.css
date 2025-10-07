@@ -8,29 +8,30 @@ body {
   font-family: 'Times New Roman', Times, serif;
 }
 
-/* Carousel Styles */
+/* REMOVE OR COMMENT OUT THESE CAROUSEL STYLES - They're already in home.php */
+/*
 .carousel-track {
   display: flex;
-  width: calc(100% * 4); /* 3 slides + 1 clone */
+  width: calc(100% * 4);
   transition: transform 0.5s ease-in-out;
 }
 
 .slide {
-  flex: 0 0 25%; /* Since width is calc(100% * 4), each slide is 25% */
+  flex: 0 0 25%;
   height: 100%;
 }
 
 .slide img {
   width: 100%;
   height: 70vh;
-  object-fit: cover; /* Changed from contain to cover */
+  object-fit: cover;
 }
+*/
 
 /* Brand and Features Section */
 .brand-and-feature {
   width: 100%;
-  padding: 40px 05px;
-  gap: 20px;
+  padding: 40px 20px;
   background: #f0f0f0;
 }
 
@@ -38,7 +39,7 @@ body {
   width: 100%;
   min-height: 90vh;
   display: flex;
-  flex-direction: column; /* Stack vertically */
+  flex-direction: column;
   align-items: center;
   gap: 40px;
 }
@@ -68,16 +69,15 @@ body {
   flex-wrap: wrap;
 }
 .card {
-  width: 200px;
-  height: auto;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  transition: transform 0.3s ease;
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: transform 0.3s ease;
 }
 
 .card:hover {
@@ -93,7 +93,7 @@ body {
 .card button {
   width: 100%;
   padding: 15px;
-  background: #1e3a8a; /* Blue color like in your Figma */
+  background: #1e3a8a;
   color: white;
   border: none;
   cursor: pointer;
