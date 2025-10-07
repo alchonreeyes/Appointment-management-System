@@ -144,4 +144,6 @@ body {
 
 .card button:hover {
   background: #1e40af;
+  pointer-events: stroke;
 }
+

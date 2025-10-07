@@ -30,8 +30,22 @@
     box-shadow: 5px 6px 9px rgba(0, 0, 0, 0.3);    
 }
 .card-consult:hover {
-  transform: translateY(-5px);
+  transform: translateY(-2px);
 }
 .card-consult h1{
     padding: 10px;
+}
+.card-consult button{    
+    height: 3.5rem;
+    background: none;
+    outline: none;
+    border: solid black 2px;
+    border-radius: 10px;
+    transition: 0.5s ease;
+}
+
+.card-consult button:hover{
+    cursor: pointer;
+    background-color: black;
+    color: white;
 }
