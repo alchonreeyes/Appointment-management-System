@@ -97,11 +97,11 @@ body {
 .brand-and-feature-description h1 {
   font-size: 4rem;
   color: rgb(0, 0, 184);
-  margin-bottom: 15px;
+  margin-bottom: 2px;
   font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
 .brand-and-feature-description p {
-  padding: 20px 5%; /* Use percentage for responsive horizontal padding */
+  padding: 10px 5%; /* Use percentage for responsive horizontal padding */
   color: black;
   text-align: center;
   font-size: 1rem;

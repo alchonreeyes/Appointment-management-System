@@ -93,12 +93,7 @@
 
   
     <section class="brand-and-feature">
-      <div class="brand-and-feature-description">
-        <h1>asdnasd</h1>
-        <p>
-          Lorem ipsum dolor sit amet consectetur adipisicing elit. Esse minima dicta placeat sint et ullam voluptas, reprehenderit aperiam dolore magni quo laboriosam qui sapiente fuga, cum incidunt ipsum ratione laborum.
-        </p>
-      </div>
+      
   <div class="features">
     <div class="brand-logo">
       <img src="../assets/src/image-section.jpg" alt="Brand Logo">
@@ -126,7 +121,12 @@
     <div class="gray-line"></div>
   </div>
 </section>
-
+<div class="brand-and-feature-description">
+        <h1>EYE MASTER</h1>
+        <p>
+          Prescision, Meet Style.
+        </p>
+      </div>
 
 
 
