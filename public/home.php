@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Home</title>
   <link rel="stylesheet" href="../assets/card.css">
-  <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
+
   <style>
     * {
       margin: 0;
@@ -226,6 +226,68 @@
     .dot.active {
       background: rgba(255, 255, 255, 1);
     }
+    .concern-consults{
+  width: 100%;
+  min-height: 65vh; /* Sets a minimum height of 70% of the viewport height */
+  background-color: rgb(218, 217, 217); /* A light gray background color */
+  padding: 40px 20px; /* Adds some spacing inside the section */
+  display: flex; /* Enables flexbox layout */
+  justify-content: center; /* Centers the items horizontally */
+  align-items: center; /* Centers the items vertically */
+  gap: 10rem; /* Adds space between the items */
+  flex-wrap: wrap; /* Allows items to wrap onto the next line on smaller screens */
+}
+
+.card-consult{
+    width: 400px;
+    height: 400px;
+    border-radius: 8px;
+    overflow: hidden;
+    
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    text-align: center;
+    transition: transform 0.3s ease;
+}
+.card-consult img{
+    width: 100%;
+    
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: 5px 6px 9px rgba(0, 0, 0, 0.3);    
+}
+.card-consult:hover {
+  transform: translateY(-2px);
+}
+.card-consult h1{
+    padding: 10px;
+    font-weight: 600;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+.card-consult p{
+    color: black;
+    font-weight: 600;
+    text-align: center;
+    padding: 10px;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.card-consult button{    
+    height: 3.5rem;
+    background: none;
+    outline: none;
+    border: solid black 2px;
+    border-radius: 10px;
+    transition: 0.5s ease;
+}
+
+
+.card-consult button:hover{
+    cursor: pointer;
+    background-color: black;
+    color: white;
+}
     
   </style>
 </head>
@@ -292,17 +354,25 @@
         <div class="card-consult">
           <img src="../assets/src/image-consult.png" alt="">
            <h1>Non-Graded</h1>
-            <p>
-             Consult with Us
-            </p>
+            
           <button>See more</button>
         </div>
-        asdsd
         
+        <div class="card-consult">
+          <img src="../assets/src/image-consult.png" alt="">
+           <h1>Non-Graded</h1>
+            
+          <button>See more</button>
+        </div>
 
+        <div class="card-consult">
+          <img src="../assets/src/image-consult.png" alt="">
+           <h1>Non-Graded</h1>
+            
+          <button>See more</button>
+        </div>
+        
       </div>
-
-
   <?php include '../includes/footer.php'; ?>
   <script src="../actions/home-imageCarousel.js">
     
