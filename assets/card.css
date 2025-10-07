@@ -145,3 +145,14 @@ body {
 .card button:hover {
   background: #1e40af;
 }
+.concern-consults{
+  width: 100%;
+  min-height: 65vh; /* Sets a minimum height of 70% of the viewport height */
+  background-color: gray; /* A light gray background color */
+  padding: 40px 20px; /* Adds some spacing inside the section */
+  display: flex; /* Enables flexbox layout */
+  justify-content: center; /* Centers the items horizontally */
+  align-items: center; /* Centers the items vertically */
+  gap: 20px; /* Adds space between the items */
+  flex-wrap: wrap; /* Allows items to wrap onto the next line on smaller screens */
+}
