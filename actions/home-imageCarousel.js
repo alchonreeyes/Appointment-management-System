@@ -1,4 +1,4 @@
-const track = document.querySelector('.carousel-track');
+     const track = document.querySelector('.carousel-track');
     const slides = document.querySelectorAll('.slide');
     const dots = document.querySelectorAll('.dot');
     const totalSlides = slides.length - 1; // Minus the cloned slide

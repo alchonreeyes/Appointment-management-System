@@ -93,59 +93,6 @@
                 <a href="#" class="signin">Sign In & Sign Up</a>
                 <a href="#" class="book-btn">Book Appointment</a>
             </div>
-             <div class="dropdown">
-            <div class="dropdown-content">
-                <ul>
-                    <h4>BRANDS</h4>
-                    <li><a href="#">Coach</a></li>
-                    <li><a href="#">Armani Exchange</a></li>
-                    <li><a href="#">ARNETTE</a></li>
-                    <li><a href="#">Celine</a></li> 
-                    <li><a href="#">Roman King</a></li> 
-                    <li><a href="#">C. Lindbergh</a></li>
-                    <br>
-                </ul>
-                <ul>
-                    <li><a href="">Memoflex</a></li>
-                    <li><a href="">Kate Spade New York</a></li>
-                    <li><a href="">Herman Miller</a></li>
-                    <li><a href="">Hushpuppies</a></li>
-                    <li><a href="">Jiashie eyes</a></li>
-                    <li><a href="#">Airflex</a></li>    
-                </ul>
-                <ul>
-                    <h4>EYEWEAR FRAMES</h4>
-                        <li><a href="#">Acetate</a></li>
-                        <li><a href="#">B Titanium</a></li>
-                        <li><a href="#">Metal</a></li>
-                        <li><a href="#">Plastic</a></li>    
-                        <li><a href="#">Plastic/Metal</a></li>    
-                        <li><a href="#">Rubber</a></li>    
-                            <br>
-                </ul>
-                <ul>
-                    <li><a href="#">Rubber/Metal</a></li>
-                    <li><a href="#">Rubber/Plastic</a></li>
-                    <li><a href="#">Titanium</a></li>
-                    <li><a href="#">Titanium/Acatate</a></li>
-                    <li><a href="#">Titanium/Wood</a></li>
-                    <li><a href="#">Wood</a></li>
-                </ul>
-                <ul>
-                    <h4>LENSES</h4>
-                        <li><a href="#">Apollo Lenses</a></li>
-                        <li><a href="#">Essilor Lenses</a></li>
-                        <li><a href="#">Hoya Lenses</a></li>
-                        <br>
-                        <br>
-                        <br>
-                        <br>
-                        <br>
-                        <br>
-                </ul>    
-            </div>
-        </div>
-
         </div>
 
     </nav>
