@@ -147,3 +147,12 @@ body {
   pointer-events: stroke;
 }
 
+.card-consult button{    
+    height: 3.5rem;
+    background: none;
+    outline: none;
+    border: solid black 2px;
+    border-radius: 10px;
+    transition: 0.5s ease;
+}
+

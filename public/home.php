@@ -133,7 +133,8 @@
 
         <div class="card-consult">
           <img src="../assets/src/image-consult.png" alt="">
-          <h1>Non-Graded</h1>
+          <h1>Non-Graded Glasses</h1>
+          <p>Discover Glasses You Like</p>
           <button>See more</button>
         </div>
 
@@ -290,10 +291,13 @@
 
         <div class="card-consult">
           <img src="../assets/src/image-consult.png" alt="">
-          <h1>Non-Graded</h1>
+           <h1>Non-Graded</h1>
+            <p>
+             Consult with Us
+            </p>
           <button>See more</button>
         </div>
-        
+        asdsd
         
 
       </div>
