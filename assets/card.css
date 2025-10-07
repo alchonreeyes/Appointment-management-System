@@ -31,13 +31,14 @@ body {
 /* Brand and Features Section */
 .brand-and-feature {
   width: 100%;
+  
   padding: 40px 20px;
   background: #f0f0f0;
 }
 
 .features {
   width: 100%;
-  min-height: 90vh;
+  min-height: 10vh;
   display: flex;
   flex-direction: row;
   align-items: center;  /* This keeps horizontal centering */
@@ -88,8 +89,27 @@ body {
     opacity: 0.2;
     margin-bottom: 20px;
 }
+.brand-and-feature-description {
+  flex: 1;
+  padding: 10px;
+  text-align: center;
+}
+.brand-and-feature-description h1 {
+  font-size: 4rem;
+  color: rgb(0, 0, 184);
+  margin-bottom: 15px;
+  font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+.brand-and-feature-description p {
+  padding: 20px 5%; /* Use percentage for responsive horizontal padding */
+  color: black;
+  text-align: center;
+  font-size: 1rem;
+  font-family: 'Times New Roman', Times, serif;
+}
+
 .card {
-    width: 250px;
+    width: 260px;
     background: white;
     border-radius: 8px;
     overflow: hidden;

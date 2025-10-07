@@ -94,7 +94,7 @@
   
     <section class="brand-and-feature">
       <div class="brand-and-feature-description">
-        <h2>asdnasd</h2>
+        <h1>asdnasd</h1>
         <p>
           Lorem ipsum dolor sit amet consectetur adipisicing elit. Esse minima dicta placeat sint et ullam voluptas, reprehenderit aperiam dolore magni quo laboriosam qui sapiente fuga, cum incidunt ipsum ratione laborum.
         </p>
@@ -109,20 +109,19 @@
         <button>Explore</button>
       </div>
       <div class="card">
-        <img src="../assets/src/product2.jpg" alt="Product 2">
+        <img src="../assets/src/image-section.jpg" alt="Product 2">
         <button>Explore</button>
       </div>
       <div class="card">
-        <img src="../assets/src/product3.jpg" alt="Product 3">
+        <img src="../assets/src/image-section.jpg" alt="Product 3">
         <button>Explore</button>
       </div>
       <div class="card">
-        <img src="../assets/src/product4.jpg" alt="Product 4">
+        <img src="../assets/src/image-section.jpg" alt="Product 4">
         <button>Explore</button>
       </div>
     </div>
   </div>
-  <h1>sdkfasdfsbd</h1>
   <div class="gray-line-area">
     <div class="gray-line"></div>
   </div>
