@@ -165,7 +165,7 @@
            <h1> Eyewear accessories</h1>
          </div>
          <div class="accessories-img">
-          <img src="../assets/src/book.png" alt="">
+          <img src="../assets/src/book1.png" alt="">
          </div>
           
 
