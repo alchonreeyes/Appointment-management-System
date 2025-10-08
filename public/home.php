@@ -118,9 +118,11 @@
       </div>
     </div>
   </div>
+
   <div class="gray-line-area">
     <div class="gray-line"></div>
   </div>
+
 </section>
 <div class="brand-and-feature-description">
         <h1>EYE MASTER</h1>
@@ -139,20 +141,40 @@
         </div>
           
         <div class="card-consult">
-          <img src="../assets/src/image-consult.png" alt="">
-          <h1>Non-Graded Glasses</h1>
-          <p>Discover Glasses You Like</p>
+          <img src="../assets/src/book.png" alt="">
+          <h1>Contact with Us</h1>
+          <p>Personalized recommendation starts here</p>
           <button>See more</button>
         </div>
 
-        
-        
-
-
+      
+      </div>
+      
+      <div class="gray-line-area">
+        <div class="gray-line"></div>
       </div>
 
+      <div class="bottom-description">
+        <h1 style="text-align: center;">We've Got your eyes covered</h1>
+        <p style="text-align: center;">when you browse glasses online, it should be safe. With over 12 years of experience.</p>
+      </div>
+      
+      <br>
+      <div class="accessories">
+        <div class="note">
+           <h1> Eyewear accessories</h1>
+         </div>
+         <div class="accessories-img">
+          <img src="../assets/src/book.png" alt="">
+         </div>
+          
+
+      </div>
 
   <?php include '../includes/footer.php'; ?>
   <script src="../actions/home-imageCarousel.js">
     
   </script>
+  
+</body>
+</html>
