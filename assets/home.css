@@ -76,11 +76,11 @@
 }
 /* accessories  */
 
-.accessories{
+.accessories{ /* hey there was a problem here, the accessories was the parent, div.note is h1 and p, and div.accessories-img is just img tag, can you help be thiis gone for responsiveness  */
     width: 100%;
     height: 330px; /* Sets a minimum height of 70% of the viewport height */
     background-color: rgb(145, 145, 145); /* A light gray background color */
-    padding-left: 40px; /* Adds some spacing inside the section */
+    padding-left: 70px; /* Adds some spacing inside the section */
     display: flex; /* Enables flexbox layout */
     justify-content: space-between; /* Centers the items horizontally */
     align-items: center; /* Centers the items vertically */
@@ -92,6 +92,27 @@
 .accessories .note h1{
         font-size: 3rem;
         color: white;
+}
+.accessories .note p{
+    font-size: 1.2rem; /* i want this to be like 2rem but the image tag on accessories-img is stacking on it i want it permanently in the right side and if not desktop view the responsiveness must be this img tag must gone and */
+    padding: 10px 0;
+    text-align: left;    
+}
+.accessories .note button{
+    height: 3.5rem;
+    width: 10rem;
+    background: none;
+    outline: none;
+    border: solid white 2px;
+    border-radius: 10px;
+    color: white;
+    font-size: 1.2rem;
+    transition: 0.4s ease-in-out;
+}
+.accessories .note button:hover{
+    cursor: pointer;
+    background-color: white;
+    color: black;
 }
 
 .accessories-img{

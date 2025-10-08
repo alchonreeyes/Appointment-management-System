@@ -163,11 +163,13 @@
       <div class="accessories">
         <div class="note">
            <h1> Eyewear accessories</h1>
-         </div>
+           <p>Keep your glasses clean and safe with our stylish cases, wipes, cords, and more.</p>
+           <button>About us</button>
+          </div>
+
          <div class="accessories-img">
           <img src="../assets/src/book1.png" alt="">
          </div>
-          
 
       </div>
 
