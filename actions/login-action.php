@@ -16,7 +16,7 @@ if (isset($_POST['login'])) {
     if ($user && password_verify($password, $user['password_hash'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['email'] = $user['email'];
-        header("Location: ../public/index.php");
+        header("Location: ../public/home.php");
         exit;
     } else {
         header("Location: ../public/login.php?error=1");
