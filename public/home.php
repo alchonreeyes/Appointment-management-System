@@ -172,6 +172,49 @@
          </div>
 
       </div>
+      <br>
+      <div class="gray-line-area">
+        <div class="gray-line"></div>
+      </div>
+      
+      <div class="bottom-description">
+        <h1 style="text-align: center;">Find The Perfect Fit</h1>
+      </div>
+
+      <div class="eye-glasses">
+        <div class="glasses-card">
+          <img src="../assets/src/eyeglasses.png" alt="">
+          <div class="glasses-description">
+            <h2>Eyeglasses sports</h2>
+            <p>Fasionable eyewear for every mood, Every day</p>
+            <button>see more</button>
+          </div>
+          
+          </div>
+          <div class="flex-column">
+
+            <div class="glasses-card">
+              <img src="../assets/src/book1.png" alt="">
+              <div class="glasses-description">
+                <h2>Eyeglasses sports</h2>
+                <p>Fasionable eyewear for every mood, Every day</p>
+                <button>see more</button>
+            </div>
+          </div>
+          <div class="glasses-card">
+              <img src="../assets/src/book1.png" alt="">
+              <div class="glasses-description">
+            <h2>Eyeglasses sports</h2>
+            <p>Fasionable eyewear for every mood, Every day</p>
+            <button>see more</button>
+              </div>
+          </div>
+          </div>
+        </div>
+          </div>
+      </div>
+      
+
 
   <?php include '../includes/footer.php'; ?>
   <script src="../actions/home-imageCarousel.js">
