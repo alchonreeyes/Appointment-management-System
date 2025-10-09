@@ -7,67 +7,7 @@
   <link rel="stylesheet" href="../assets/card.css">
   <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      font-family: Arial, sans-serif;
-      background: #f0f0f0;
-    }
-
-    .carousel {
-      width: 100%;
-      height: 70vh;
-      overflow: hidden;
-      position: relative;
-      background: #000;
-    }
-
-    .carousel-track {
-      display: flex;
-      height: 100%;
-      transition: transform 0.6s ease-in-out;
-    }
-
-    .slide {
-      min-width: 100%;
-      height: 100%;
-      position: relative;
-    }
-
-    .slide img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover; /* This maintains aspect ratio and fills the container */
-      display: block;
-    }
-
-    /* Optional: Add navigation dots */
-    .carousel-dots {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      display: flex;
-      gap: 10px;
-      z-index: 10;
-    }
-
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    .dot.active {
-      background: rgba(255, 255, 255, 1);
-    }
+ 
     
   </style>
 </head>
@@ -213,7 +153,56 @@
         </div>
           </div>
       </div>
+
+      <div class="gray-line-area">
+        <div class="gray-line"></div>
+      </div>
       
+      <div class="feature-highlight">
+  <h1>EYEWEAR FOR EVERYONE®</h1>
+  <h2>STYLE & CLARITY MADE FOR YOU</h2>
+</div>
+
+<div class="feature-products">
+  <div class="features">
+    
+    <!-- Card 1 -->
+    <div class="cards">
+      <img src="../assets/src/eyeglasses.png" alt="Style for Every Scene">
+      <div class="cards-detail">
+        <h3>STYLE FOR<br>EVERY SCENE</h3>
+        <p>Fits for every</p>
+        <button class="view-more-btn">View More</button>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="cards">
+      <img src="../assets/src/image-section1.jpg" alt="Designer Vibes">
+      <div class="cards-detail">
+        <h3>Designer<br>Vibes</h3>
+        <p>Effortless looks for every<br>vibe.</p>
+        <button class="view-more-btn">View More</button>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="cards">
+      <img src="../assets/src/image-section.jpg" alt="Privacy Activated">
+      <div class="cards-detail">
+        <h3>Privacy<br>Activated</h3>
+        <p>Disrupt unwanted<br>tracking</p>
+        <button class="view-more-btn">View More</button>
+      </div>
+    </div>
+
+  </div>
+  
+  <div class="function-buttons">
+    <button>&lt;</button>
+    <button>&gt;</button>
+  </div>
+</div>
 
 
   <?php include '../includes/footer.php'; ?>

@@ -1,3 +1,65 @@
+   * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f0f0;
+    }
+
+    .carousel {
+      width: 100%;
+      height: 70vh;
+      overflow: hidden;
+      position: relative;
+      background: #000;
+    }
+
+    .carousel-track {
+      display: flex;
+      height: 100%;
+      transition: transform 0.6s ease-in-out;
+    }
+
+    .slide {
+      min-width: 100%;
+      height: 100%;
+      position: relative;
+    }
+
+    .slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover; /* This maintains aspect ratio and fills the container */
+      display: block;
+    }
+
+    /* Optional: Add navigation dots */
+    .carousel-dots {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      z-index: 10;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.5);
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .dot.active {
+      background: rgba(255, 255, 255, 1);
+    }
+
 .concern-consults{
   width: 100%;
   min-height: 65vh; /* Sets a minimum height of 70% of the viewport height */
@@ -191,4 +253,267 @@
     cursor: pointer;
     background-color: black;
     color: white;
+}
+
+.feature-highlight {
+    width: 100%;
+    min-height: 30vh;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background-color: #f2f2f2;
+    margin: 0;
+}
+
+.feature-highlight h1 {
+    font-size: 2.5rem;
+    color: #000;
+    margin-bottom: 10px;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.feature-highlight h2 {
+    font-size: 1rem;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    color: #333;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+}
+
+/* Feature Products Section */
+.feature-products {
+    width: 100%;
+    padding: 40px 20px;
+    background-color: #ffffff;
+}
+
+.features {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    justify-content: center;
+    align-items: stretch;
+    flex-wrap: wrap;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Individual Cards */
+.cards {
+    position: relative;
+    width: 300px;
+    height: 400px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease;
+}
+
+.cards:hover {
+    transform: translateY(-5px);
+}
+
+.cards img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* Cards Detail Overlay */
+.cards-detail {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 30px 20px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.3) 70%, transparent 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.cards-detail h3 {
+    font-size: 1.8rem;
+    font-weight: bold;
+    margin-bottom: 8px;
+    line-height: 1.2;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+.cards-detail p {
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+    line-height: 1.4;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+/* View More Button */
+.view-more-btn {
+    background-color: white;
+    color: black;
+    border: none;
+    padding: 10px 25px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
+.view-more-btn:hover {
+    background-color: #333;
+    color: white;
+}
+
+/* Navigation Buttons */
+.function-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.function-buttons button {
+    background-color: white;
+    color: black;
+    border: none;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.function-buttons button:hover {
+    background-color: #ddd;
+    transform: scale(1.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .features {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .cards {
+        width: 100%;
+        max-width: 350px;
+    }
+    
+    .feature-highlight h1 {
+        font-size: 2rem;
+    }
+}
+
+/* Media Query for tablets and smaller screens */
+@media (max-width: 768px) {
+    .concern-consults {
+        gap: 2rem;
+        padding: 20px 10px;
+    }
+
+    .card-consult {
+        width: 300px;
+        height: 350px;
+    }
+
+    .accessories {
+        height: auto;
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 2rem;
+    }
+
+    .accessories .note h1 {
+        font-size: 2rem;
+    }
+
+    .accessories-img {
+        display: none; /* Hides the image on tablet view as requested */
+    }
+
+    .eye-glasses {
+        padding: 20px 10px;
+    }
+
+    .glasses-description h2 {
+        font-size: 1.8rem;
+    }
+
+    .feature-highlight h1 {
+        font-size: 2rem;
+    }
+}
+
+/* Media Query for mobile phones */
+@media (max-width: 480px) {
+    .card-consult {
+        width: 100%;
+        max-width: 280px;
+        height: 320px;
+    }
+
+    .accessories .note h1 {
+        font-size: 1.5rem;
+    }
+
+    .accessories .note p {
+        font-size: 1rem;
+    }
+
+    .accessories .note button {
+        height: 3rem;
+        width: 8rem;
+        font-size: 1rem;
+    }
+
+    .glasses-description h2 {
+        font-size: 1.5rem;
+    }
+
+    .glasses-description p {
+        font-size: 12px;
+    }
+
+    .glasses-description button {
+        height: 2.5rem;
+        width: 8rem;
+        font-size: 1rem;
+    }
+
+    .feature-highlight h1 {
+        font-size: 1.5rem;
+    }
+
+    .feature-highlight h2 {
+        font-size: 0.9rem;
+    }
+
+    .cards {
+        height: 350px;
+    }
+
+    .cards-detail h3 {
+        font-size: 1.5rem;
+    }
+
+    .function-buttons button {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
 }
