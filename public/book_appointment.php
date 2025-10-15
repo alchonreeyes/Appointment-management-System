@@ -40,7 +40,7 @@ $getpdo = $pdo->getConnection();
     <div class="content-wrapper">
         <div class="book-appointment">
             <div class="appointment-wrapper">
-                <h1>Choose a Service</h1>
+                <h1>Choose a Services</h1>
                 <p>Please select the type of service you require from the options below.</p>
                 <button class="appointment">Appointment</button>
                 <button class="Medical">Medical Certificate</button>
