@@ -16,8 +16,17 @@ if (isset($_POST['login'])) {
     if ($user && password_verify($password, $user['password_hash'])) {
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['email'] = $user['email'];
-        header("Location: ../public/home.php");
-        exit;
+        $_SESSION['role'] = $user['role'];
+
+         if ($user['role'] === 'admin' || $user['role'] === 'staff') {
+            header('Location: ../admin/dashboard.php');
+            exit;
+        } else {
+            // Redirect based on role
+            header("Location: ../public/home.php");
+            exit;
+        }
+
     } else {
         header("Location: ../public/login.php?error=1");
         exit;

@@ -20,7 +20,9 @@
             <div class="logo-container">
             <div class="logo">
                 <img src="" alt="Logo">
+                
             </div>
+            <p class="logo-name">Eye-Master Clinic</p>
             
             <!-- Dropdown moved inside logo-container -->
             <div class="dropdown">
