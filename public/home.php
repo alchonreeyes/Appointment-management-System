@@ -107,9 +107,6 @@
            <button>About us</button>
           </div>
 
-         <div class="accessories-img">
-          <img src="../assets/src/book1.png" alt="">
-         </div>
 
       </div>
       <br>
