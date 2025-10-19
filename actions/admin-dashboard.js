@@ -1,0 +1,1 @@
+const filtertype = document.getElementById('filterType')
