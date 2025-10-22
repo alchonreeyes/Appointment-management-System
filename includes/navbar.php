@@ -1,7 +1,13 @@
-<?php
-session_start();
-?>
+<?php 
+include '../config/db.php';
 
+
+$db = new Database();
+$pdo = $db->getConnection();
+
+
+
+?>
 
 <!DOCTYPE html>
 <html lang="en">
