@@ -1,3 +1,8 @@
+<?php
+session_start();
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -90,7 +95,7 @@
 
             <div class="nav-config">
                 <i class="fa-regular fa-user"></i>
-                <a href="#" class="signin">Sign In & Sign Up</a>
+                <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
                 <a href="#" class="book-btn">Book Appointment</a>
             </div>
         </div>
