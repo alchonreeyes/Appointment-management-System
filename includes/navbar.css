@@ -25,6 +25,9 @@ nav {
     width: 100%;
     background: white;
     border-bottom: 1px solid #ccc;
+    position: sticky;
+    top: 0;
+    z-index: 999;
 }
 
 .nav-section {
@@ -34,7 +37,7 @@ nav {
     padding: 10px 20px;
 }
 
-/* Logo container - NEW */
+/* Logo container */
 .logo-container {
     position: relative;
     display: inline-block;
@@ -43,7 +46,6 @@ nav {
 .logo {
     cursor: pointer;
     transition: transform 0.3s ease-in-out;
-    color: #333;
 }
 
 .logo:hover {
@@ -51,10 +53,10 @@ nav {
 }
 
 .logo img {
-    height: 40px;
-    transition: ease-in-out 0.3s;
+    height: 45px;
 }
 
+/* Navigation Links */
 .nav-links {
     display: flex;
     align-items: center;
@@ -64,26 +66,32 @@ nav {
 .nav-links ul {
     display: flex;
     list-style: none;
-    gap: 30px;
+    gap: 25px;
 }
 
 .nav-links ul li a {
     text-decoration: none;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     color: #004aad;
+    transition: color 0.3s ease;
 }
 
+.nav-links ul li a:hover {
+    color: #007aff;
+}
+
+/* Search box */
 .search input {
     width: 250px;
-    height: 30px;
+    height: 32px;
     border-radius: 20px;
     border: 1px solid #aaa;
-    padding: 0 10px;
-    font-size: 12px;
+    padding: 0 12px;
+    font-size: 13px;
 }
 
-/* Right section */
+/* Right section (user + book button) */
 .nav-config {
     display: flex;
     align-items: center;
@@ -91,8 +99,9 @@ nav {
 }
 
 .nav-config i {
-    font-size: 18px;
+    font-size: 20px;
     color: #333;
+    cursor: pointer;
 }
 
 .nav-config .signin {
@@ -102,31 +111,35 @@ nav {
 }
 
 .book-btn {
-    background: red;
+    background: #004aad;
     color: white;
     padding: 7px 15px;
     border-radius: 5px;
     text-decoration: none;
     font-weight: bold;
+    transition: background 0.3s ease;
 }
 
-/* Dropdown styles - REVISED */
+.book-btn:hover {
+    background: #003080;
+}
+
+/* Dropdown for brands */
 .dropdown {
     display: none;
     position: absolute;
     top: 100%;
     left: 0;
-    background: #ececec;
-    width: 100vw; /* Full viewport width */
+    background: #f3f3f3;
+    width: 100vw;
     height: 48vh;
-    border: 1px solid black;
+    border-top: 1px solid #ccc;
     z-index: 1000;
     opacity: 0;
     transform: translateY(-10px);
     transition: all 0.3s ease;
 }
 
-/* Show dropdown only on logo container hover - CHANGED */
 .logo-container:hover .dropdown {
     display: block;
     opacity: 1;
@@ -136,38 +149,92 @@ nav {
 .dropdown-content {
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
     height: 100%;
-    gap: 70px;
+    gap: 60px;
+    padding-top: 20px;
 }
 
-.dropdown .dropdown-content ul {
+.dropdown-content ul {
     list-style: none;
     padding: 0;
 }
 
-.dropdown .dropdown-content ul li {
-    margin: 15px 0;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 0.8rem;
+.dropdown-content ul li {
+    margin: 10px 0;
+    font-size: 0.9rem;
 }
 
-h4 {
-    font-size: 1.1rem;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-weight: bold;
-}
-
-.dropdown .dropdown-content ul li a {
+.dropdown-content ul li a {
     text-decoration: none;
-    color: black;
-    transition: color 0.3s ease;
+    color: #333;
 }
 
-.dropdown .dropdown-content ul li a:hover {
+.dropdown-content ul li a:hover {
     color: #004aad;
 }
 
-.dropdown .dropdown-content ul li a:nth-child(2) {
+.dropdown-content h4 {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #004aad;
+}
+
+/* ✅ User dropdown menu (for logged-in state) */
+.user-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.user-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #004aad;
+    font-size: 1.6rem;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 110%;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    padding: 10px;
+    min-width: 150px;
+}
+
+.dropdown-menu a {
+    display: block;
+    padding: 8px 12px;
     text-decoration: none;
+    color: #333;
+    transition: background 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+    background: #f5f5f5;
+}
+
+.user-menu:hover .dropdown-menu {
+    display: block;
+}
+
+/* ✅ Responsive design */
+@media (max-width: 768px) {
+    .nav-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .nav-links ul {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .search input {
+        width: 200px;
+    }
 }

@@ -1,13 +1,9 @@
-<?php 
-include '../config/db.php';
-
-
-$db = new Database();
-$pdo = $db->getConnection();
-
-
-
+<?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 ?>
+  
 
 <!DOCTYPE html>
 <html lang="en">
@@ -100,10 +96,27 @@ $pdo = $db->getConnection();
             </div>
 
             <div class="nav-config">
-                <i class="fa-regular fa-user"></i>
-                <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
-                <a href="#" class="book-btn">Book Appointment</a>
+    <?php if (!isset($_SESSION['user_id'])): ?>
+        <!-- 👤 Not logged in -->
+        <i class="fa-regular fa-user"></i>
+        <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
+        <a href="../public/appointment.php" class="book-btn">Book Appointment</a>
+    <?php else: ?>
+        <!-- ✅ Logged in -->
+        <div class="user-menu">
+            <button class="user-icon">
+                <i class="fa-solid fa-user-circle"></i>
+            </button>
+            <div class="dropdown-menu">
+                <a href="../public/profile.php">Profile</a>
+                <a href="../public/my-appointments.php">My Appointments</a>
+                <a href="../public/settings.php">Settings</a>
+                <a href="../actions/logout.php">Logout</a>
             </div>
+        </div>
+    <?php endif; ?>
+</div>
+
         </div>
 
     </nav>
