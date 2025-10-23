@@ -88,6 +88,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 <ul>
                     <li><a href="#">About</a></li>
                     <li><a href="#">Category</a></li>
+                    <li><a href="../public/home.php">Home</a></li>
                     <li><a href="#">Brands</a></li>
                 </ul>
                 <div class="search">
