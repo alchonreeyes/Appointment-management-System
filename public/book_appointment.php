@@ -23,13 +23,22 @@ $getpdo = $pdo->getConnection();
             flex-direction: column;
             min-height: 100vh;
             margin: 0;
+                background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.9)), url("../assets/src/eyewear-share.jpg");
+    height: 100%;
+    width: 100%;
+    background-size: cover;
+    background-repeat: no-repeat;
         }
         .content-wrapper {
             flex: 1;
             display: flex;
             justify-content: center;
             align-items: center;
+            width: 100%;
+            height: auto;
+            margin: 1rem;
         }
+
        
 
     </style>
@@ -43,9 +52,22 @@ $getpdo = $pdo->getConnection();
                 <h1>Choose a Services</h1>
                 <p>Please select the type of service you require from the options below.</p>
                 <button class="appointment">Appointment</button>
-                <button class="Medical">Medical Certificate</button>
-                <button class="Ishihara">Ishihara Appointment</button>
             </div>
+            
+            <div class="appointment-wrapper">
+                <h1>Choose a Services</h1>
+                <p>Please select the type of service you require from the options below.</p>
+                <button class="appointment">Appointment</button>
+            </div>
+
+            <div class="appointment-wrapper">
+                <h1>Choose a Services</h1>
+                <p>Please select the type of service you require from the options below.</p>
+                <button class="appointment">Appointment</button>
+            </div>
+
+            <div class="medical-wrapper"></div>
+            
         </div>
     </div>
     
@@ -54,28 +76,5 @@ $getpdo = $pdo->getConnection();
     
     <?php include '../includes/footer.php'; ?>
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const target = document.querySelector('.appointment-wrapper');
-
-            const observer = new IntersectionObserver((entries, observer) => {
-                entries.forEach(entry => {
-                    // If the element is in the viewport
-                    if (entry.isIntersecting) {
-                        // Add the 'is-visible' class to trigger the animation
-                        entry.target.classList.add('is-visible');
-                        // Stop observing the element so the animation only happens once
-                        observer.unobserve(entry.target);
-                    }
-                });
-            }, {
-                // Optional: trigger when 50% of the element is visible
-                threshold: 0.5 
-            });
-
-            // Start observing the target element
-            observer.observe(target);
-        });
-    </script>
 </body>
 </html>
