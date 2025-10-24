@@ -20,8 +20,8 @@ include '../config/db.php';
     <link rel="stylesheet" href="../assets//appointment.css">
 </head>
 <body>
-<?php include '../includes/navbar.php'; ?>
-
+  
+  <?php include '../includes/navbar.php'; ?>
 <div class="form-container">
      <div class="header">
             <h4>eye glasses exam form</h4>

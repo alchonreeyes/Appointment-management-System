@@ -7,7 +7,9 @@
   <link rel="stylesheet" href="../assets/card.css">
   <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
   <style>
- 
+    body{
+       font-family: Arial, sans-serif;
+    }
     
   </style>
 </head>

@@ -1,3 +1,11 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+body{
+     font-family: Arial, sans-serif;
+}
+
 /* General Body and Container Styles */
 .appointment-container {
     max-width: 800px;
