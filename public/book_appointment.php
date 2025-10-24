@@ -41,7 +41,7 @@ $getpdo = $pdo->getConnection();
             <!-- Vision7 Card -->
             <div class="appointment-wrapper vision7">
                 <div class="card-header">
-                    <h1 class="brand-name">vision<span class="highlight">7</span></h1>
+                    <h1 class="brand-name">Appointment <br> <span class="highlight">Schedule</span></h1>
                     <h2 class="service-title">State-of-the-Art Eye Exam</h2>
                     <p class="service-description">Our state-of-the-art eye examination can provide a visual health checks to a different extent based on your age, lifestyle and specific needs</p>
                 </div>
@@ -108,13 +108,87 @@ $getpdo = $pdo->getConnection();
                     </div>
                 </div>
                 
-                <button class="appointment-btn">TRY IT NOW</button>
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/appointment.php">TRY IT NOW</a>
+            </div>
+            <div class="appointment-wrapper vision7">
+                <div class="card-header">
+                    <h1 class="brand-name">Medical
+                        <br>
+                        <span class="highlight">Appointment</span></h1>
+                    <h2 class="service-title">State-of-the-Art Eye Exam</h2>
+                    <p class="service-description">Our state-of-the-art eye examination can provide a visual health checks to a different extent based on your age, lifestyle and specific needs</p>
+                </div>
+                
+                <div class="benefits-list">
+                    <div class="benefit-row">
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Case History</span>
+                        </div>
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Binocular Eye Exam</span>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-row">
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Visual Acuity</span>
+                        </div>
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Visual Eye Exam</span>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-row">
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Objective Refraction</span>
+                        </div>
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Diagnosis</span>
+                        </div>
+                    </div>
+                    
+                    <div class="benefit-row">
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Subjective Refraction</span>
+                        </div>
+                        <div class="benefit-item">
+                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            <span>Ishihara/Color Test</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/medical.php">TRY IT NOW</a>
             </div>
             
             <!-- VisionPlus Card -->
             <div class="appointment-wrapper visionplus">
                 <div class="card-header">
-                    <h1 class="brand-name">vision<span class="highlight">plus</span></h1>
+                    <h1 class="brand-name">Ishihara Test <br>
+                    <span class="highlight">Appointment</span></h1>
                     <h2 class="service-title">AI-Powered Health Screening Eye Exam</h2>
                     <p class="service-description">An AI-powered eye screening that detects potential health risks in just 3 minutes using advanced retinal imaging</p>
                 </div>
@@ -168,19 +242,19 @@ $getpdo = $pdo->getConnection();
                 </div>
                 
                 <div class="extra-benefits">
-                    <div class="extra-item">
+                    <!-- <div class="extra-item">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="12" cy="12" r="10"/>
                             <path d="M12 6v6l4 2"/>
                         </svg>
                         <span>Only 3 minutes, straight to your email</span>
-                    </div>
+                    </div> -->
                     <div class="extra-item">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                             <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
                         </svg>
-                        <span>Results based on AI technology</span>
+                        <span>Color Blind Eye examination</span>
                     </div>
                     <div class="extra-item">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -191,7 +265,7 @@ $getpdo = $pdo->getConnection();
                     </div>
                 </div>
                 
-                <button class="appointment-btn">TRY IT NOW</button>
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/ishihara.php">TRY IT NOW</a>
             </div>
         </div>
     </div>
