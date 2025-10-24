@@ -1,18 +1,227 @@
-
-
-
-
-
-.book-appointment{
+.book-appointment {
     display: flex;
     justify-content: center;
+    align-items: stretch;
+    gap: 30px;
+    max-width: 1400px;
+    width: 100%;
+    padding: 20px;
+}
+
+.appointment-wrapper {
+    flex: 1;
+    max-width: 600px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.appointment-wrapper:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    margin-bottom: 30px;
+}
+
+.brand-name {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 15px 0;
+    letter-spacing: -1px;
+}
+
+.brand-name .highlight {
+    color: #e63946;
+}
+
+.visionplus .brand-name .highlight {
+    color: #e63946;
+}
+
+.service-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #2d2d2d;
+    margin: 0 0 15px 0;
+}
+
+.service-description {
+    font-size: 0.95rem;
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Vision7 Benefits List */
+.benefits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.benefit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.benefit-item {
+    display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 10px;
 }
 
-.appointment-wrapper{
-    width: 400px;
-    height: 400px;
-    background: red;
+.check-icon {
+    width: 24px;
+    height: 24px;
+    stroke: #4caf50;
+    flex-shrink: 0;
+    background: #e8f5e9;
+    border-radius: 50%;
+    padding: 4px;
 }
 
+.benefit-item span {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* VisionPlus Health Screening */
+.health-screening {
+    margin-bottom: 25px;
+}
+
+.health-screening h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #2d2d2d;
+    margin: 0 0 20px 0;
+}
+
+.disease-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.disease-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.disease-item span {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+/* Extra Benefits */
+.extra-benefits {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-bottom: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #f0f0f0;
+}
+
+.extra-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.extra-item .icon {
+    width: 28px;
+    height: 28px;
+    stroke: #666;
+    flex-shrink: 0;
+}
+
+.extra-item span {
+    font-size: 0.9rem;
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Button */
+.appointment-btn {
+    width: 100%;
+    padding: 16px 24px;
+    background: #1a1a1a;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: auto;
+}
+
+.appointment-btn:hover {
+    background: #333;
+    transform: translateY(-2px);
+}
+
+.appointment-btn:active {
+    transform: translateY(0);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .book-appointment {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .appointment-wrapper {
+        max-width: 700px;
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .appointment-wrapper {
+        padding: 30px 20px;
+    }
+    
+    .brand-name {
+        font-size: 2.5rem;
+    }
+    
+    .service-title {
+        font-size: 1.1rem;
+    }
+    
+    .benefit-row,
+    .disease-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .book-appointment {
+        padding: 10px;
+    }
+    
+    .appointment-wrapper {
+        padding: 25px 15px;
+    }
+    
+    .brand-name {
+        font-size: 2rem;
+    }
+}
