@@ -9,10 +9,9 @@ const observer = new IntersectionObserver((entries) => {
     threshold: 0.1
 });
 
-
-const headers = document.querySelectorAll("appointment", "medical", "ishihara");
-     headers.forEach((header) => {
-        observer.observe(header);
-     });
+const headers = document.querySelectorAll("appointment", "ishihara", "medical");
+   header.forEach((header) => {
+    observer.observe(header);
+   });
 
      
