@@ -107,7 +107,7 @@ if (session_status() === PHP_SESSION_NONE) {
         <!-- ✅ Logged in -->
         <div class="user-menu">
             <button class="user-icon">
-                <img src="../assets/src/book1.png" alt="" width="50px" height="20px">
+                <img src="../assets/src/user.png" alt="" width="40px" height="30px">
             </button>
             <div class="dropdown-menu">
                 <a href="../public/profile.php">Profile</a>

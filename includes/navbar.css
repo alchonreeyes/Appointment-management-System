@@ -32,13 +32,12 @@ nav {
 }
 
 .nav-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 20px;
-    max-width: 1400px; /* Add max-width */
-    margin: 0 auto; /* Center the navbar content */
-    gap: 20px; /* Add consistent gap */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  width: 100%;
+  max-width: none; /* remove limit */
 }
 
 /* Logo container */
@@ -46,20 +45,28 @@ nav {
     position: relative;
     display: inline-block;
     flex-shrink: 0; /* Prevent logo from shrinking */
+    align-items: center;
 }
 
 .logo {
     cursor: pointer;
     transition: transform 0.3s ease-in-out;
+    align-items: center;
 }
 
 .logo:hover {
     transform: scale(1.05);
 }
 
+.logo-container {
+  margin-left: -20px; /* cancel out the 20px padding from .nav-section */
+  padding-left: 20px; /* keep inner spacing so logo not glued to edge */
+}
+
 .logo img {
-    height: 45px;
-    width: auto; /* Maintain aspect ratio */
+
+  width: auto;
+  display: block;
 }
 
 /* Navigation Links */
