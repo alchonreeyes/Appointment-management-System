@@ -67,7 +67,7 @@ $getpdo = $pdo->getConnection();
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Visual Acuity</span>
+                            <span>Eye Muscle Movement Test</span>
                         </div>
                         <div class="benefit-item">
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -103,7 +103,7 @@ $getpdo = $pdo->getConnection();
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Ishihara/Color Test</span>
+                            <span>Consultation for Eyeglass Prescription</span>
                         </div>
                     </div>
                 </div>
@@ -115,8 +115,8 @@ $getpdo = $pdo->getConnection();
                     <h1 class="brand-name">Medical
                         <br>
                         <span class="highlight">Appointment</span></h1>
-                    <h2 class="service-title">State-of-the-Art Eye Exam</h2>
-                    <p class="service-description">Our state-of-the-art eye examination can provide a visual health checks to a different extent based on your age, lifestyle and specific needs</p>
+                    <h2 class="service-title">Eye exams to treatments for various eye conditions</h2>
+                    <p class="service-description">comprehensive eye examinations and the most advanced vision correction treatments and procedures for eye diseases and disorders.</p>
                 </div>
                 
                 <div class="benefits-list">
@@ -125,7 +125,7 @@ $getpdo = $pdo->getConnection();
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Case History</span>
+                            <span>Visual eye Test for recommended eye-glasses</span>
                         </div>
                         <div class="benefit-item">
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -135,20 +135,7 @@ $getpdo = $pdo->getConnection();
                         </div>
                     </div>
                     
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Visual Acuity</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Visual Eye Exam</span>
-                        </div>
-                    </div>
+                    
                     
                     <div class="benefit-row">
                         <div class="benefit-item">
@@ -165,20 +152,7 @@ $getpdo = $pdo->getConnection();
                         </div>
                     </div>
                     
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Subjective Refraction</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Ishihara/Color Test</span>
-                        </div>
-                    </div>
+                    
                 </div>
                 
                 <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/medical.php">TRY IT NOW</a>
@@ -189,8 +163,8 @@ $getpdo = $pdo->getConnection();
                 <div class="card-header">
                     <h1 class="brand-name">Ishihara Test <br>
                     <span class="highlight">Appointment</span></h1>
-                    <h2 class="service-title">AI-Powered Health Screening Eye Exam</h2>
-                    <p class="service-description">An AI-powered eye screening that detects potential health risks in just 3 minutes using advanced retinal imaging</p>
+                    <h2 class="service-title"> Color Vision Examination</h2>
+                    <p class="service-description">This appointment is for patients who want to check if they have color vision problems. It uses the Ishihara Color Vision Test, which helps identify red-green color blindness and other color perception issues.</p>
                 </div>
                 
                 <div class="health-screening">
@@ -200,46 +174,23 @@ $getpdo = $pdo->getConnection();
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Hypertension</span>
+                            <span>Autism</span>
                         </div>
                         <div class="disease-item">
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Macular</span>
+                            <span>Macular Degeneration</span>
                         </div>
                         <div class="disease-item">
                             <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                 <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                             </svg>
-                            <span>Diabetes</span>
+                            <span>Color Vision Deficiency</span>
                         </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Retinal Abrasion</span>
-                        </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Heart diseases</span>
-                        </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Glaucoma</span>
-                        </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Brain Cognitive</span>
-                        </div>
+                        
                     </div>
-                </div>
+                </div>  
                 
                 <div class="extra-benefits">
                     <!-- <div class="extra-item">
