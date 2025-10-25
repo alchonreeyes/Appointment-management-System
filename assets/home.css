@@ -85,8 +85,8 @@
     transition: transform 0.3s ease;
 }
 .card-consult img{
-    width: 100%;
-    
+    width: 400px;
+    height: 300px;
     border-radius: 8px;
     object-fit: cover;
     box-shadow: 5px 6px 9px rgba(0, 0, 0, 0.3);    
@@ -95,7 +95,7 @@
   transform: translateY(-2px);
 }
 .card-consult h1{
-    padding: 10px;
+    padding: 20px;
     font-weight: 600;
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
 }
@@ -287,9 +287,11 @@
 
 /* Feature Products Section */
 .feature-products {
+    background: transparent;
+    position: relative;
     width: 100%;
     padding: 40px 20px;
-    background-color: #ffffff;
+    background-color: transparent;
 }
 
 .features {

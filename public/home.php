@@ -39,11 +39,12 @@
       
   <div class="features">
     <div class="brand-logo">
-      <img src="../assets/src/image-section.jpg" alt="Brand Logo">
+      <h1 style="font-size: 3rem;">FIT & STYLE</h1>
     </div>
     <div class="product-feature-row">
       <div class="card">
-        <img src="../assets/src/image-section1.jpg" alt="Product 1">
+        <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Product 1">
+
         <button>Explore</button>
       </div>
       <div class="card">
@@ -83,7 +84,7 @@
         </div>
           
         <div class="card-consult">
-          <img src="../assets/src/book.png" alt="">
+          <img src="../assets/src/eyewear-share.jpg" alt="">
           <h1>Contact with Us</h1>
           <p>Personalized recommendation starts here</p>
           <button>See more</button>

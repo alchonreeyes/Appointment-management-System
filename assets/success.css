@@ -29,7 +29,7 @@ body {
   height: 100px;
   border-radius: 50%;
   stroke-width: 2;
-  stroke: #4CAF50;
+  stroke: #ff3a3d;
   stroke-miterlimit: 10;
   box-shadow: inset 0px 0px 0px #4CAF50;
   animation: scaleIn 0.4s ease forwards;
@@ -59,7 +59,7 @@ body {
 
 .btn {
   text-decoration: none;
-  background-color: #4CAF50;
+  background-color: #4eafff;
   color: white;
   padding: 12px 24px;
   border-radius: 8px;

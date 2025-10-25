@@ -103,11 +103,11 @@ if (session_status() === PHP_SESSION_NONE) {
         <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
         <a href="../public/appointment.php" class="book-btn">Book Appointment</a>
     <?php else: ?>
-        <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
+     
         <!-- ✅ Logged in -->
         <div class="user-menu">
             <button class="user-icon">
-                <img src="../assets/src/user.png" alt="" width="40px" height="30px">
+                <i class="fa-regular fa-user"></i>
             </button>
             <div class="dropdown-menu">
                 <a href="../public/profile.php">Profile</a>
@@ -116,6 +116,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 <a href="../actions/logout.php">Logout</a>
             </div>
         </div>
+           <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
     <?php endif; ?>
 </div>
 

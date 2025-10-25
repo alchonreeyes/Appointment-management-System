@@ -90,7 +90,7 @@ body{
 .check-icon {
     width: 24px;
     height: 24px;
-    stroke: #4caf50;
+    stroke: red;
     flex-shrink: 0;
     background: #e8f5e9;
     border-radius: 50%;

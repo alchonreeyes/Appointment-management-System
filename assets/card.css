@@ -110,7 +110,7 @@ body {
 
 .card {
     width: 260px;
-    background: white;
+    background: transparent;
     border-radius: 8px;
     overflow: hidden;
     box-shadow: 5px 6px 9px rgba(0, 0, 0, 0.3);
