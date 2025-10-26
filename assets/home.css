@@ -60,6 +60,34 @@
       background: rgba(255, 255, 255, 1);
     }
 
+.service{
+    width: 100%;
+    height: 10vh;
+    gap: 30px;
+    background-color: rgb(218, 217, 217); /* A light gray background color */
+    display: flex; 
+    flex-direction: row ;/* Enables flexbox layout */
+    justify-content: center; /* Centers the items horizontally */
+    align-items: center; /* Centers the items vertically */
+    font-size: 2rem;
+    font-weight: bold;
+    padding: 10px 20px;
+    color: black;
+}
+.service-description{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5rem;
+}
+.service-description i{
+    font-size: 1.4rem;
+}
+.service-description span{
+    font-size: 1rem;
+    font-weight: 300;
+}
+
 .concern-consults{
   width: 100%;
   min-height: 65vh; /* Sets a minimum height of 70% of the viewport height */

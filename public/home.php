@@ -6,7 +6,9 @@
   <title>Home</title>
   <link rel="stylesheet" href="../assets/card.css">
   <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
-  <style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
     body{
        font-family: Arial, sans-serif;
     }
@@ -29,7 +31,18 @@
       <div class="dot"></div>
     </div>
   </div>
-
+  <div class="service">
+    <div class="service-description">
+      asdas
+    </div>
+    <div class="service-description">
+      asdas
+    </div>
+    <div class="service-description">
+      <i class="fa-regular fa-calendar"></i> 
+      <span>appointment now</span>
+    </div>
+  </div>
   <div class="gray-line-area">
     <div class="gray-line"></div>
   </div>
@@ -44,7 +57,6 @@
     <div class="product-feature-row">
       <div class="card">
         <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Product 1">
-
         <button>Explore</button>
       </div>
       <div class="card">
