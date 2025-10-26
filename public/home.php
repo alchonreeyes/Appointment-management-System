@@ -36,7 +36,8 @@
       asdas
     </div>
     <div class="service-description">
-      asdas
+      <i class="fa-solid fa-user"></i>
+      <span>24/7 Contact Support</span>
     </div>
     <div class="service-description">
       <i class="fa-regular fa-calendar"></i> 
@@ -55,12 +56,9 @@
       <h1 style="font-size: 3rem;">FIT & STYLE</h1>
     </div>
     <div class="product-feature-row">
+      
       <div class="card">
-        <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Product 1">
-        <button>Explore</button>
-      </div>
-      <div class="card">
-        <img src="../assets/src/image-section.jpg" alt="Product 2">
+        <img src="../assets/src/image-section1.jpg" alt="Product 2">
         <button>Explore</button>
       </div>
       <div class="card">
@@ -68,7 +66,7 @@
         <button>Explore</button>
       </div>
       <div class="card">
-        <img src="../assets/src/image-section.jpg" alt="Product 4">
+        <img src="../assets/src/coach.png" alt="Product 4">
         <button>Explore</button>
       </div>
     </div>
@@ -81,7 +79,7 @@
 </section>
 <div class="brand-and-feature-description">
         <h1>EYE MASTER</h1>
-        <p>
+        <p style="font-weight: 600; font-size: 1.2rem; text-align: center; margin-top: 10px; font-family: Arial, sans-serif;">
           Prescision, Meet Style.
         </p>
       </div>
@@ -190,7 +188,7 @@
 
     <!-- Card 2 -->
     <div class="cards">
-      <img src="../assets/src/image-section1.jpg" alt="Designer Vibes">
+      <img src="../assets/src/pink-glasses.jpg" alt="Designer Vibes">
       <div class="cards-detail">
         <h3>Designer<br>Vibes</h3>
         <p>Effortless looks for every<br>vibe.</p>
@@ -200,7 +198,7 @@
 
     <!-- Card 3 -->
     <div class="cards">
-      <img src="../assets/src/image-section.jpg" alt="Privacy Activated">
+      <img src="../assets/src/glasses-yellow.jpg" alt="Privacy Activated">
       <div class="cards-detail">
         <h3>Privacy<br>Activated</h3>
         <p>Disrupt unwanted<br>tracking</p>
