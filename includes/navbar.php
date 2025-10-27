@@ -86,7 +86,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
             <div class="nav-links">
                 <ul>
-                    <li><a href="#">About</a></li>
+                    <li><a href="../public/about.php">About</a></li>
                     <li><a href="#">Category</a></li>
                     <li><a href="../public/home.php">Home</a></li>
                     <li><a href="#">Brands</a></li>

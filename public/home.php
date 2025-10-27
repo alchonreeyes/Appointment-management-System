@@ -19,9 +19,9 @@
     <?php include '../includes/navbar.php'; ?>
   <div class="carousel">
     <div class="carousel-track">
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/image-section.jpg" alt="Mountain landscape"></div>
+      <div class="slide"><img src="../assets/src/hero-mage.png" alt="Mountain landscape"></div>
+      <div class="slide"><img src="../assets/src/eyewear-share.jpg" alt="Mountain landscape"></div>
+      <div class="slide"><img src="../assets/src/image-consult.png" alt="Mountain landscape"></div>
       <!-- Clone first slide for seamless loop -->
       <div class="slide"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4" alt="Mountain landscape"></div>
     </div>
@@ -33,7 +33,8 @@
   </div>
   <div class="service">
     <div class="service-description">
-      asdas
+      <i class="fa-solid fa-shield"></i>
+      <span>Eyewear Insurance</span>
     </div>
     <div class="service-description">
       <i class="fa-solid fa-user"></i>
