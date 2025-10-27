@@ -21,7 +21,7 @@ main:
     push    rbp
     mov     rbp, rsp
     sub     rsp, 8 
-
+    
     mov     rdi, 0
     call    mysql_init
     

@@ -22,7 +22,7 @@ if (isset($_POST['login'])) {
             header('Location: ../admin/dashboard.php');
             exit;
         } else {
-            // Redirect based on role
+            // Redirect based on roleE
             header("Location: ../public/home.php");
             exit;
         }
