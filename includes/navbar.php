@@ -110,7 +110,7 @@ if (session_status() === PHP_SESSION_NONE) {
                 <i class="fa-regular fa-user"></i>
             </button>
             <div class="dropdown-menu">
-                <a href="../public/profile.php">Profile</a>
+                <a href="../client/profile.php">Profile</a>
                 <a href="../public/my-appointments.php">My Appointments</a>
                 <a href="../public/settings.php">Settings</a>
                 <a href="../actions/logout.php">Logout</a>
