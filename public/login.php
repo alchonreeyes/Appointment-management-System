@@ -32,6 +32,7 @@ include '../actions/login-action.php';
             <p class="register-link" style="color: black;">
             Don't have an account? <a href="register.php" style="color: blue;">Sign Up</a>
             </p>
+           <p><a href="forgot_password.php" style="color: blue;">Forgot Password?</a></p>
     </div>
     </form>
     <?php include '../includes/footer.php' ?>

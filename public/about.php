@@ -60,7 +60,7 @@ Improve our customer service and clinic operations
     <br>
     <div class="general-row">
         <div class="message-img">
-                <img src="../assets/src/about-glasses.jpg" alt="">
+                <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="">
             </div>        
     <div class="message">
                 <h2>Consent to Contact</h2>

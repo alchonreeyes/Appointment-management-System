@@ -10,7 +10,11 @@ class Database{
         try {       
         $this->pdo = new PDO("mysql:host={$this->server};dbname={$this->dbname};", $this->username, $this->password);
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
-        } catch (PDOException $e) {
+        $this->pdo->exec("SET time_zone = '+08:00'");
+              date_default_timezone_set('Asia/Manila');
+    
+    
+    } catch (PDOException $e) {
             echo("Error connecting: " . $e->getMessage());
             exit;
         }
