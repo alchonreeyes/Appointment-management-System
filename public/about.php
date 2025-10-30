@@ -44,13 +44,48 @@ Improve our customer service and clinic operations
         </div>
 
         <div class="general-row">
-            <h1>sads</h1>
+            <div class="message">
+                <h2>Consent to Contact</h2>
+                <p> By submitting your phone number or email, you consent to receive communications from us related to your appointments or optical needs. Standard message and data rates may apply.</p>
+                <br>
+                <p>We prioritize the security and confidentiality of your contact information. Your details will only be used for appointment-related communications and will not be shared with third parties without your explicit consent.</p>
+                <br>
+                <p>You may opt out of receiving communications at any time by contacting our clinic directly. However, please note that this may affect our ability to provide you with timely updates about your appointments and eye care services.</p>
+            </div>
+            <div class="message-img">
+                <img src="../assets/src/about-glasses.jpg" alt="">
+            </div>
         </div>
     </div>
-
-asdasd
-
-
+    <br>
+    <div class="general-row">
+        <div class="message-img">
+                <img src="../assets/src/about-glasses.jpg" alt="">
+            </div>        
+    <div class="message">
+                <h2>Consent to Contact</h2>
+                <p> By submitting your phone number or email, you consent to receive communications from us related to your appointments or optical needs. Standard message and data rates may apply.</p>
+                <br>
+                <p>We prioritize the security and confidentiality of your contact information. Your details will only be used for appointment-related communications and will not be shared with third parties without your explicit consent.</p>
+                <br>
+                <p>You may opt out of receiving communications at any time by contacting our clinic directly. However, please note that this may affect our ability to provide you with timely updates about your appointments and eye care services.</p>
+            </div>
+            <
+        </div>
+    </div>
+    <br><br>
+    
+    <div class="finds">
+        <div class="finds-message">
+            <h1>Find Your Perfect Glasses Today!</h1>
+            <p>Explore our wide selection of stylish and affordable eyewear to suit your unique look and lifestyle.</p>
+        </div>
+        <div class="search-bar">
+            <input type="text" placeholder="Search...">
+            <button>Search</button>        
+        </div>   
+    
+    </div>
 <?php include '../includes/footer.php'; ?>
 </body>
 </html>
