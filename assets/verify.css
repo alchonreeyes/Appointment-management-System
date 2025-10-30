@@ -1,0 +1,48 @@
+.verify-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 80vh;
+}
+
+.verify-form {
+  background: white;
+  padding: 30px 40px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  width: 350px;
+  text-align: center;
+}
+
+.verify-form h2 {
+  color: #004aad;
+  margin-bottom: 10px;
+}
+
+.verify-form input {
+  width: 100%;
+  padding: 10px;
+  margin: 15px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 18px;
+  letter-spacing: 3px;
+}
+
+.verify-form button {
+  background: #004aad;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.verify-form button:hover {
+  background: #003080;
+}
+
+.error { color: red; margin-top: 10px; }
+.success { color: green; margin-top: 10px; }

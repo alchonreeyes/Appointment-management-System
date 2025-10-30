@@ -24,13 +24,14 @@ include '../actions/register-action.php';
 
             <div class="form-group">
                 <label for="name">Full Name</label>
-                <input type="text" name="name" id="name" placeholder="Enter your Full name..." required>
+                <input type="text" name="full_name" id="name" placeholder="Enter your Full name..." required>
             </div>
 
             <div class="form-group">
                 <label for="email">Email Address</label>
                 <input type="email" name="email" id="email" placeholder="Enter your Email address..." required>
             </div>
+            
 
             <div class="form-group">
                 <label for="password">Password</label>
@@ -44,13 +45,9 @@ include '../actions/register-action.php';
             
             <div class="form-group">
                 <label for="address">address</label>
-                <input type="text" name="address" placeholder="enter your address..." require>
+               <input type="text" name="address" placeholder="Enter your address..." required>
             </div>
 
-            <div class="form-group">
-                <label for="otp">OTP Verification</label>
-                <input type="text" name="otp" id="otp" placeholder="Confirm your OTP Code..." >
-            </div>
 
             <div class="form-group terms">
                 <label>

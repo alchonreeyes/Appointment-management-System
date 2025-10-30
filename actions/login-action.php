@@ -18,6 +18,12 @@ if (isset($_POST['login'])) {
         $_SESSION['email'] = $user['email'];
         $_SESSION['role'] = $user['role'];
 
+        if($user['is_verified'] == 0){
+            $_SESSION['error'] = 'please verify your email before logging in';
+            header('Location: ../public/login.php');
+            exit;
+        }
+
          if ($user['role'] === 'admin' || $user['role'] === 'staff') {
             header('Location: ../admin/dashboard.php');
             exit;
