@@ -78,7 +78,9 @@ Improve our customer service and clinic operations
     <div class="finds">
         <div class="finds-message">
             <h1>Find Your Perfect Glasses Today!</h1>
-            <p>Explore our wide selection of stylish and affordable eyewear to suit your unique look and lifestyle.</p>
+            <p>Explore our wide selection of stylish and affordable eyewear </p>
+            <p>to suit your unique look and lifestyle.</p>
+            
         </div>
         <div class="search-bar">
             <input type="text" placeholder="Search...">

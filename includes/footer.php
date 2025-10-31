@@ -1,7 +1,7 @@
 <style>
     /* General Footer Styles */
     .site-footer {
-        background-color: #424242;
+        background-color: #090909ff;
         color: #fff;
         padding: 40px 20px;
         font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;

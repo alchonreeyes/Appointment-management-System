@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="../assets/about-hero-section.css">
 <style>
     body{
        font-family: Arial, sans-serif;
@@ -16,10 +17,12 @@
   </style>
 </head>
 <body>
+
     <?php include '../includes/navbar.php'; ?>
+
   <div class="carousel">
     <div class="carousel-track">
-      <div class="slide"><img src="../assets/src/hero-mage.png" alt="Mountain landscape"></div>
+      <div class="slide"><img src="../assets/src/hero-mage.png" alEt="Mountain landscape"></div>
       <div class="slide"><img src="../assets/src/eyewear-share.jpg" alt="Mountain landscape"></div>
       <div class="slide"><img src="../assets/src/image-consult.png" alt="Mountain landscape"></div>
       <!-- Clone first slide for seamless loop -->
@@ -52,26 +55,7 @@
   
     <section class="brand-and-feature">
       
-  <div class="features">
-    <div class="brand-logo">
-      <h1 style="font-size: 3rem;">FIT & STYLE</h1>
-    </div>
-    <div class="product-feature-row">
-      
-      <div class="card">
-        <img src="../assets/src/image-section1.jpg" alt="Product 2">
-        <button>Explore</button>
-      </div>
-      <div class="card">
-        <img src="../assets/src/image-section.jpg" alt="Product 3">
-        <button>Explore</button>
-      </div>
-      <div class="card">
-        <img src="../assets/src/coach.png" alt="Product 4">
-        <button>Explore</button>
-      </div>
-    </div>
-  </div>
+
 
   <div class="gray-line-area">
     <div class="gray-line"></div>
@@ -215,6 +199,19 @@
   </div>
 </div>
 
+
+  <!-- HERO SECTION BELOW!!! NEW CSS FILE FOR THIS BOOGY-->
+<div class="hero-section">
+  <div class="section-image">
+    <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="" width="550px" height="350px">  
+  </div>
+  <div class="section-message">
+    <h1>Fit & Style Quiz</h1>
+    <p>Need help figuring out which frames are right for you?</p>
+    <a href="#" class="cta-button">TAKE THE QUIZ</a>
+</div>
+
+</div>
 
   <?php include '../includes/footer.php'; ?>
   <script src="../actions/home-imageCarousel.js">

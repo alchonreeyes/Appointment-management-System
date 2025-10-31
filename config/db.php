@@ -12,8 +12,6 @@ class Database{
         $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); 
         $this->pdo->exec("SET time_zone = '+08:00'");
               date_default_timezone_set('Asia/Manila');
-    
-    
     } catch (PDOException $e) {
             echo("Error connecting: " . $e->getMessage());
             exit;
