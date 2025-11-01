@@ -75,19 +75,28 @@ Improve our customer service and clinic operations
     </div>
     <br><br>
     
-    <div class="finds">
-        <div class="finds-message">
-            <h1>Find Your Perfect Glasses Today!</h1>
-            <p>Explore our wide selection of stylish and affordable eyewear </p>
-            <p>to suit your unique look and lifestyle.</p>
+    <section class="newsletter-section">
+        <div class="newsletter-container">
+            <div class="newsletter-content">
+                <h2>Get the Latest Updates</h2>
+                <p>Enter your email to receive news on our new eyewear, latest promotions, and marketing campaigns.</p>
+            </div>
             
+            <form class="newsletter-form" action="subscribe.php" method="POST">
+                <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="Your email address" 
+                    required
+                >
+                <button type="submit">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
+                    </svg>
+                </button>
+            </form>
         </div>
-        <div class="search-bar">
-            <input type="text" placeholder="Search...">
-            <button>Search</button>        
-        </div>   
-    
-    </div>
+    </section>
 <?php include '../includes/footer.php'; ?>
 </body>
 </html>
