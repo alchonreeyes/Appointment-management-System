@@ -41,7 +41,8 @@ Improve our customer service and clinic operations
 .
 </p>  
 <p>- When you schedule an appointment, we may contact you through SMS, phone call, or email to confirm your booking, send reminders, or inform you of product availability and promotions.</p>    
-        </div>
+<p>- We maintain detailed records of your eye examinations, prescriptions, and frame measurements to ensure we provide you with the most suitable eyewear options. This includes tracking your lens preferences, frame styles, and any specific requirements for your vision needs. We also use this information to recommend appropriate lens coatings, materials, and specialty eyewear based on your lifestyle and visual requirements.</p>
+</div>
 
         <div class="general-row">
             <div class="message">

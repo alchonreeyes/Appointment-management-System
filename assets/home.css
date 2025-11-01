@@ -102,6 +102,9 @@
 }
 
 /* CONCERN SECTION */
+.concern-consults h1{
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
   .concern-consults {
             width: 100%;
             min-height: 65vh;
