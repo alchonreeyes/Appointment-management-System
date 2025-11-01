@@ -195,7 +195,8 @@
                 </div>
                 <h3>About Us</h3>
                 <p>Eye-Master is a premier eyecare clinic dedicated to providing comprehensive vision services since 2010. We combine cutting-edge technology with expert care to ensure your optimal eye health.</p>
-                <p>Our team of licensed optometrists offers personalized eye examinations, prescription eyewear, and expert consultation for all your vision needs.</p>
+                <br>
+                
                 
                 <a href="../public/about.php" class="cta-button">LEARN MORE</a>
             </div>
