@@ -12,7 +12,7 @@
 </head>
 <body>
     <?php include '../includes/navbar.php'; ?>
-sadasd    
+    <p>hello</p>    
     
     
     <?php include '../includes/footer.php'; ?>
