@@ -1,7 +1,7 @@
 <?php
 class Database{
     private $server = "localhost";
-    private $dbname = "temp_appointmentdb";
+    private $dbname = "appointmentdb";
     private $username = "root";
     private $password = "";
     protected $pdo;

@@ -11,6 +11,8 @@ if (!isset($_SESSION['user_id'])) {
 
 include '../config/db.php';
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

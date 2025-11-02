@@ -13,7 +13,7 @@ if (!isset($_SESSION['last_attempt_time'])) {
 // Check if the user is temporarily locked out
 $is_locked_out = false;
 $remaining_lockout = 0;
-if ($_SESSION['login_attempts'] >= 3) { // Reduced for demonstration
+if ($_SESSION['login_attempts'] >= 5) { // Reduced for demonstration
     $lockout_time = 30; // 30 seconds lockout
     $remaining_lockout = $lockout_time - (time() - $_SESSION['last_attempt_time']);
     

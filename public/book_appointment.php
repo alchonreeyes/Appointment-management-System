@@ -1,10 +1,17 @@
-<?php  
-include '../config/db.php'; 
-session_start();  
+<?php
+include '../config/db.php';
+$db = new Database();
+$pdo = $db->getConnection();
 
-$pdo = new Database(); 
-$getpdo = $pdo->getConnection();    
-?>   
+// Auto-update missed appointments
+$update = $pdo->prepare("
+    UPDATE appointments
+    SET status_id = 4
+    WHERE status_id = 1 
+    AND CONCAT(appointment_date, ' ', appointment_time) < NOW()
+");
+$update->execute();
+?>
 
 <!DOCTYPE html>
 <html lang="en">

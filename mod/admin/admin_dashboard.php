@@ -2,7 +2,13 @@
 session_start();
 // This path assumes 'database.php' is in the 'EYE MASTER' folder,
 // and this file is in 'EYE MASTER/admin/'
+
+
 require_once __DIR__ . '/../database.php'; 
+
+
+require_once __DIR__ . '../../../config/db.php'; // <-- client side database fetching data from admin side
+
 
 // ======================================================================
 // <-- FIX #1: Ginamit ang tamang Session variables galing sa login.php
