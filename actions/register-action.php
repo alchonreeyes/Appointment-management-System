@@ -57,7 +57,7 @@ if (isset($_POST['signup'])) {
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
             $mail->Username = 'alchonreyez@gmail.com'; // your Gmail
-            $mail->Password = 'fojwnzlcxrkqquhs'; // your app password
+            $mail->Password = 'urwbzscfmaynltzx'; // your app password
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
 
