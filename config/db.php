@@ -1,7 +1,7 @@
 <?php
 class Database{
     private $server = "localhost";
-    private $dbname = "appointmentdb";
+    private $dbname = "capstone";
     private $username = "root";
     private $password = "";
     protected $pdo;

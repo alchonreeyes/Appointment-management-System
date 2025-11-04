@@ -6,8 +6,8 @@ session_start();
 
 require_once __DIR__ . '/../database.php'; 
 
+require_once __DIR__ . '../../clientdb.php'; // <-- client side database fetching data from admin side
 
-require_once __DIR__ . '../../../config/db.php'; // <-- client side database fetching data from admin side
 
 
 // ======================================================================
