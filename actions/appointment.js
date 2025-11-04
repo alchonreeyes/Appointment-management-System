@@ -165,19 +165,38 @@ function generateDateStrip(baseDateStr) {
                 dateStrip.appendChild(div);
         }
 }
-
-
+// ==========================
+// ✅ FIX FOR MEDICAL PURPOSE RADIO BUTTONS
+// ==========================
 document.addEventListener("DOMContentLoaded", function() {
-        // default: today
-        let today = new Date().toISOString().split("T")[0];
-        nativeDate.value = today;
-        selectedDate = today; // Set initial selected date
-        appointmentDate.value = today;
-        generateDateStrip(today);
-        updateNextAvailable(); // Initial update
+  const radios = document.querySelectorAll('input[name="certificate_purpose"]');
+  const otherInput = document.querySelector('input[name="certificate_other"]');
 
-        // update on input change
-        nativeDate.addEventListener("change", function() {
-                generateDateStrip(this.value);
-        });
+  if (!radios.length) return; // Ignore if not on medical page
+
+  // Hide "Other" text by default
+  otherInput.style.display = "none";
+
+  radios.forEach(radio => {
+    radio.addEventListener("change", () => {
+      if (radio.value === "Other") {
+        otherInput.style.display = "block";
+        otherInput.required = true;
+      } else {
+        otherInput.style.display = "none";
+        otherInput.value = "";
+        otherInput.required = false;
+      }
+    });
+  });
+});
+
+
+
+document.getElementById("appointmentForm").addEventListener("submit", function() {
+  // Find selected radio button manually
+  const selected = document.querySelector('input[name="certificate_purpose"]:checked');
+  if (selected) {
+    selected.disabled = false; // make sure it's active when posting
+  }
 });

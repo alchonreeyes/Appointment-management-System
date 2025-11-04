@@ -159,8 +159,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // 🔹 Add per type
     if ($type === 'medical') {
-        $data['certificate_purpose'] = $_POST['certificate_purpose'] ?? '';
-        $data['certificate_other'] = trim($_POST['certificate_other'] ?? '');
+    // Automatically set default medical purpose instead of relying on radio buttons
+    $data['certificate_purpose'] = 'Fit to Work'; // or 'Medical Certificate'
+    $data['certificate_other'] = ''; // you can leave this empty or set a note if needed
+    
+
     } elseif ($type === 'ishihara') {
         $data['ishihara_test_type'] = $_POST['ishihara_test_type'] ?? '';
         $data['ishihara_reason'] = trim($_POST['ishihara_reason'] ?? '');

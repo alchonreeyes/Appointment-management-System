@@ -72,13 +72,14 @@ include '../config/db.php';
             <button type="button" class="next-btn">Next</button>
         </div>
         
-  <!-- Step 2: medical certificate purpose -->
+        <!-- Step 2: medical certificate purpose -->
 <div class="form-step">
     <h3 style="color: black;">Medical Certificate Purpose</h3>
     <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
     <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
     <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
     <label><input type="radio" name="certificate_purpose" value="Other"> Other</label>
+    <input type="text" name="certificate_purpose"value="medical purpose" style="display:none;">
     <input type="text" name="certificate_other" placeholder="If other, please specify...">
     
     <button type="button" class="prev-btn">Back</button>
