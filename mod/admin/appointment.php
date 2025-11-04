@@ -149,7 +149,8 @@ if (isset($_POST['action'])) {
 $statusFilter = $_GET['status'] ?? 'All';
 $dateFilter = $_GET['date'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
-$viewFilter = $_GET['view'] ?? 'all'; 
+$viewFilter = $_GET['view'] ?? 'all';
+ 
 
 // --- Base Query ---
 $selectClauses = [
@@ -1083,6 +1084,7 @@ document.addEventListener('keydown', function(e){
 </script>
 
 <script>
+  
 document.addEventListener('DOMContentLoaded', function() {
     setTimeout(function() {
         const loader = document.getElementById('loader-overlay');

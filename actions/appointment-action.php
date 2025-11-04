@@ -63,7 +63,7 @@ class Appointment {
 
             // 🔹 Common fields
             $stmt->bindParam(':client_id', $data['client_id']);
-            $stmt->bindParam(':service_id', $data['service_id']); // Default service_id to 1 if not provided
+           $stmt->bindValue(':service_id', $data['service_id'], PDO::PARAM_INT);// Default service_id to 1 if not provided
             $stmt->bindParam(':full_name', $data['full_name']);
             $stmt->bindParam(':suffix', $data['suffix']);
             $stmt->bindParam(':gender', $data['gender']);
