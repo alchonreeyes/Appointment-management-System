@@ -169,18 +169,18 @@ if ($viewFilter === 'eye_exam') {
     $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 1"; 
+    $whereClauses[] = "a.service_id = 6"; 
 } elseif ($viewFilter === 'ishihara') {
     $selectClauses[] = "a.ishihara_test_type";
     $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 2"; 
+    $whereClauses[] = "a.service_id = 8"; 
 } elseif ($viewFilter === 'medical') {
     $selectClauses[] = "a.certificate_purpose";
     $extraHeaders = "<th>Purpose</th>";
     $extraColumnNames = ['certificate_purpose'];
-    $whereClauses[] = "a.service_id = 3";
+    $whereClauses[] = "a.service_id = 7";
 }
 
 // --- I-apply ang iba pang Filters ---
@@ -242,9 +242,9 @@ $countParams = [];
 $countParamTypes = "";
 
 // I-apply din ang filters sa stats
-if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 1"; }
-if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 2"; }
-if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 3"; }
+if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 6"; }
+if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 8"; }
+if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 7"; }
 
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $countSql .= " AND DATE(a.appointment_date) = ?";

@@ -38,7 +38,8 @@ include '../config/db.php';
     </div>
 
     <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">
-      
+      <input type="hidden" name="service_id" value="8">
+
       <!-- Step 1: Patient Info -->
       <div class="form-step active">
         <h2>Let's get you scheduled</h2>

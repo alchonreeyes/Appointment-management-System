@@ -21,12 +21,12 @@ class Appointment {
             if ($type === 'medical') {
                 // ✅ MEDICAL CERTIFICATE
                 $sql = "INSERT INTO appointments (
-                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                             certificate_purpose, certificate_other,
                             appointment_date, appointment_time,
                             consent_info, consent_reminders, consent_terms
                         ) VALUES (
-                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
                             :certificate_purpose, :certificate_other,
                             :appointment_date, :appointment_time,
                             :consent_info, :consent_reminders, :consent_terms
@@ -34,12 +34,12 @@ class Appointment {
             } elseif ($type === 'ishihara') {
                 // ✅ ISHIHARA TEST
                 $sql = "INSERT INTO appointments (
-                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                             appointment_date, appointment_time,
                             ishihara_test_type, ishihara_reason, previous_color_issues, ishihara_notes,
                             consent_info, consent_reminders, consent_terms
                         ) VALUES (
-                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
                             :appointment_date, :appointment_time,
                             :ishihara_test_type, :ishihara_reason, :previous_color_issues, :ishihara_notes,
                             :consent_info, :consent_reminders, :consent_terms
@@ -47,12 +47,12 @@ class Appointment {
             } else {
                 // ✅ NORMAL APPOINTMENT
                 $sql = "INSERT INTO appointments (
-                            client_id, full_name, suffix, gender, age, phone_number, occupation,
+                            client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                             appointment_date, appointment_time,
                             wear_glasses, symptoms, concern,
                             consent_info, consent_reminders, consent_terms
                         ) VALUES (
-                            :client_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                            :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
                             :appointment_date, :appointment_time,
                             :wear_glasses, :symptoms, :concern,
                             :consent_info, :consent_reminders, :consent_terms
@@ -63,6 +63,7 @@ class Appointment {
 
             // 🔹 Common fields
             $stmt->bindParam(':client_id', $data['client_id']);
+            $stmt->bindParam(':service_id', $data['service_id']); // Default service_id to 1 if not provided
             $stmt->bindParam(':full_name', $data['full_name']);
             $stmt->bindParam(':suffix', $data['suffix']);
             $stmt->bindParam(':gender', $data['gender']);
@@ -119,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $client_id = $client['client_id'];
+    
 
     // 🔹 Common fields
     $full_name = trim($_POST['full_name']);
@@ -144,6 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // 🔹 Build data
     $data = [
         'client_id' => $client_id,
+        'service_id' => $_POST['service_id'] ?? 1,
         'full_name' => $full_name,
         'suffix' => $suffix,
         'gender' => $gender,

@@ -41,6 +41,7 @@ include '../config/db.php';
   
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
             <!-- Step 1: Patient Info -->
+             <input type="hidden" name="service_id" value="7">
         <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
