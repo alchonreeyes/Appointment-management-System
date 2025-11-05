@@ -134,8 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     
     <div class="link-section">
         <a href="../public/home.php"><i class="fa-solid fa-house"></i></a>
-        <i class="fa-solid fa-arrow-right"></i>
-        <p>Profile</p>
+        <a href="#" class="side-toggle"><i class="fa-solid fa-bars"></i></a>
     </div>
 
     <div class="profile">
