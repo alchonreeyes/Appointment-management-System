@@ -94,10 +94,11 @@ include '../config/db.php';
 
   <!-- Native Date Picker (syncs with strip) -->
   <label>Select Date</label>
-  <input type="date" id="nativeDate">
+<input type="date" id="nativeDate">
+<p id="slotInfo" style="color: green; font-weight: 600;">Remaining slots: —</p>
 
   <!-- Date Strip -->
-   
+<!--    
   <div class="date-strip">
     <button data-date="2025-09-09">Mon 09 Sep</button>
     <button data-date="2025-09-10">Tue 10 Sep</button>
@@ -106,7 +107,7 @@ include '../config/db.php';
     <button data-date="2025-09-13">Fri 13 Sep</button>
     <button data-date="2025-09-14">Sat 14 Sep</button>
     <button data-date="2025-09-15">Sun 15 Sep</button>
-  </div>
+  </div> -->
 
   <!-- Time Slots -->
   <div class="time-slots">

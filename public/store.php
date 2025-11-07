@@ -13,7 +13,7 @@
 <body>
     <?php include '../includes/navbar.php'; ?>
     <p>hello</p>    
-    
+ 
     
     <?php include '../includes/footer.php'; ?>
 </body>

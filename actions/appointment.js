@@ -79,7 +79,7 @@ nativeDate.addEventListener("change", (e) => {
     appointmentDate.value = selectedDate;
 
     // Sync strip (regenerate it for the new week)
-    generateDateStrip(selectedDate);
+    
     updateNextAvailable();
 });
 
@@ -113,58 +113,58 @@ function updateNextAvailable() {
     }
 }
 
-const dateStrip = document.querySelector(".date-strip");
+    const dateStrip = document.querySelector(".date-strip");
 
-// Generate week strip based on selected date
-function generateDateStrip(baseDateStr) {
-        dateStrip.innerHTML = ""; // clear existing strip
+    // Generate week strip based on selected date
+    function generateDateStrip(baseDateStr) {
+            dateStrip.innerHTML = ""; // clear existing strip
 
-        const [year, month, day] = baseDateStr.split('-').map(Number);
-        let baseDate = new Date(year, month - 1, day);
+            const [year, month, day] = baseDateStr.split('-').map(Number);
+            let baseDate = new Date(year, month - 1, day);
 
-        let dayOfWeek = baseDate.getDay(); // 0=Sun, 1=Mon...
-        let diff = baseDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        let monday = new Date(baseDate.setDate(diff));
+            let dayOfWeek = baseDate.getDay(); // 0=Sun, 1=Mon...
+            let diff = baseDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            let monday = new Date(baseDate.setDate(diff));
 
-        // loop 7 days (Mon → Sun)
-        for (let i = 0; i < 7; i++) {
-                let d = new Date(monday);
-                d.setDate(monday.getDate() + i);
-                const dateValue = d.toISOString().split("T")[0];
+            // loop 7 days (Mon → Sun)
+            for (let i = 0; i < 7; i++) {
+                    let d = new Date(monday);
+                    d.setDate(monday.getDate() + i);
+                    const dateValue = d.toISOString().split("T")[0];
 
-                let div = document.createElement("div");
-                div.className = "date-box";
-                div.textContent = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
-                div.dataset.date = dateValue;
+                    let div = document.createElement("div");
+                    div.className = "date-box";
+                    div.textContent = d.toLocaleDateString("en-US", { weekday: "short", day: "numeric" });
+                    div.dataset.date = dateValue;
 
-                // highlight the date that was originally selected
-                if (dateValue === baseDateStr) {
-                        div.classList.add("selected");
-                }
+                    // highlight the date that was originally selected
+                    if (dateValue === baseDateStr) {
+                            div.classList.add("selected");
+                    }
 
-                // gray out weekends
-                if (d.getDay() === 0 || d.getDay() === 6) {
-                        div.classList.add("weekend");
-                }
+                    // gray out weekends
+                    if (d.getDay() === 0 || d.getDay() === 6) {
+                            div.classList.add("weekend");
+                    }
 
-                // add click event to choose
-                div.addEventListener("click", function() {
-                        // Update state and UI
-                        selectedDate = this.dataset.date;
-                        appointmentDate.value = selectedDate;
-                        nativeDate.value = selectedDate; // sync with picker
+                    // add click event to choose
+                    div.addEventListener("click", function() {
+                            // Update state and UI
+                            selectedDate = this.dataset.date;
+                            appointmentDate.value = selectedDate;
+                            nativeDate.value = selectedDate; // sync with picker
 
-                        // Update visual selection
-                        document.querySelectorAll(".date-box").forEach(el => el.classList.remove("selected"));
-                        this.classList.add("selected");
+                            // Update visual selection
+                            document.querySelectorAll(".date-box").forEach(el => el.classList.remove("selected"));
+                            this.classList.add("selected");
 
-                        // Update the "Next Available" text
-                        updateNextAvailable();
-                });
+                            // Update the "Next Available" text
+                            updateNextAvailable();
+                    });
 
-                dateStrip.appendChild(div);
-        }
-}
+                    dateStrip.appendChild(div);
+            }
+    }
 // ==========================
 // ✅ FIX FOR MEDICAL PURPOSE RADIO BUTTONS
 // ==========================
@@ -200,3 +200,83 @@ document.getElementById("appointmentForm").addEventListener("submit", function()
     selected.disabled = false; // make sure it's active when posting
   }
 });
+// ===============================
+// ✅ Remaining Slot Display
+// ===============================
+function updateRemainingSlots(selectedDate) {
+ async function checkSlot(date) {
+  const serviceId = document.getElementById('serviceId').value;
+  const data = new URLSearchParams({ date, service_id: serviceId });
+
+  const res = await fetch('/actions/check-slot.php', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: data.toString()
+  });
+  const j = await res.json();
+  if (!j.ok) {
+    console.error('Slot check failed', j);
+    return { ok:false };
+  }
+  return j; // {ok:true, remaining: n, ...}
+}
+
+// Example usage: when nativeDate changes:
+document.getElementById('nativeDate').addEventListener('change', async (e) => {
+  const date = e.target.value;
+  const info = await checkSlot(date);
+  if (info.ok) {
+    document.getElementById('remainingSlotsP').textContent = `Remaining slots: ${info.remaining}`;
+    if (info.remaining === 0) {
+      showBookingPopup('Fully Booked', 'No more slots for selected date and service.');
+      // disable submit button
+      document.querySelector('button[type="submit"]').disabled = true;
+    } else {
+      document.querySelector('button[type="submit"]').disabled = false;
+    }
+  }
+});
+}
+
+// ===============================
+// ✅ SLOT CHECKER (fetch from PHP)
+// ===============================
+const remainingDisplay = document.createElement('p');
+remainingDisplay.id = "remainingSlots";
+remainingDisplay.style.fontWeight = "bold";
+remainingDisplay.style.marginTop = "10px";
+document.querySelector(".time-slots").after(remainingDisplay);
+
+async function checkSlots() {
+  const date = document.getElementById("nativeDate").value;
+  const serviceId = document.querySelector('input[name="service_id"]').value;
+
+  if (!date || !serviceId) return;
+
+  try {
+    const response = await fetch("../actions/check_slots.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `service_id=${serviceId}&appointment_date=${date}`
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      remainingDisplay.textContent = `Remaining Slots: ${data.remaining}`;
+      if (data.remaining <= 0) {
+        showBookingPopup("Fully Booked", "Sorry, this date is already full. Please pick another date.");
+        document.querySelector('button[type="submit"]').disabled = true;
+      } else {
+        document.querySelector('button[type="submit"]').disabled = false;
+      }
+    } else {
+      remainingDisplay.textContent = "Error checking slots.";
+    }
+  } catch (error) {
+    remainingDisplay.textContent = "Error connecting to server.";
+  }
+}
+
+// 🔹 Run check whenever the date changes
+document.getElementById("nativeDate").addEventListener("change", checkSlots);

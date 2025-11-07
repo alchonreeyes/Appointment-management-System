@@ -102,8 +102,10 @@ include '../config/db.php';
         <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
         <p style="color: black;">Select a suitable date and time for your Ishihara test.</p>
 
-        <label>Select Date</label>
-        <input type="date" id="nativeDate">
+          <!-- Native Date Picker (syncs with strip) -->
+  <label>Select Date</label>
+<input type="date" id="nativeDate">
+<p id="slotInfo" style="color: green; font-weight: 600;">Remaining slots: —</p>
 
         <div class="date-strip"></div>
 

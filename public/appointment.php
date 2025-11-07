@@ -84,10 +84,10 @@ if (!isset($_SESSION['user_id'])) {
 
   <!-- Native Date Picker (syncs with strip) -->
   <label>Select Date</label>
-  <input type="date" id="nativeDate">
-
+<input type="date" id="nativeDate">
+<p id="slotInfo" style="color: green; font-weight: 600;">Remaining slots: —</p>
   <!-- Date Strip -->
-   
+<!--    
   <div class="date-strip">
     <button data-date="2025-09-09">Mon 09 Sep</button>
     <button data-date="2025-09-10">Tue 10 Sep</button>
@@ -96,7 +96,7 @@ if (!isset($_SESSION['user_id'])) {
     <button data-date="2025-09-13">Fri 13 Sep</button>
     <button data-date="2025-09-14">Sat 14 Sep</button>
     <button data-date="2025-09-15">Sun 15 Sep</button>
-  </div>
+  </div> -->
 
   <!-- Time Slots -->
   <div class="time-slots">
@@ -162,86 +162,6 @@ if (!isset($_SESSION['user_id'])) {
 </div>
 </div>
 <!-- Booking Popup Message -->
-<div id="bookingPopup" class="popup-overlay" style="display:none;">
-  <div class="popup-box">
-    <h2 id="popupTitle">Notice</h2>
-    <p id="popupMessage">Message here...</p>
-    <button id="popupClose" class="popup-btn">OK</button>
-  </div>
-</div>
-
-<style>
-/* Overlay background */
-.popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-/* White centered popup */
-.popup-box {
-  background: white;
-  color: #333;
-  padding: 30px 40px;
-  border-radius: 12px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.2);
-  text-align: center;
-  width: 360px;
-  animation: popupFade 0.3s ease-in-out;
-}
-
-/* Title + Message */
-.popup-box h2 {
-  font-size: 20px;
-  margin-bottom: 10px;
-  color: #e63946;
-}
-
-.popup-box p {
-  font-size: 15px;
-  margin-bottom: 20px;
-  color: #555;
-}
-
-/* Button */
-.popup-btn {
-  background: #e63946;
-  color: #fff;
-  border: none;
-  padding: 10px 25px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: background 0.2s ease;
-}
-
-.popup-btn:hover {
-  background: #d62828;
-}
-
-@keyframes popupFade {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-</style>
-
-<script>
-// Popup Logic
-function showBookingPopup(title, message) {
-  document.getElementById("popupTitle").textContent = title;
-  document.getElementById("popupMessage").textContent = message;
-  document.getElementById("bookingPopup").style.display = "flex";
-}
-
-document.getElementById("popupClose").addEventListener("click", () => {
-  document.getElementById("bookingPopup").style.display = "none";
-  window.history.back(); // Optional: go back
-});
-</script>
 
 
 <script src="../actions/appointment.js"></script>
