@@ -232,49 +232,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $data['concern'] = trim($_POST['concern'] ?? '');
     }
 
-  
-// ===============================
-// ✅ Slot availability check (Safe)
-/// ===============================
-// ✅ Slot availability check and booking (Fixed)
+ // ===============================
+// ✅ Slot availability check WITHOUT consuming slot
 // ===============================
 try {
     $pdo->beginTransaction();
 
-    // 1️⃣ Lock and check the slot
-    $slotCheck = $pdo->prepare("SELECT * FROM appointment_slots WHERE service_id = ? AND appointment_date = ? FOR UPDATE");
+    // 1️⃣ Check if date is fully booked FOR THIS SPECIFIC SERVICE
+    $slotCheck = $pdo->prepare("SELECT * FROM appointment_slots WHERE service_id = ? AND appointment_date = ?");
     $slotCheck->execute([$data['service_id'], $data['appointment_date']]);
     $slot = $slotCheck->fetch(PDO::FETCH_ASSOC);
 
-    // 2️⃣ Create if not exists
+    // 2️⃣ If no slot record exists, allow booking (admin hasn't confirmed any yet)
     if (!$slot) {
-        $pdo->prepare("INSERT INTO appointment_slots (service_id, appointment_date, max_slots, used_slots) VALUES (?, ?, 3, 0)")
-            ->execute([$data['service_id'], $data['appointment_date']]);
-        $slot = ['max_slots' => 3, 'used_slots' => 0];
+        // No slot record = no confirmed appointments yet = allow booking
+    } else {
+        // 3️⃣ Check if fully booked
+        if ($slot['used_slots'] >= $slot['max_slots']) {
+            $pdo->rollBack();
+            echo "<script>
+                alert('Sorry, this date is already fully booked for this service!');
+                window.location.href='../public/home.php';
+            </script>";
+            exit;
+        }
     }
 
-    // 3️⃣ Stop if fully booked
-    if ($slot['used_slots'] >= $slot['max_slots']) {
-        $pdo->rollBack();
-        echo "<script>
-            alert('Sorry, this date is already fully booked!');
-            window.location.href='../public/home.php';
-        </script>";
-        exit;
-    }
-
-    // 4️⃣ Insert appointment safely
+    // 4️⃣ Insert appointment as PENDING (doesn't consume slot yet)
     $appointment = new Appointment($pdo);
     $appointment->bookAppointmentWithoutRedirect($data, $type);
 
-    // 5️⃣ Increment used slot count once
-    $pdo->prepare("UPDATE appointment_slots SET used_slots = used_slots + 1 WHERE service_id = ? AND appointment_date = ?")
-        ->execute([$data['service_id'], $data['appointment_date']]);
+    // ✅ DO NOT INCREMENT used_slots here - only admin confirmation does that
 
     $pdo->commit();
 
     echo "<script>
-        alert('Appointment booked successfully!');
+        alert('Appointment booked successfully! Waiting for admin confirmation.');
         window.location.href='../public/success.php';
     </script>";
     exit();

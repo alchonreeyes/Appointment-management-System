@@ -95,7 +95,7 @@ include '../config/db.php';
   <!-- Native Date Picker (syncs with strip) -->
   <label>Select Date</label>
 <input type="date" id="nativeDate">
-<p id="slotInfo" style="color: green; font-weight: 600;">Remaining slots: —</p>
+<p id="remainingSlots" style="font-weight: bold; margin-top: 10px; color: #16a34a;">Please select a date to check availability</p>
 
   <!-- Date Strip -->
 <!--    
