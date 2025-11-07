@@ -18,6 +18,48 @@ class Appointment {
 
     public function bookAppointment($data, $type){
         try {
+            // 🔹 Step 2: Check slot availability before booking
+$check = $this->pdo->prepare("
+    SELECT COUNT(*) AS used_slots 
+    FROM appointments 
+    WHERE appointment_date = ? AND service_id = ?
+");
+$check->execute([$data['appointment_date'], $data['service_id']]);
+$used = $check->fetch(PDO::FETCH_ASSOC)['used_slots'];
+
+$slotStmt = $this->pdo->prepare("
+    SELECT max_slots FROM appointment_slots 
+    WHERE appointment_date = ? AND service_id = ?
+");
+$slotStmt->execute([$data['appointment_date'], $data['service_id']]);
+$slotRow = $slotStmt->fetch(PDO::FETCH_ASSOC);
+
+// Default to 3 slots if not set
+$maxSlots = $slotRow ? (int)$slotRow['max_slots'] : 3;
+
+if ($used >= $maxSlots) {
+    echo "
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+            background:rgba(0,0,0,0.5);z-index:9999;
+        `;
+        overlay.innerHTML = `
+            <div style='background:#fff;padding:30px;border-radius:12px;text-align:center;box-shadow:0 0 10px rgba(0,0,0,0.2);'>
+                <h2 style='color:#e63946;margin-bottom:10px;'>Fully Booked</h2>
+                <p style='color:#333;margin-bottom:15px;'>Sorry, this date is already full. Please choose another date.</p>
+                <button style='background:#e63946;color:#fff;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;font-weight:600;'
+                        onclick='window.history.back();'>OK</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    });
+    </script>";
+    exit;
+}
+
             if ($type === 'medical') {
                 // ✅ MEDICAL CERTIFICATE
                 $sql = "INSERT INTO appointments (

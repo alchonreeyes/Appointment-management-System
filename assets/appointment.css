@@ -274,7 +274,6 @@ h2{
     background: rgb(255, 0, 4);
 }
 
-
 /* On larger screens, use flex row */
 @media (min-width: 768px) {
         .form-row {

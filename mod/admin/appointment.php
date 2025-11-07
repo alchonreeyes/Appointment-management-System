@@ -58,51 +58,130 @@ if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
-    if ($action === 'updateStatus') {
-        $id = $_POST['id'] ?? '';
-        
-        // ======================================================================
-        // <-- THE ONLY CHANGE IS HERE
-        //     Tinatanggap na nito ang 'status_name' (galing sa QR modal) 
-        //     o 'status' (galing sa table buttons)
-        // ======================================================================
-        $newStatusName = $_POST['status_name'] ?? $_POST['status'] ?? '';
+    // REPLACE the existing updateStatus action in your appointment.php (around line 60-100)
+// with this updated version:
 
-        if (!$id || !$newStatusName) {
-            echo json_encode(['success' => false, 'message' => 'Missing parameters.']);
+if ($action === 'updateStatus') {
+    $id = $_POST['id'] ?? '';
+    $newStatusName = $_POST['status_name'] ?? $_POST['status'] ?? '';
+
+    if (!$id || !$newStatusName) {
+        echo json_encode(['success' => false, 'message' => 'Missing parameters.']);
+        exit;
+    }
+
+    try {
+        // Get the status_id from status_name
+        $stmt_status = $conn->prepare("SELECT status_id FROM appointmentstatus WHERE status_name = ?");
+        $stmt_status->bind_param("s", $newStatusName);
+        $stmt_status->execute();
+        $result_status = $stmt_status->get_result();
+        
+        if ($result_status->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid status name.']);
             exit;
         }
+        
+        $status_id = $result_status->fetch_assoc()['status_id'];
 
-        try {
-            // Kunin muna ang status_id galing sa status_name
-            $stmt_status = $conn->prepare("SELECT status_id FROM appointmentstatus WHERE status_name = ?");
-            $stmt_status->bind_param("s", $newStatusName);
-            $stmt_status->execute();
-            $result_status = $stmt_status->get_result();
+        // Get current appointment details (old status, service_id, date)
+        $stmt_current = $conn->prepare("SELECT status_id, service_id, appointment_date FROM appointments WHERE appointment_id = ?");
+        $stmt_current->bind_param("i", $id);
+        $stmt_current->execute();
+        $current_result = $stmt_current->get_result();
+        
+        if ($current_result->num_rows === 0) {
+            echo json_encode(['success' => false, 'message' => 'Appointment not found.']);
+            exit;
+        }
+        
+        $current_appt = $current_result->fetch_assoc();
+        $old_status_id = $current_appt['status_id'];
+        $service_id = $current_appt['service_id'];
+        $appointment_date = $current_appt['appointment_date'];
+
+        // Get status names for old and new
+        $stmt_old_status = $conn->prepare("SELECT status_name FROM appointmentstatus WHERE status_id = ?");
+        $stmt_old_status->bind_param("i", $old_status_id);
+        $stmt_old_status->execute();
+        $old_status_name = $stmt_old_status->get_result()->fetch_assoc()['status_name'];
+
+        // ====== SLOT MANAGEMENT LOGIC ======
+        
+        // Case 1: Changing FROM Confirmed TO something else (Cancel, Missed, etc.)
+        // Action: RELEASE the slot (decrement used_slots)
+        if ($old_status_name === 'Confirmed' && $newStatusName !== 'Confirmed') {
+            $stmt_release = $conn->prepare("
+                UPDATE appointment_slots 
+                SET used_slots = GREATEST(0, used_slots - 1) 
+                WHERE service_id = ? AND appointment_date = ?
+            ");
+            $stmt_release->bind_param("is", $service_id, $appointment_date);
+            $stmt_release->execute();
+        }
+        
+        // Case 2: Changing TO Confirmed (from Pending, Missed, etc.)
+        // Action: CONSUME a slot (increment used_slots) - but check availability first
+        if ($newStatusName === 'Confirmed' && $old_status_name !== 'Confirmed') {
+            // Check if slot exists for this date
+            $stmt_check_slot = $conn->prepare("
+                SELECT slot_id, max_slots, used_slots 
+                FROM appointment_slots 
+                WHERE service_id = ? AND appointment_date = ?
+            ");
+            $stmt_check_slot->bind_param("is", $service_id, $appointment_date);
+            $stmt_check_slot->execute();
+            $slot_result = $stmt_check_slot->get_result();
             
-            if ($result_status->num_rows === 0) {
-                echo json_encode(['success' => false, 'message' => 'Invalid status name.']);
+            if ($slot_result->num_rows === 0) {
+                // Create slot record if it doesn't exist
+                $stmt_create_slot = $conn->prepare("
+                    INSERT INTO appointment_slots (service_id, appointment_date, max_slots, used_slots) 
+                    VALUES (?, ?, 3, 0)
+                ");
+                $stmt_create_slot->bind_param("is", $service_id, $appointment_date);
+                $stmt_create_slot->execute();
+                $slot_data = ['max_slots' => 3, 'used_slots' => 0];
+            } else {
+                $slot_data = $slot_result->fetch_assoc();
+            }
+            
+            // Check if slots are available
+            $remaining = $slot_data['max_slots'] - $slot_data['used_slots'];
+            if ($remaining <= 0) {
+                echo json_encode([
+                    'success' => false, 
+                    'message' => 'No available slots for this date. All 3 slots are full.'
+                ]);
                 exit;
             }
             
-            $status_id = $result_status->fetch_assoc()['status_id'];
-
-            // I-update ang appointment gamit ang status_id
-            $stmt_update = $conn->prepare("UPDATE appointments SET status_id = ? WHERE appointment_id = ?");
-            $stmt_update->bind_param("ii", $status_id, $id);
-            $stmt_update->execute();
-
-            if ($stmt_update->affected_rows > 0) {
-                echo json_encode(['success' => true, 'message' => 'Status updated successfully.', 'status' => $newStatusName]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'No rows updated or appointment not found.']);
-            }
-        } catch (Exception $e) {
-            error_log("UpdateStatus error (appointment.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error during status update.']);
+            // Increment used_slots
+            $stmt_consume = $conn->prepare("
+                UPDATE appointment_slots 
+                SET used_slots = used_slots + 1 
+                WHERE service_id = ? AND appointment_date = ?
+            ");
+            $stmt_consume->bind_param("is", $service_id, $appointment_date);
+            $stmt_consume->execute();
         }
-        exit;
+
+        // ====== UPDATE APPOINTMENT STATUS ======
+        $stmt_update = $conn->prepare("UPDATE appointments SET status_id = ? WHERE appointment_id = ?");
+        $stmt_update->bind_param("ii", $status_id, $id);
+        $stmt_update->execute();
+        
+        if ($stmt_update->affected_rows > 0) {
+            echo json_encode(['success' => true, 'message' => 'Status updated successfully.', 'status' => $newStatusName]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'No rows updated or appointment not found.']);
+        }
+    } catch (Exception $e) {
+        error_log("UpdateStatus error (appointment.php): " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error during status update.']);
     }
+    exit;
+}
 
     if ($action === 'viewDetails') {
         $id = $_POST['id'] ?? '';
