@@ -242,6 +242,11 @@ $countSql = "SELECT
 $countParams = [];
 $countParamTypes = "";
 
+// Confirmation slot logic
+
+
+
+
 // I-apply din ang filters sa stats
 if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 6"; }
 if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 8"; }
@@ -279,6 +284,9 @@ $missedCount    = (int)($stats['missed']    ?? 0);
 $cancelledCount = (int)($stats['cancelled'] ?? 0);
 $completedCount = (int)($stats['completed'] ?? 0);
 $totalCount     = (int)($stats['total']     ?? 0);
+
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
