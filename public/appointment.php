@@ -85,7 +85,8 @@ if (!isset($_SESSION['user_id'])) {
   <!-- Native Date Picker (syncs with strip) -->
   <label>Select Date</label>
 <input type="date" id="nativeDate">
-<p id="slotInfo" style="color: green; font-weight: 600;">Remaining slots: —</p>
+<p id="remainingSlots">Remaining Slots: —</p>
+
   <!-- Date Strip -->
 <!--    
   <div class="date-strip">

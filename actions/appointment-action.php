@@ -15,6 +15,59 @@ class Appointment {
     {
          $this->pdo = $pdo;
     }
+    public function bookAppointmentWithoutRedirect($data, $type){
+    try {
+        if ($type === 'medical') {
+            $sql = "INSERT INTO appointments (
+                        client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
+                        certificate_purpose, certificate_other,
+                        appointment_date, appointment_time,
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                        :certificate_purpose, :certificate_other,
+                        :appointment_date, :appointment_time,
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
+        } elseif ($type === 'ishihara') {
+            $sql = "INSERT INTO appointments (
+                        client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
+                        appointment_date, appointment_time,
+                        ishihara_test_type, ishihara_reason, previous_color_issues, ishihara_notes,
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                        :appointment_date, :appointment_time,
+                        :ishihara_test_type, :ishihara_reason, :previous_color_issues, :ishihara_notes,
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
+        } else {
+            $sql = "INSERT INTO appointments (
+                        client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
+                        appointment_date, appointment_time,
+                        wear_glasses, symptoms, concern,
+                        consent_info, consent_reminders, consent_terms
+                    ) VALUES (
+                        :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+                        :appointment_date, :appointment_time,
+                        :wear_glasses, :symptoms, :concern,
+                        :consent_info, :consent_reminders, :consent_terms
+                    )";
+        }
+
+        $stmt = $this->pdo->prepare($sql);
+
+        // Bind parameters (same as before)
+        foreach ($data as $key => $value) {
+            $stmt->bindValue(":$key", $value);
+        }
+
+        $stmt->execute();
+    } catch (PDOException $e) {
+        throw new Exception("Booking failed: " . $e->getMessage());
+    }
+}
+
 
     public function bookAppointment($data, $type){
         try {
@@ -182,22 +235,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   
 // ===============================
 // ✅ Slot availability check (Safe)
+/// ===============================
+// ✅ Slot availability check and booking (Fixed)
 // ===============================
-$pdo->beginTransaction();
-
 try {
-    // Lock the slot row for this service and date
+    $pdo->beginTransaction();
+
+    // 1️⃣ Lock and check the slot
     $slotCheck = $pdo->prepare("SELECT * FROM appointment_slots WHERE service_id = ? AND appointment_date = ? FOR UPDATE");
     $slotCheck->execute([$data['service_id'], $data['appointment_date']]);
     $slot = $slotCheck->fetch(PDO::FETCH_ASSOC);
 
+    // 2️⃣ Create if not exists
     if (!$slot) {
-        // Create a new slot record if it doesn’t exist
         $pdo->prepare("INSERT INTO appointment_slots (service_id, appointment_date, max_slots, used_slots) VALUES (?, ?, 3, 0)")
             ->execute([$data['service_id'], $data['appointment_date']]);
         $slot = ['max_slots' => 3, 'used_slots' => 0];
     }
 
+    // 3️⃣ Stop if fully booked
     if ($slot['used_slots'] >= $slot['max_slots']) {
         $pdo->rollBack();
         echo "<script>
@@ -207,22 +263,25 @@ try {
         exit;
     }
 
-    // Increment used slot count
+    // 4️⃣ Insert appointment safely
+    $appointment = new Appointment($pdo);
+    $appointment->bookAppointmentWithoutRedirect($data, $type);
+
+    // 5️⃣ Increment used slot count once
     $pdo->prepare("UPDATE appointment_slots SET used_slots = used_slots + 1 WHERE service_id = ? AND appointment_date = ?")
         ->execute([$data['service_id'], $data['appointment_date']]);
 
-    // Continue booking appointment
-$appointment = new Appointment($pdo);
-    $appointment->bookAppointment($data, $type);
-
     $pdo->commit();
+
+    echo "<script>
+        alert('Appointment booked successfully!');
+        window.location.href='../public/success.php';
+    </script>";
+    exit();
+
 } catch (Exception $e) {
     $pdo->rollBack();
-    die("Error booking appointment: " . $e->getMessage());
+    die('Error booking appointment: ' . $e->getMessage());
 }
-
-    // 🔹 Save
-    $appointment = new Appointment($pdo);
-    $appointment->bookAppointment($data, $type);
 }
 ?>

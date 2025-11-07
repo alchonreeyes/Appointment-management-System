@@ -1,32 +1,24 @@
 <?php
-session_start();
 include '../config/db.php';
 $db = new Database();
 $pdo = $db->getConnection();
 
-$service_id = $_POST['service_id'] ?? null;
-$appointment_date = $_POST['appointment_date'] ?? null;
-
-header('Content-Type: application/json');
-
-if (!$service_id || !$appointment_date) {
-    echo json_encode(['success' => false, 'message' => 'Missing data']);
+if (!isset($_POST['service_id'], $_POST['appointment_date'])) {
+    echo json_encode(['success' => false, 'message' => 'Missing parameters']);
     exit;
 }
 
-try {
-    $stmt = $pdo->prepare("SELECT max_slots, used_slots FROM appointment_slots WHERE service_id = ? AND appointment_date = ?");
-    $stmt->execute([$service_id, $appointment_date]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+$service_id = intval($_POST['service_id']);
+$date = $_POST['appointment_date'];
 
-    if ($row) {
-        $remaining = $row['max_slots'] - $row['used_slots'];
-    } else {
-        $remaining = 3; // default if no record yet
-    }
+$stmt = $pdo->prepare("SELECT max_slots, used_slots FROM appointment_slots WHERE service_id = ? AND appointment_date = ?");
+$stmt->execute([$service_id, $date]);
+$slot = $stmt->fetch(PDO::FETCH_ASSOC);
 
+if ($slot) {
+    $remaining = max(0, $slot['max_slots'] - $slot['used_slots']);
     echo json_encode(['success' => true, 'remaining' => $remaining]);
-} catch (PDOException $e) {
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+} else {
+    echo json_encode(['success' => true, 'remaining' => 3]); // default 3 slots
 }
 ?>

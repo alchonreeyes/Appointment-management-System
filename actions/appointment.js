@@ -208,7 +208,7 @@ function updateRemainingSlots(selectedDate) {
   const serviceId = document.getElementById('serviceId').value;
   const data = new URLSearchParams({ date, service_id: serviceId });
 
-  const res = await fetch('/actions/check-slot.php', {
+  const res = await fetch('/actions/check_slots.php', {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: data.toString()
@@ -261,14 +261,15 @@ async function checkSlots() {
     });
 
     const data = await response.json();
-
     if (data.success) {
       remainingDisplay.textContent = `Remaining Slots: ${data.remaining}`;
+      const submitBtn = document.querySelector('button[type="submit"]');
+
       if (data.remaining <= 0) {
-        showBookingPopup("Fully Booked", "Sorry, this date is already full. Please pick another date.");
-        document.querySelector('button[type="submit"]').disabled = true;
+        alert("Sorry, this date is fully booked. Please choose another date.");
+        submitBtn.disabled = true;
       } else {
-        document.querySelector('button[type="submit"]').disabled = false;
+        submitBtn.disabled = false;
       }
     } else {
       remainingDisplay.textContent = "Error checking slots.";
@@ -278,5 +279,5 @@ async function checkSlots() {
   }
 }
 
-// 🔹 Run check whenever the date changes
 document.getElementById("nativeDate").addEventListener("change", checkSlots);
+
