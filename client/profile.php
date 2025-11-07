@@ -34,7 +34,7 @@ $user['birth_date'] = $user['birth_date'] ?? '';
 $user['gender'] = $user['gender'] ?? '';
 $user['age'] = $user['age'] ?? '';
 $user['suffix'] = $user['suffix'] ?? '';
-$user['occupation'] = $user['occupation'] ?? '';
+$user['occupation'] = $user['occupation'] ?? '';    
 
 // Get user initials for avatar
 $name_parts = explode(' ', $user['full_name']);

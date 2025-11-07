@@ -280,4 +280,3 @@ async function checkSlots() {
 }
 
 document.getElementById("nativeDate").addEventListener("change", checkSlots);
-
