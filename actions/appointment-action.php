@@ -233,36 +233,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
  // ===============================
-// ✅ Slot availability check WITHOUT consuming slot
+// ✅ Slot availability check - ALL SERVICES SHARE SAME SLOTS
 // ===============================
 try {
     $pdo->beginTransaction();
 
-    // 1️⃣ Check if date is fully booked FOR THIS SPECIFIC SERVICE
-    $slotCheck = $pdo->prepare("SELECT * FROM appointment_slots WHERE service_id = ? AND appointment_date = ?");
-    $slotCheck->execute([$data['service_id'], $data['appointment_date']]);
-    $slot = $slotCheck->fetch(PDO::FETCH_ASSOC);
+    // 1️⃣ Count ALL confirmed appointments for this date (regardless of service type)
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as confirmed_count 
+        FROM appointments 
+        WHERE appointment_date = ? 
+        AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+    ");
+    $stmt->execute([$data['appointment_date']]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    $confirmedCount = $result['confirmed_count'];
+    $maxSlots = 3;
 
-    // 2️⃣ If no slot record exists, allow booking (admin hasn't confirmed any yet)
-    if (!$slot) {
-        // No slot record = no confirmed appointments yet = allow booking
-    } else {
-        // 3️⃣ Check if fully booked
-        if ($slot['used_slots'] >= $slot['max_slots']) {
-            $pdo->rollBack();
-            echo "<script>
-                alert('Sorry, this date is already fully booked for this service!');
-                window.location.href='../public/home.php';
-            </script>";
-            exit;
-        }
+    // 2️⃣ Check if fully booked
+    if ($confirmedCount >= $maxSlots) {
+        $pdo->rollBack();
+        echo "<script>
+            alert('Sorry, this date is already fully booked (3 confirmed appointments across all services)!');
+            window.location.href='../public/home.php';
+        </script>";
+        exit;
     }
 
-    // 4️⃣ Insert appointment as PENDING (doesn't consume slot yet)
+    // 3️⃣ Insert appointment as PENDING (doesn't consume slot yet)
     $appointment = new Appointment($pdo);
     $appointment->bookAppointmentWithoutRedirect($data, $type);
 
-    // ✅ DO NOT INCREMENT used_slots here - only admin confirmation does that
+    // ✅ DO NOT INCREMENT used_slots - only admin confirmation does that
 
     $pdo->commit();
 

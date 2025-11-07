@@ -106,55 +106,54 @@ if ($action === 'updateStatus') {
         $stmt_old_status->execute();
         $old_status_name = $stmt_old_status->get_result()->fetch_assoc()['status_name'];
 
-        // ====== SLOT MANAGEMENT LOGIC ======
-        
-        // Case 1: Changing FROM Confirmed TO something else (Cancel, Missed, etc.)
-        // Action: RELEASE the slot (decrement used_slots)
-        if ($old_status_name === 'Confirmed' && $newStatusName !== 'Confirmed') {
-            $stmt_release = $conn->prepare("
-                UPDATE appointment_slots 
-                SET used_slots = GREATEST(0, used_slots - 1) 
-                WHERE service_id = ? AND appointment_date = ?
-            ");
-            $stmt_release->bind_param("is", $service_id, $appointment_date);
-            $stmt_release->execute();
-        }
-        
-        // Case 2: Changing TO Confirmed (from Pending, Missed, etc.)
-        // Action: CONSUME a slot (increment used_slots) - but check availability first
-        if ($newStatusName === 'Confirmed' && $old_status_name !== 'Confirmed') {
-            // Check if slot exists for this date
-            $stmt_check_slot = $conn->prepare("
-                SELECT slot_id, max_slots, used_slots 
-                FROM appointment_slots 
-                WHERE service_id = ? AND appointment_date = ?
-            ");
-            $stmt_check_slot->bind_param("is", $service_id, $appointment_date);
-            $stmt_check_slot->execute();
-            $slot_result = $stmt_check_slot->get_result();
-            
-            if ($slot_result->num_rows === 0) {
-                // Create slot record if it doesn't exist
-                $stmt_create_slot = $conn->prepare("
-                    INSERT INTO appointment_slots (service_id, appointment_date, max_slots, used_slots) 
-                    VALUES (?, ?, 3, 0)
-                ");
-                $stmt_create_slot->bind_param("is", $service_id, $appointment_date);
-                $stmt_create_slot->execute();
-                $slot_data = ['max_slots' => 3, 'used_slots' => 0];
-            } else {
-                $slot_data = $slot_result->fetch_assoc();
-            }
-            
-            // Check if slots are available
-            $remaining = $slot_data['max_slots'] - $slot_data['used_slots'];
-            if ($remaining <= 0) {
-                echo json_encode([
-                    'success' => false, 
-                    'message' => 'No available slots for this date. All 3 slots are full.'
-                ]);
-                exit;
-            }
+       // ====== SLOT MANAGEMENT LOGIC ======
+// Now we track confirmed appointments directly in the appointments table
+// No need for appointment_slots table anymore
+
+// Case 1: Changing FROM Confirmed TO something else
+// Action: One slot opens up for the date
+if ($old_status_name === 'Confirmed' && $newStatusName !== 'Confirmed') {
+    // Count current confirmed appointments for this date
+    $stmt_count = $conn->prepare("
+        SELECT COUNT(*) as confirmed_count 
+        FROM appointments 
+        WHERE appointment_date = ? 
+        AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+        AND appointment_id != ?
+    ");
+    $stmt_count->bind_param("si", $appointment_date, $id);
+    $stmt_count->execute();
+    $count_result = $stmt_count->get_result()->fetch_assoc();
+    
+    // Slot is released (we don't need to do anything, just update status)
+}
+
+// Case 2: Changing TO Confirmed (from Pending, Missed, etc.)
+// Action: Check if slots are available
+if ($newStatusName === 'Confirmed' && $old_status_name !== 'Confirmed') {
+    // Count current confirmed appointments for this date
+    $stmt_count = $conn->prepare("
+        SELECT COUNT(*) as confirmed_count 
+        FROM appointments 
+        WHERE appointment_date = ? 
+        AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+    ");
+    $stmt_count->bind_param("s", $appointment_date);
+    $stmt_count->execute();
+    $count_result = $stmt_count->get_result()->fetch_assoc();
+    
+    $confirmedCount = $count_result['confirmed_count'];
+    $maxSlots = 3;
+    
+    // Check if slots are available
+    if ($confirmedCount >= $maxSlots) {
+        echo json_encode([
+            'success' => false, 
+            'message' => 'No available slots for this date. All 3 slots are full (across all services).'
+        ]);
+        exit;
+    }
+
             
             // Increment used_slots
             $stmt_consume = $conn->prepare("

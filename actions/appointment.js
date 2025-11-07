@@ -237,7 +237,6 @@ document.getElementById('nativeDate').addEventListener('change', async (e) => {
   }
 });
 }
-
 // ===============================
 // ✅ SLOT CHECKER (fetch from PHP)
 // ===============================
@@ -255,15 +254,13 @@ if (timeSlotsContainer) {
 
 async function checkSlots() {
   const dateInput = document.getElementById("nativeDate");
-  const serviceInput = document.querySelector('input[name="service_id"]');
   const submitBtn = document.querySelector('button[type="submit"]');
 
-  if (!dateInput || !serviceInput) return;
+  if (!dateInput) return;
 
   const date = dateInput.value;
-  const serviceId = serviceInput.value;
 
-  if (!date || !serviceId) {
+  if (!date) {
     remainingDisplay.textContent = "Please select a date first.";
     remainingDisplay.style.color = "#6b7280";
     return;
@@ -273,7 +270,7 @@ async function checkSlots() {
     const response = await fetch("../actions/check_slots.php", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: `service_id=${serviceId}&appointment_date=${date}`
+      body: `appointment_date=${date}`
     });
 
     const data = await response.json();
@@ -283,7 +280,7 @@ async function checkSlots() {
       
       // Update display with color coding
       if (remaining > 0) {
-        remainingDisplay.textContent = `✅ ${remaining} slot${remaining !== 1 ? 's' : ''} available`;
+        remainingDisplay.textContent = `✅ ${remaining} slot${remaining !== 1 ? 's' : ''} available (across all services)`;
         remainingDisplay.style.color = remaining > 1 ? "#16a34a" : "#f59e0b";
         if (submitBtn) submitBtn.disabled = false;
       } else {
@@ -291,11 +288,12 @@ async function checkSlots() {
         remainingDisplay.style.color = "#dc2626";
         if (submitBtn) submitBtn.disabled = true;
         
-        // Also clear the selected date
+        // Clear the selected date
         dateInput.value = "";
-        document.getElementById("appointmentDate").value = "";
+        const appointmentDateInput = document.getElementById("appointmentDate");
+        if (appointmentDateInput) appointmentDateInput.value = "";
         
-        alert("Sorry, this date is fully booked. Please choose another date.");
+        alert("Sorry, this date is fully booked for all services. Please choose another date.");
       }
     } else {
       remainingDisplay.textContent = "Error checking slots.";
@@ -318,4 +316,3 @@ if (nativeDateInput) {
     checkSlots();
   }
 }
-document.getElementById("nativeDate").addEventListener("change", checkSlots);
