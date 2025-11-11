@@ -77,47 +77,26 @@ if (!isset($_SESSION['user_id'])) {
             <button type="button" class="next-btn">Next</button>
         </div>
         
-  <!-- Step 2: Choose Provider & Time -->
+<!-- STEP 2: Choose Provider & Time -->
 <div class="form-step">
-  <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
-  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
+  <h2>Choose provider & time</h2>
 
-  <!-- Native Date Picker (syncs with strip) -->
-  <label>Select Date</label>
-<input type="date" id="nativeDate">
-<p id="remainingSlots">Remaining Slots: —</p>
+  <label>Select 3 Appointment Dates</label>
+  <input type="date" id="multiDate1" name="appointment_dates[]" required>
+  <input type="date" id="multiDate2" name="appointment_dates[]" required>
+  <input type="date" id="multiDate3" name="appointment_dates[]" required>
 
-  <!-- Date Strip -->
-<!--    
-  <div class="date-strip">
-    <button data-date="2025-09-09">Mon 09 Sep</button>
-    <button data-date="2025-09-10">Tue 10 Sep</button>
-    <button data-date="2025-09-11">Wed 11 Sep</button>
-    <button data-date="2025-09-12">Thu 12 Sep</button>
-    <button data-date="2025-09-13">Fri 13 Sep</button>
-    <button data-date="2025-09-14">Sat 14 Sep</button>
-    <button data-date="2025-09-15">Sun 15 Sep</button>
-  </div> -->
-
-  <!-- Time Slots -->
   <div class="time-slots">
-    <button data-time="10:00 AM">10:00 AM</button>
-    <button data-time="11:00 AM">11:00 AM</button>
-    <button data-time="1:30 PM">1:30 PM</button>
-    <button data-time="2:30 PM">2:30 PM</button>
-    <button data-time="3:30 PM">3:30 PM</button>
-    <button data-time="4:30 PM">4:30 PM</button>
-    <button data-time="5:30 PM">5:30 PM</button>
+    <button type="button" data-time="10:00">10:00 AM</button>
+    <button type="button" data-time="11:00">11:00 AM</button>
+    <button type="button" data-time="13:30">1:30 PM</button>
+    <!-- ... -->
   </div>
 
-  <!-- Next Available -->
-  <div class="next-available" id="nextAvailable">
-    Next Available: —
-  </div>
+  <div id="nextAvailable">Please select 3 dates and a time.</div>
 
-  <!-- Hidden Inputs for PHP -->
-  <input type="hidden" name="appointment_date" id="appointmentDate">
-  <input type="hidden" name="appointment_time" id="appointmentTime">
+  <input type="hidden" id="appointment_dates_json" name="appointment_dates_json">
+  <input type="hidden" id="appointmentTime" name="appointment_time">
 
   <button type="button" class="prev-btn">Back</button>
   <button type="button" class="next-btn">Next</button>
