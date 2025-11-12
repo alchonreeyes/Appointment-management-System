@@ -273,6 +273,14 @@ h2{
 .progress-line.completed {
     background: rgb(255, 0, 4);
 }
+.date-time-row {
+  display: flex;
+  gap: 10px;
+}
+.date-time-row input, .date-time-row select {
+  width: 50%;
+}
+
 
 /* On larger screens, use flex row */
 @media (min-width: 768px) {

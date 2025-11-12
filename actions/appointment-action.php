@@ -2,35 +2,25 @@
 session_start();
 include '../config/db.php';
 
-header('Content-Type: application/json');
-
 try {
     $db = new Database();
     $pdo = $db->getConnection();
 
-    if (!$pdo) {
-        throw new Exception("Database connection failed");
-    }
+    if (!$pdo) throw new Exception("Database connection failed");
 
-    // ✅ Must be logged in
     if (!isset($_SESSION['user_id'])) {
         echo json_encode(['success' => false, 'message' => 'Session expired. Please log in again.']);
         exit;
     }
 
-    // 🔑 Get client_id linked to the logged-in user
+    // Get client ID
     $stmt = $pdo->prepare("SELECT client_id FROM clients WHERE user_id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $client = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$client) {
-        echo json_encode(['success' => false, 'message' => 'Client record not found.']);
-        exit;
-    }
-
+    if (!$client) throw new Exception("Client record not found.");
     $client_id = $client['client_id'];
 
-    // ✅ Gather common form inputs
+    // Common input fields
     $service_id = $_POST['service_id'] ?? 1;
     $full_name = trim($_POST['full_name'] ?? '');
     $suffix = trim($_POST['suffix'] ?? '');
@@ -38,60 +28,64 @@ try {
     $age = intval($_POST['age'] ?? 0);
     $phone_number = trim($_POST['contact_number'] ?? '');
     $occupation = trim($_POST['occupation'] ?? '');
-    $appointment_time = trim($_POST['appointment_time'] ?? '');
     $consent_info = isset($_POST['consent_info']) ? 1 : 0;
     $consent_reminders = isset($_POST['consent_reminders']) ? 1 : 0;
     $consent_terms = isset($_POST['consent_terms']) ? 1 : 0;
 
-    // ✅ Determine appointment type (based on existing fields)
+    // Detect appointment type
     $type = 'normal';
-    if (isset($_POST['certificate_purpose'])) {
-        $type = 'medical';
-    } elseif (isset($_POST['ishihara_test_type'])) {
-        $type = 'ishihara';
-    }
+    if (isset($_POST['certificate_purpose'])) $type = 'medical';
+    elseif (isset($_POST['ishihara_test_type'])) $type = 'ishihara';
 
-    // ✅ Parse the 3-day appointment selection
-    $dates = [];
+    // Parse the appointment dates JSON (should contain array of {date, time} objects)
+    $appointments = [];
     if (!empty($_POST['appointment_dates_json'])) {
-        $dates = json_decode($_POST['appointment_dates_json'], true);
-    } elseif (!empty($_POST['appointment_date'])) {
-        // fallback: single-date mode (for compatibility)
-        $dates = [$_POST['appointment_date']];
-    }
-
-    if (!is_array($dates) || count($dates) === 0) {
-        echo json_encode(['success' => false, 'message' => 'Please select at least one appointment date.']);
-        exit;
-    }
-
-    // ✅ Slot availability check for each selected date
-    foreach ($dates as $date) {
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as confirmed_count 
-            FROM appointments 
-            WHERE appointment_date = ? 
-            AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
-        ");
-        $stmt->execute([$date]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        $maxSlots = 3;
-        if ($result['confirmed_count'] >= $maxSlots) {
-            echo json_encode([
-                'success' => false,
-                'message' => "Sorry, $date is already fully booked (3 confirmed appointments)."
-            ]);
-            exit;
+        $decoded = json_decode($_POST['appointment_dates_json'], true);
+        if (is_array($decoded)) {
+            $appointments = $decoded;
         }
     }
 
-    // ✅ Everything looks good — insert appointment group
-    $appointment_group_id = uniqid('grp_', true);
+    // Validate we have appointments
+    if (empty($appointments)) {
+        echo json_encode(['success' => false, 'message' => 'Please select appointment date(s) and time(s).']);
+        exit;
+    }
 
+    // Create unique group ID for this set of appointments
+    $appointment_group_id = uniqid('grp_', true);
+    
+    // Start transaction
     $pdo->beginTransaction();
 
-    foreach ($dates as $date) {
+    foreach ($appointments as $slot) {
+        $date = $slot['date'] ?? '';
+        $time = $slot['time'] ?? '';
+
+        if (empty($date) || empty($time)) continue;
+
+        // ✅ Check if this specific date+time slot is full (max 3 confirmed)
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) AS confirmed_count
+            FROM appointments
+            WHERE appointment_date = ?
+              AND appointment_time = ?
+              AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+        ");
+        $stmt->execute([$date, $time]);
+        $confirmedCount = $stmt->fetchColumn();
+        $maxSlots = 3;
+
+        if ($confirmedCount >= $maxSlots) {
+            $pdo->rollBack();
+            echo json_encode([
+                'success' => false,
+                'message' => "Sorry, $date at $time is fully booked. Please select a different time."
+            ]);
+            exit;
+        }
+
+        // ✅ Insert appointment based on type
         if ($type === 'medical') {
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
@@ -117,10 +111,10 @@ try {
                 ':age' => $age,
                 ':phone_number' => $phone_number,
                 ':occupation' => $occupation,
-                ':certificate_purpose' => $_POST['certificate_purpose'] ?? 'Fit to Work',
-                ':certificate_other' => $_POST['certificate_other'] ?? '',
+                ':certificate_purpose' => 'Medical Purposes',  // Automatically fills when booking a medical type
+                ':certificate_other' => '', // leave blank if not applicable
                 ':appointment_date' => $date,
-                ':appointment_time' => $appointment_time,
+                ':appointment_time' => $time,
                 ':consent_info' => $consent_info,
                 ':consent_reminders' => $consent_reminders,
                 ':consent_terms' => $consent_terms,
@@ -152,7 +146,7 @@ try {
                 ':phone_number' => $phone_number,
                 ':occupation' => $occupation,
                 ':appointment_date' => $date,
-                ':appointment_time' => $appointment_time,
+                ':appointment_time' => $time,
                 ':ishihara_test_type' => $_POST['ishihara_test_type'] ?? '',
                 ':ishihara_reason' => $_POST['ishihara_reason'] ?? '',
                 ':previous_color_issues' => $_POST['previous_color_issues'] ?? '',
@@ -163,6 +157,7 @@ try {
                 ':appointment_group_id' => $appointment_group_id
             ]);
         } else {
+            // Normal appointment
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                         appointment_date, appointment_time,
@@ -188,7 +183,7 @@ try {
                 ':phone_number' => $phone_number,
                 ':occupation' => $occupation,
                 ':appointment_date' => $date,
-                ':appointment_time' => $appointment_time,
+                ':appointment_time' => $time,
                 ':wear_glasses' => $_POST['wear_glasses'] ?? null,
                 ':symptoms' => isset($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : '',
                 ':concern' => $_POST['concern'] ?? '',
@@ -200,18 +195,17 @@ try {
         }
     }
 
+    // Commit all appointments
     $pdo->commit();
 
     echo json_encode([
         'success' => true,
-        'message' => 'Appointment successfully created for multiple dates.',
+        'message' => count($appointments) . ' appointment(s) successfully created.',
         'group_id' => $appointment_group_id
     ]);
 
 } catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) {
-        $pdo->rollBack();
-    }
+    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
 ?>

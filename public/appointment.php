@@ -80,29 +80,110 @@ if (!isset($_SESSION['user_id'])) {
 <!-- STEP 2: Choose Provider & Time -->
 <div class="form-step">
   <h2>Choose provider & time</h2>
+  <p style="color: black;">Select up to 3 appointment dates and their corresponding time slots. Each slot can accommodate maximum 3 clients.</p>
 
-  <label>Select 3 Appointment Dates</label>
-  <input type="date" id="multiDate1" name="appointment_dates[]" required>
-  <input type="date" id="multiDate2" name="appointment_dates[]" required>
-  <input type="date" id="multiDate3" name="appointment_dates[]" required>
-
-  <div class="time-slots">
-    <button type="button" data-time="10:00">10:00 AM</button>
-    <button type="button" data-time="11:00">11:00 AM</button>
-    <button type="button" data-time="13:30">1:30 PM</button>
-    <!-- ... -->
+  <!-- Appointment 1 -->
+  <div class="appointment-row" style="margin-bottom: 20px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0; color: #1f2937;">Appointment 1</h4>
+      <span class="slot-badge" id="slot-badge-0" style="padding: 4px 12px; background: #e5e7eb; color: #6b7280; border-radius: 20px; font-size: 13px; font-weight: 600;">Select date & time</span>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Date:</label>
+        <input type="date" class="date-input" data-index="0" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+      </div>
+      
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Time:</label>
+        <select class="time-select" data-index="0" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+          <option value="">Select Time</option>
+          <option value="10:00">10:00 AM</option>
+          <option value="11:00">11:00 AM</option>
+          <option value="13:30">1:30 PM</option>
+          <option value="14:30">2:30 PM</option>
+          <option value="15:30">3:30 PM</option>
+          <option value="16:30">4:30 PM</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="slot-message" id="slot-message-0" style="margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 14px; display: none;"></div>
   </div>
 
-  <div id="nextAvailable">Please select 3 dates and a time.</div>
+  <!-- Appointment 2 -->
+  <div class="appointment-row" style="margin-bottom: 20px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0; color: #1f2937;">Appointment 2</h4>
+      <span class="slot-badge" id="slot-badge-1" style="padding: 4px 12px; background: #e5e7eb; color: #6b7280; border-radius: 20px; font-size: 13px; font-weight: 600;">Select date & time</span>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Date:</label>
+        <input type="date" class="date-input" data-index="1" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+      </div>
+      
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Time:</label>
+        <select class="time-select" data-index="1" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+          <option value="">Select Time</option>
+          <option value="10:00">10:00 AM</option>
+          <option value="11:00">11:00 AM</option>
+          <option value="13:30">1:30 PM</option>
+          <option value="14:30">2:30 PM</option>
+          <option value="15:30">3:30 PM</option>
+          <option value="16:30">4:30 PM</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="slot-message" id="slot-message-1" style="margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 14px; display: none;"></div>
+  </div>
 
+  <!-- Appointment 3 -->
+  <div class="appointment-row" style="margin-bottom: 20px; padding: 15px; border: 2px solid #e5e7eb; border-radius: 12px; background: #f9fafb;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0; color: #1f2937;">Appointment 3</h4>
+      <span class="slot-badge" id="slot-badge-2" style="padding: 4px 12px; background: #e5e7eb; color: #6b7280; border-radius: 20px; font-size: 13px; font-weight: 600;">Select date & time</span>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Date:</label>
+        <input type="date" class="date-input" data-index="2" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+      </div>
+      
+      <div>
+        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Time:</label>
+        <select class="time-select" data-index="2" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 6px;">
+          <option value="">Select Time</option>
+          <option value="10:00">10:00 AM</option>
+          <option value="11:00">11:00 AM</option>
+          <option value="13:30">1:30 PM</option>
+          <option value="14:30">2:30 PM</option>
+          <option value="15:30">3:30 PM</option>
+          <option value="16:30">4:30 PM</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="slot-message" id="slot-message-2" style="margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 14px; display: none;"></div>
+  </div>
+
+  <!-- Summary Display -->
+  <div id="appointmentSummary" style="margin-top: 20px; padding: 15px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 8px; display: none;">
+    <h4 style="margin: 0 0 10px 0; color: #1e40af;">📋 Appointment Summary</h4>
+    <div id="summaryContent"></div>
+  </div>
+
+  <!-- Hidden field to store JSON data -->
   <input type="hidden" id="appointment_dates_json" name="appointment_dates_json">
-  <input type="hidden" id="appointmentTime" name="appointment_time">
 
   <button type="button" class="prev-btn">Back</button>
   <button type="button" class="next-btn">Next</button>
 </div>
-
-
 
         
         <!-- Step 3: Symptoms -->
