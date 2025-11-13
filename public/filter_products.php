@@ -13,11 +13,17 @@ if ($conn->connect_error) {
     die(json_encode(['error' => 'Connection failed']));
 }
 
-// Get filter parameters from POST
-$genders = isset($_POST['genders']) ? $_POST['genders'] : [];
-$brands = isset($_POST['brands']) ? $_POST['brands'] : [];
-$lensTypes = isset($_POST['lensTypes']) ? $_POST['lensTypes'] : [];
-$frameTypes = isset($_POST['frameTypes']) ? $_POST['frameTypes'] : [];
+// Get filter parameters from POST and decode JSON
+$genders = isset($_POST['genders']) ? json_decode($_POST['genders'], true) : [];
+$brands = isset($_POST['brands']) ? json_decode($_POST['brands'], true) : [];
+$lensTypes = isset($_POST['lensTypes']) ? json_decode($_POST['lensTypes'], true) : [];
+$frameTypes = isset($_POST['frameTypes']) ? json_decode($_POST['frameTypes'], true) : [];
+
+// Ensure they are arrays
+$genders = is_array($genders) ? $genders : [];
+$brands = is_array($brands) ? $brands : [];
+$lensTypes = is_array($lensTypes) ? $lensTypes : [];
+$frameTypes = is_array($frameTypes) ? $frameTypes : [];
 
 // Build the SQL query
 $sql = "SELECT * FROM products WHERE 1=1";
