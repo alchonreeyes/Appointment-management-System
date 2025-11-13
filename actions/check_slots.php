@@ -35,12 +35,15 @@ try {
         exit;
     }
 
-    // Build query
+    // ✅ FIXED: Only check appointments table with proper status filtering
     $query = "
         SELECT COUNT(*) AS confirmed_count
         FROM appointments
         WHERE appointment_date = :appointment_date
-          AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+          AND status_id IN (
+              SELECT status_id FROM appointmentstatus 
+              WHERE status_name IN ('Confirmed', 'Pending')
+          )
     ";
 
     $params = [':appointment_date' => $date];
