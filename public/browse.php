@@ -141,7 +141,15 @@ $result = $conn->query($sql);
                 echo '<div class="product-card">';
                 echo '<div class="product-image">';
                 if (!empty($row['image_path'])) {
-                    echo '<img src="' . htmlspecialchars($row['image_path']) . '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="Product">';
+                    // Convert the path: ../photo/ -> ../assets/src/ (where images actually are)
+                    $imagePath = $row['image_path'];
+                    
+                    // If path contains ../photo/, replace it with actual location
+                    if (strpos($imagePath, '../photo/') !== false) {
+                        $imagePath = str_replace('../photo/', '../assets/src/', $imagePath);
+                    }
+                    
+                    echo '<img src="' . htmlspecialchars($imagePath) . '" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="Product">';
                 }
                 echo '</div>';
                 echo '<div class="product-info">';
@@ -181,7 +189,7 @@ $result = $conn->query($sql);
       
       <button class="add-to-cart-btn">Want Prescriptions?</button>
       
-      <a href="#" class="prescription-link">Book An Appointment Now?</a>
+      <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       
       <ul class="product-features">
         <li>Premium quality frames</li>
@@ -293,10 +301,17 @@ function updateProductGrid(products) {
         return;
     }
     
-    grid.innerHTML = products.map(product => `
+    grid.innerHTML = products.map(product => {
+        // Fix the image path - convert ../photo/ to ../assets/src/
+        let imagePath = product.image_path || '';
+        if (imagePath.includes('../photo/')) {
+            imagePath = imagePath.replace('../photo/', '../assets/src/');
+        }
+        
+        return `
         <div class="product-card">
             <div class="product-image">
-                ${product.image_path ? `<img src="${product.image_path}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="Product">` : ''}
+                ${imagePath ? `<img src="${imagePath}" style="width:100%;height:100%;object-fit:cover;border-radius:6px;" alt="${product.product_name}">` : '<div style="display:flex;align-items:center;justify-content:center;color:#999;">No Image</div>'}
             </div>
             <div class="product-info">
                 <h3>${product.product_name}</h3>
@@ -309,7 +324,8 @@ function updateProductGrid(products) {
                 <button class="see-more-btn" onclick="openModal(${product.product_id})">See more</button>
             </div>
         </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // Add event listeners to all filter checkboxes
