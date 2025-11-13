@@ -90,7 +90,7 @@ if (session_status() === PHP_SESSION_NONE) {
                     <li><a href="#">Category</a></li>
                     <li><a href="../public/store.php">Store</a></li>
                     <li><a href="../public/home.php">Home</a></li>
-                    <li><a href="#">Brands</a></li>
+                    <li><a href="../public/browse.php">Browse</a></li>
                 </ul>
                 <div class="search">
                     <input type="text" id="browse" placeholder="I'm looking for.....">
