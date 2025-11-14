@@ -118,6 +118,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
         $error_message = "Current password is incorrect.";
     }
 }
+
+
 ?>
 
 <!DOCTYPE html>
@@ -134,8 +136,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     
     <div class="link-section">
         <a href="../public/home.php"><i class="fa-solid fa-house"></i></a>
-        <a href="#" class="side-toggle"><i class="fa-solid fa-bars"></i></a>
+        <a href="#" class="side-toggle" style="border-radius: 50%; background:white; padding: 10px" ><i class="fa-solid fa-bars"></i></a>
     </div>
+
+    <?php include 'sidebar.php'; ?>
+
+<!-- Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
 
     <div class="profile">
         <div class="profile-details">
@@ -306,30 +313,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
     <?php include '../includes/footer.php' ?>
 
-    <script>
-        function togglePassword(inputId) {
-            const input = document.getElementById(inputId);
-            const icon = input.nextElementSibling;
-            
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-            } else {
-                input.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-            }
-        }
-
-        // Auto-hide alerts after 5 seconds
-        setTimeout(function() {
-            const alerts = document.querySelectorAll('.alert');
-            alerts.forEach(alert => {
-                alert.style.opacity = '0';
-                setTimeout(() => alert.remove(), 300);
-            });
-        }, 5000);
-    </script>
 </body>
 </html>
