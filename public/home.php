@@ -95,7 +95,7 @@ $update->execute();
           <div class="glasses-description">
             <h2>Eyeglasses sports</h2>
             <p>Fasionable eyewear for every mood, Every day</p>
-            <button>see more</button>
+            <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
           </div>
           
           </div>
@@ -106,7 +106,7 @@ $update->execute();
               <div class="glasses-description">
                 <h2>Eyeglasses sports</h2>
                 <p>Fasionable eyewear for every mood, Every day</p>
-                <button>see more</button>
+               <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
             </div>
           </div>
           <div class="glasses-card">
@@ -114,7 +114,7 @@ $update->execute();
               <div class="glasses-description">
             <h2>Eyeglasses sports</h2>
             <p>Fasionable eyewear for every mood, Every day</p>
-            <button>see more</button>
+            <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
               </div>
           </div>
           </div>
@@ -140,7 +140,7 @@ $update->execute();
       <div class="cards-detail">
         <h3>STYLE FOR<br>EVERY SCENE</h3>
         <p>Fits for every</p>
-        <button class="view-more-btn">View More</button>
+        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
       </div>
     </div>
 
@@ -150,7 +150,7 @@ $update->execute();
       <div class="cards-detail">
         <h3>Designer<br>Vibes</h3>
         <p>Effortless looks for every<br>vibe.</p>
-        <button class="view-more-btn">View More</button>
+        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
       </div>
     </div>
 
@@ -160,7 +160,7 @@ $update->execute();
       <div class="cards-detail">
         <h3>Privacy<br>Activated</h3>
         <p>Disrupt unwanted<br>tracking</p>
-        <button class="view-more-btn">View More</button>
+        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
       </div>
     </div>
 
@@ -181,7 +181,7 @@ $update->execute();
   <div class="section-message">
     <h1>Fit & Style</h1>
     <p>Need help figuring out which frames are right for you?</p>
-    <a href="#" class="cta-button">Browse Eyew-Wear</a>
+    <a href="./browse.php" class="cta-button">Browse Eye-Wear</a>
 </div>
 
 </div>
@@ -257,7 +257,7 @@ $update->execute();
                 <h3>Browse product</h3>
                 <p>Explore our extensive collection of eyewear to find the perfect style that matches your personality.</p>
                 <p>Visit our store to try on frames, get expert style advice, and find the glasses that make you look and feel confident!</p>
-                <a href="#" class="cta-button">See more</a>
+                <a href="./browse.php" class="cta-button">See more</a>
             </div>
         </div>
     </div>

@@ -1,0 +1,429 @@
+/* ============================================
+   DARK MODE THEME - Eye Master Clinic
+   ============================================ */
+
+body.dark-mode {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+.body.dark-mode sidebar-nav{
+    background-color: black;
+}
+
+/* ========== BREADCRUMB NAVIGATION ========== */
+body.dark-mode .link-section {
+    background-color: #2d2d2d;
+}
+
+body.dark-mode .link-section a {
+    color: #e0e0e0;
+}
+
+body.dark-mode .link-section a:hover {
+    color: #ff6b6b;
+}
+
+body.dark-mode .link-section p {
+    color: #e0e0e0;
+}
+
+/* ========== PROFILE CONTAINER ========== */
+body.dark-mode .profile {
+    background: #1a1a1a;
+}
+
+/* ========== PROFILE DETAILS CARD ========== */
+body.dark-mode .profile-details {
+    background: #2d2d2d;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ========== PROFILE HEADER ========== */
+body.dark-mode .profile-header {
+    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+}
+
+body.dark-mode .avatar-circle {
+    background: rgba(255, 255, 255, 0.15);
+    border: 4px solid rgba(255, 255, 255, 0.3);
+}
+
+body.dark-mode .user-badge {
+    background: white;
+    color: #8B0000;
+}
+
+/* ========== ALERTS ========== */
+body.dark-mode .alert-success {
+    background: #1e4620;
+    color: #81c784;
+    border: 1px solid #2e7d32;
+}
+
+body.dark-mode .alert-error {
+    background: #4a1a1a;
+    color: #ef9a9a;
+    border: 1px solid #c62828;
+}
+
+/* ========== PROFILE SECTIONS ========== */
+body.dark-mode .profile-section {
+    border-bottom: 1px solid #404040;
+}
+
+body.dark-mode .section-title {
+    color: #e0e0e0;
+}
+
+body.dark-mode .section-title i {
+    color: #ff6b6b;
+}
+
+/* ========== FORMS ========== */
+body.dark-mode .form-group label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .form-group input,
+body.dark-mode .form-group select,
+body.dark-mode .form-group textarea {
+    background: #1a1a1a;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+body.dark-mode .form-group input:focus,
+body.dark-mode .form-group select:focus,
+body.dark-mode .form-group textarea:focus {
+    background: #2d2d2d;
+    border-color: #8B0000;
+    box-shadow: 0 0 0 3px rgba(139, 0, 0, 0.2);
+}
+
+body.dark-mode .form-group input:hover,
+body.dark-mode .form-group select:hover,
+body.dark-mode .form-group textarea:hover {
+    border-color: #606060;
+}
+
+body.dark-mode .form-group input:disabled,
+body.dark-mode .form-group select:disabled,
+body.dark-mode .form-group textarea:disabled {
+    background: #1a1a1a;
+    opacity: 0.5;
+}
+
+body.dark-mode .toggle-password {
+    color: #b0b0b0;
+}
+
+body.dark-mode .toggle-password:hover {
+    color: #ff6b6b;
+}
+
+/* ========== BUTTONS ========== */
+body.dark-mode .btn-primary {
+    background: #28a745;
+    color: white;
+}
+
+body.dark-mode .btn-primary:hover {
+    background: #218838;
+}
+
+body.dark-mode .btn-warning {
+    background: #ffc107;
+    color: #1a1a1a;
+}
+
+body.dark-mode .btn-warning:hover {
+    background: #e0a800;
+}
+
+body.dark-mode .btn-danger {
+    background: #dc3545;
+    color: white;
+}
+
+body.dark-mode .btn-danger:hover {
+    background: #c82333;
+}
+
+/* ========== LOGOUT SECTION ========== */
+body.dark-mode .logout-section {
+    background: #1a1a1a;
+}
+
+/* ========== SIDEBAR ========== */
+body.dark-mode .sidebar {
+    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+}
+
+body.dark-mode .sidebar-header {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode .sidebar-nav a {
+    color: white;
+}
+
+body.dark-mode .sidebar-nav a:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+body.dark-mode .sidebar-nav a.active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ========== APPOINTMENTS PAGE ========== */
+body.dark-mode .stat-box {
+    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+    border: 2px solid #404040;
+}
+
+body.dark-mode .stat-number {
+    color: #e0e0e0;
+}
+
+body.dark-mode .stat-label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .filter-group select,
+body.dark-mode .filter-group input {
+    background: #1a1a1a;
+    border: 1px solid #404040;
+    color: #e0e0e0;
+}
+
+body.dark-mode .appointment-card {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+}
+
+body.dark-mode .appointment-title {
+    color: #e0e0e0;
+}
+
+body.dark-mode .appointment-id {
+    background: #1a1a1a;
+    color: #b0b0b0;
+}
+
+body.dark-mode .detail-label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .detail-value {
+    color: #e0e0e0;
+}
+
+body.dark-mode .appointment-actions {
+    border-top: 1px solid #404040;
+}
+
+body.dark-mode .empty-state {
+    color: #b0b0b0;
+}
+
+body.dark-mode .empty-state i {
+    color: #404040;
+}
+
+body.dark-mode .empty-state h3 {
+    color: #e0e0e0;
+}
+
+/* ========== STATUS BADGES (DARK MODE) ========== */
+body.dark-mode .status-badge.pending {
+    background: #4a3c00;
+    color: #ffd54f;
+}
+
+body.dark-mode .status-badge.confirmed {
+    background: #1b3a1b;
+    color: #81c784;
+}
+
+body.dark-mode .status-badge.completed {
+    background: #1a2942;
+    color: #64b5f6;
+}
+
+body.dark-mode .status-badge.cancelled {
+    background: #3a3a3a;
+    color: #b0b0b0;
+}
+
+body.dark-mode .status-badge.missed {
+    background: #4a1a1a;
+    color: #ef9a9a;
+}
+
+/* ========== MODALS ========== */
+body.dark-mode .modal-overlay {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+body.dark-mode .modal-content {
+    background: #2d2d2d;
+}
+
+body.dark-mode .modal-header {
+    background: linear-gradient(135deg, #8B0000 0%, #A52A2A 100%);
+}
+
+body.dark-mode .modal-body {
+    background: #2d2d2d;
+}
+
+body.dark-mode .detail-row {
+    background: #1a1a1a;
+    border: 1px solid #404040;
+}
+
+body.dark-mode .detail-row label {
+    color: #b0b0b0;
+}
+
+body.dark-mode .detail-row .value {
+    color: #e0e0e0;
+}
+
+/* ========== SETTINGS PAGE ========== */
+body.dark-mode .settings-nav {
+    border-bottom: 2px solid #404040;
+}
+
+body.dark-mode .settings-nav-item {
+    color: #b0b0b0;
+}
+
+body.dark-mode .settings-nav-item:hover {
+    color: #ff6b6b;
+}
+
+body.dark-mode .settings-nav-item.active {
+    color: #ff6b6b;
+    border-bottom-color: #ff6b6b;
+}
+
+body.dark-mode .settings-card {
+    background: #2d2d2d;
+    border: 1px solid #404040;
+}
+
+body.dark-mode .settings-card h3 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .settings-card p {
+    color: #b0b0b0;
+}
+
+body.dark-mode .theme-option {
+    background: #1a1a1a;
+    border: 2px solid #404040;
+}
+
+body.dark-mode .theme-option:hover {
+    border-color: #ff6b6b;
+}
+
+body.dark-mode .theme-option.selected {
+    border-color: #ff6b6b;
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(165, 42, 42, 0.1) 100%);
+}
+
+body.dark-mode .theme-option.selected::after {
+    background: #ff6b6b;
+}
+
+body.dark-mode .theme-option h4 {
+    color: #e0e0e0;
+}
+
+body.dark-mode .theme-option span {
+    color: #b0b0b0;
+}
+
+body.dark-mode .placeholder-section {
+    background: #1a1a1a;
+    border: 2px dashed #404040;
+    color: #b0b0b0;
+}
+
+body.dark-mode .placeholder-section i {
+    color: #404040;
+}
+
+body.dark-mode .placeholder-section h4 {
+    color: #e0e0e0;
+}
+
+/* ========== TABLES (if you have any) ========== */
+body.dark-mode table {
+    background: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.dark-mode table thead {
+    background: #1a1a1a;
+    color: #e0e0e0;
+}
+
+body.dark-mode table tbody tr {
+    border-bottom: 1px solid #404040;
+}
+
+body.dark-mode table tbody tr:hover {
+    background: #353535;
+}
+
+/* ========== SCROLLBARS ========== */
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #606060;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #808080;
+}
+
+/* ========== NAVBAR (if you have custom navbar) ========== */
+body.dark-mode .navbar {
+    background: #2d2d2d;
+    border-bottom: 1px solid #404040;
+}
+
+body.dark-mode .navbar a {
+    color: #e0e0e0;
+}
+
+body.dark-mode .navbar a:hover {
+    color: #ff6b6b;
+}
+
+/* ========== FOOTER ========== */
+body.dark-mode footer {
+    background: #2d2d2d;
+    color: #b0b0b0;
+    border-top: 1px solid #404040;
+}
+
+/* ========== SMOOTH TRANSITION ========== */
+body,
+.profile-details,
+.profile-section,
+.form-group input,
+.form-group select,
+.form-group textarea,
+.btn,
+.appointment-card,
+.modal-content {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}

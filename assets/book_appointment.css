@@ -2,6 +2,12 @@ body{
      font-family: Arial, sans-serif;
 }
 
+.nav-links ul li a{
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+.nav-config{
+    align-items: center;
+}
 .book-appointment {
     display: flex;
     justify-content: center;

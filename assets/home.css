@@ -8,6 +8,10 @@
       font-family: Arial, sans-serif;
       background: #f0f0f0;
     }
+    
+.nav-links ul li a{
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
 
     .carousel {
       width: 100%;
@@ -201,7 +205,7 @@
 .newsletter-section {
             width: 100%;
             min-height: 10vh;
-            background: #a6faff;
+            background: #60b4f8;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -224,13 +228,13 @@
         .newsletter-content h2 {
             font-size: 1.8rem;
             font-weight: 700;
-            color: #1a1a1a;
+            color: #ffffff;
             margin-bottom: 10px;
         }
 
         .newsletter-content p {
             font-size: 1rem;
-            color: #4a4a4a;
+            color: #ffffff;
             line-height: 1.5;
         }
 

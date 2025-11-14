@@ -6,6 +6,10 @@ body{
     overflow-x: hidden;
 }
 
+.nav-links ul li a{
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+}
+
 .route-link{
     width: 100%;
     min-height: 5vh;

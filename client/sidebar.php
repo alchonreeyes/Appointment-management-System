@@ -3,9 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Your Page Title</title>
+    <link rel="stylesheet" href="./style/profile.css">
+    
+    <?php 
+    // Include theme handler
+    if (!isset($current_theme)) {
+        include '../includes/theme_handler.php';
+    }
+    
+    // Load dark mode CSS if needed
+    if ($current_theme === 'dark'): 
+    ?>
+        <link rel="stylesheet" href="./style/dark-mode.css">
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                document.body.classList.add('dark-mode');
+            });
+        </script>
+    <?php endif; ?>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
+<body<?php echo $current_theme === 'dark' ? ' class="dark-mode"' : ''; ?>>
         <!-- Sidebar -->
 <div class="sidebar" id="sidebar">
     <div class="sidebar-header">
@@ -26,10 +46,7 @@
             <i class="fa-solid fa-calendar-check"></i>
             <span>My Appointments</span>
         </a>
-        <a href="medical-history.php">
-            <i class="fa-solid fa-file-medical"></i>
-            <span>Medical History</span>
-        </a>
+        
         <a href="settings.php">
             <i class="fa-solid fa-gear"></i>
             <span>Settings</span>
@@ -37,7 +54,7 @@
     </nav>
     
     <div class="sidebar-footer">
-        <a href="../public/logout.php" onclick="return confirm('Are you sure you want to logout?')">
+        <a href="../actions/logout.php" onclick="return confirm('Are you sure you want to logout?')">
             <i class="fa-solid fa-right-from-bracket"></i>
             <span>Logout</span>
         </a>
