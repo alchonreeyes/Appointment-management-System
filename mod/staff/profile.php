@@ -49,11 +49,11 @@ if (isset($_POST['action'])) {
 
         try {
             // Check for duplicate email in admin table
-            $stmt_email = $conn->prepare("SELECT 1 FROM admin WHERE email = ?");
+            $stmt_email = $conn->prepare("SELECT 1 FROM staff WHERE email = ?");
             $stmt_email->bind_param("s", $email);
             $stmt_email->execute();
             if ($stmt_email->get_result()->num_rows > 0) {
-                 echo json_encode(['success' => false, 'message' => 'This email is already in use by an admin account.']);
+                 echo json_encode(['success' => false, 'message' => 'This email is already in use by an staff account.']);
                  exit;
             }
             
@@ -208,7 +208,7 @@ nav a.active { background:#2563eb; color:#fff; }
 .btn-close { background:#fff; color:#4a5568; border:2px solid #e2e8f0; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-@media (max-width:768px) { .form-grid { grid-template-columns:1fr; } }
+@media (max-width: 768px) { .form-grid { grid-template-columns:1fr; } }
 
 
 .toast-overlay {
@@ -302,6 +302,97 @@ nav a.active { background:#2563eb; color:#fff; }
     from { opacity: 0; }
     to { opacity: 1; }
 }
+
+/* =================================== */
+/* <-- BAGO: Responsive CSS para sa Mobile */
+/* =================================== */
+#menu-toggle {
+  display: none; /* Nakatago sa desktop */
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #334155;
+  font-size: 24px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  z-index: 2100; 
+}
+
+@media (max-width: 1000px) {
+  .vertical-bar {
+    display: none; /* Itago ang vertical bar */
+  }
+  header {
+    padding: 12px 20px; /* Alisin ang left padding */
+    justify-content: space-between; /* I-space out ang logo at toggle */
+  }
+  .logo-section {
+    margin-right: 0; /* Alisin ang auto margin */
+  }
+  .container {
+    padding: 20px; /* Alisin ang left padding */
+  }
+  
+  #menu-toggle {
+    display: block; /* Ipakita ang hamburger button */
+  }
+
+  /* Itago ang original nav, gawing mobile nav */
+  nav#main-nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 0, 0, 0.9); /* Mas madilim na background */
+    backdrop-filter: blur(5px);
+    z-index: 2000; /* Mataas sa header */
+    padding: 80px 20px 20px 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  nav#main-nav.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  nav#main-nav a {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  nav#main-nav a:hover {
+      background: rgba(255,255,255,0.1);
+  }
+  
+  nav#main-nav a.active {
+    background: none; /* Alisin ang blue background sa mobile view */
+    color: #60a5fa; /* Light Blue para kitang-kita */
+  }
+
+  /* Ayusin ang profile header sa mobile */
+  .profile-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 24px;
+  }
+  .profile-name {
+    font-size: 24px;
+  }
+  .profile-body {
+    padding: 24px; /* Bawasan ang padding sa mobile */
+  }
+}
+/* --- END ng Responsive CSS --- */
 </style>
 </head>
 <body>
@@ -313,11 +404,13 @@ nav a.active { background:#2563eb; color:#fff; }
 <div id="main-content" style="display: none;">
 
     <div class="vertical-bar"><div class="circle"></div></div>
+    
     <header>
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
       </div>
-      <nav>
+      <button id="menu-toggle" aria-label="Open navigation">☰</button>
+      <nav id="main-nav"> 
         <a href="staff_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
@@ -583,9 +676,9 @@ nav a.active { background:#2563eb; color:#fff; }
     document.addEventListener('keydown', function(e){
       if (e.key === 'Escape') {
         const logoutOverlay = document.getElementById('logoutOverlay');
-            if (logoutOverlay?.classList.contains('show')) {
+           if (logoutOverlay?.classList.contains('show')) {
                closeLogoutModal();
-            }
+           }
       }
     });
     </script>
@@ -616,7 +709,38 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply fade-in animation
             content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 1000); // 3000 milliseconds = 3 seconds
+    }, 1000); // 1000 milliseconds = 1 second
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.getElementById('menu-toggle');
+  const mainNav = document.getElementById('main-nav');
+
+  if (menuToggle && mainNav) {
+    menuToggle.addEventListener('click', function() {
+      mainNav.classList.toggle('show');
+      
+      // Palitan ang icon ng button
+      if (mainNav.classList.contains('show')) {
+        this.innerHTML = '✕'; // Close icon
+        this.setAttribute('aria-label', 'Close navigation');
+      } else {
+        this.innerHTML = '☰'; // Hamburger icon
+        this.setAttribute('aria-label', 'Open navigation');
+      }
+    });
+
+    // Isara ang menu kapag pinindot ang isang link
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function() {
+        mainNav.classList.remove('show');
+        menuToggle.innerHTML = '☰';
+        menuToggle.setAttribute('aria-label', 'Open navigation');
+      });
+    });
+  }
 });
 </script>
 </body>

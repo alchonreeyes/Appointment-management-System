@@ -1,4 +1,5 @@
 <?php
+// Start session at the very beginning
 session_start();
 include 'database.php'; // <-- FIX 1: Corrected include path
 
@@ -177,7 +178,14 @@ if (isset($_POST['login']) && !$is_locked_out) {
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    
+    /* === BACKGROUND IMAGE === */
+    background-image: url('https://images.unsplash.com/photo-1579684385127-1ef15d508118?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzEyMywxMjA3fDB8MXxzZWFyY2h8MTB8fG1lZGljYWwlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTcyMDY1NDU3NXww&ixlib=rb-4.0.3&q=80&w=1080');
+    background-size: cover;
+    background-position: center center;
+    background-attachment: fixed;
+    /* === END BACKGROUND IMAGE === */
+
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -195,6 +203,11 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
+    
+    /* === BACKGROUND OVERLAY === */
+    background-color: rgba(255, 255, 255, 0.5); 
+    /* === END OVERLAY === */
+    
     background-image: 
         radial-gradient(circle at 20% 30%, rgba(220, 20, 60, 0.03) 0%, transparent 50%),
         radial-gradient(circle at 80% 70%, rgba(220, 20, 60, 0.03) 0%, transparent 50%);

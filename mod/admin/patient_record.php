@@ -2,7 +2,7 @@
 // Start session at the very beginning
 session_start();
 // Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
-require_once __DIR__ . '/../database.php'; 
+require_once __DIR__ . '/../database.php';
 
 // =======================================================
 // 1. INAYOS NA SECURITY CHECK
@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../login.php'); 
+        header('Location: ../login.php');
     }
     exit;
 }
@@ -24,9 +24,6 @@ if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
-    // --- TINANGGAL ANG 'updateStatus' ACTION BLOCK ---
-    // Hindi na ito kailangan dahil 'View' button lang ang meron.
-
     if ($action === 'viewDetails') {
         $id = $_POST['id'] ?? '';
         if (!$id) {
@@ -36,7 +33,7 @@ if (isset($_POST['action'])) {
         try {
             // Kinukuha ang lahat ng data (a.*) pati ang mga pangalan
             $stmt = $conn->prepare("
-                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name 
+                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name
                 FROM appointments a
                 LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
                 LEFT JOIN services ser ON a.service_id = ser.service_id
@@ -69,10 +66,10 @@ if (isset($_POST['action'])) {
 // =======================================================
 
 // --- Kunin ang lahat ng filters ---
-$statusFilter = $_GET['status'] ?? 'All';
+$statusFilter = $_GET['status'] ?? 'All'; 
 $dateFilter = $_GET['date'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
-$viewFilter = $_GET['view'] ?? 'all'; 
+$viewFilter = $_GET['view'] ?? 'all';
 
 // --- Base Query ---
 $selectClauses = [
@@ -92,13 +89,13 @@ if ($viewFilter === 'eye_exam') {
     $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 1"; 
+    $whereClauses[] = "a.service_id = 1";
 } elseif ($viewFilter === 'ishihara') {
     $selectClauses[] = "a.ishihara_test_type";
     $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 2"; 
+    $whereClauses[] = "a.service_id = 2";
 } elseif ($viewFilter === 'medical') {
     $selectClauses[] = "a.certificate_purpose";
     $extraHeaders = "<th>Purpose</th>";
@@ -107,11 +104,14 @@ if ($viewFilter === 'eye_exam') {
 }
 
 // --- I-apply ang iba pang Filters ---
-if ($statusFilter !== 'All') {
+if ($statusFilter === 'All') {
+    $whereClauses[] = "s.status_name IN ('Completed', 'Cancel')";
+} else {
     $whereClauses[] = "s.status_name = ?";
     $params[] = $statusFilter;
     $paramTypes .= "s";
 }
+
 
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $whereClauses[] = "DATE(a.appointment_date) = ?";
@@ -144,18 +144,15 @@ try {
     $appointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
      error_log("Fetch Appointments error (appointment.php): " . $e->getMessage());
-     $appointments = []; 
+     $appointments = [];
      $pageError = "Error loading appointments: " . $e->getMessage();
 }
 
 
 // --- Buuin ang Stats Query ---
 $countSql = "SELECT
-    COALESCE(SUM(CASE WHEN s.status_name = 'Pending' THEN 1 ELSE 0 END), 0)   AS pending,
-    COALESCE(SUM(CASE WHEN s.status_name = 'Confirmed' THEN 1 ELSE 0 END), 0) AS accepted,
-    COALESCE(SUM(CASE WHEN s.status_name = 'Missed' THEN 1 ELSE 0 END), 0) AS cancelled,
     COALESCE(SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END), 0) AS completed,
-    COALESCE(COUNT(a.appointment_id), 0)                           AS total
+    COALESCE(SUM(CASE WHEN s.status_name = 'Cancel' THEN 1 ELSE 0 END), 0) AS cancelled
     FROM appointments a
     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
     WHERE 1=1";
@@ -166,6 +163,14 @@ $countParamTypes = "";
 if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 1"; }
 if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 2"; }
 if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 3"; }
+
+if ($statusFilter === 'All') {
+    $countSql .= " AND s.status_name IN ('Completed', 'Cancel')";
+} else {
+    $countSql .= " AND s.status_name = ?";
+    $countParams[] = $statusFilter;
+    $countParamTypes .= "s";
+}
 
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $countSql .= " AND DATE(a.appointment_date) = ?";
@@ -189,21 +194,46 @@ try {
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
     error_log("Fetch Stats error (appointment.php): " . $e->getMessage());
-    $stats = ['pending'=>0, 'accepted'=>0, 'cancelled'=>0, 'completed'=>0, 'total'=>0]; 
+    $stats = ['completed'=>0, 'cancelled'=>0];
 }
 
-$pendingCount   = (int)($stats['pending']   ?? 0);
-$acceptedCount  = (int)($stats['accepted']  ?? 0); 
-$cancelledCount = (int)($stats['cancelled'] ?? 0);
 $completedCount = (int)($stats['completed'] ?? 0);
-$totalCount     = (int)($stats['total']     ?? 0);
+$cancelledCount = (int)($stats['cancelled'] ?? 0);
+
+// =======================================================
+// BAGO: Kunin ang lahat ng araw na may records para i-highlight
+// =======================================================
+$highlight_dates = [];
+try {
+    // Kunin lang ang dates na 'Completed' or 'Cancel'
+    $hl_result = $conn->query("
+        SELECT DISTINCT a.appointment_date 
+        FROM appointments a
+        JOIN appointmentstatus s ON a.status_id = s.status_id
+        WHERE s.status_name IN ('Completed', 'Cancel')
+    ");
+    if ($hl_result) {
+        while ($row = $hl_result->fetch_assoc()) {
+            $highlight_dates[] = $row['appointment_date'];
+        }
+    }
+} catch (Exception $e) {
+    // Mag-log ng error pero huwag itigil ang page
+    error_log("Fetch highlight dates error (patient_record.php): " . $e->getMessage());
+}
+$js_highlight_dates = json_encode($highlight_dates);
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Patient Records - Eye Master Clinic</title> <style>
+<title>Patient Records - Eye Master Clinic</title> 
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+<style>
 /* --- Keep all your existing styles --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background:#f8f9fa; color:#223; }
@@ -220,6 +250,29 @@ nav a.active { background:#dc3545; color:#fff; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; }
+
+/* BAGO: I-style ang bagong flatpickr input */
+input.flatpickr-input {
+    padding: 9px 10px;
+    border: 1px solid #dde3ea;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    width: auto; /* Para 'di sakupin ang buong space */
+}
+
+/* BAGO: Style para sa highlighted date (kulay pula) */
+.flatpickr-day.has-appointments {
+    background: #f8d7da; /* Light red */
+    border-color: #dc3545;
+    color: #721c24;
+    font-weight: bold;
+}
+.flatpickr-day.has-appointments:hover {
+    background: #f5c6cb;
+}
+
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
 .btn-filter {
     padding: 9px 15px;
@@ -240,7 +293,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     color: #fff;
     border-color: #991010;
 }
-.stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:18px; }
+.stats { 
+    display:grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap:12px; 
+    margin-bottom:18px; 
+}
 .stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
 .stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
 .stat-card p { color:#6b7f86; font-size:13px; }
@@ -254,7 +312,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .detail-overlay.show, .confirm-modal.show { display: flex; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 .detail-card, .confirm-card { max-width: 96%; background: #fff; border-radius: 16px; padding: 0; box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; }
-.detail-card { width: 700px; } 
+.detail-card { width: 700px; }
 .confirm-card { width: 440px; padding: 24px; }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 .detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
@@ -263,9 +321,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .detail-title:before { content: '📋'; font-size: 24px; }
 .badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge.pending { background: #fff4e6; color: #a66300; border: 2px solid #ffd280; }
-.badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; } 
-.badge.missed { background: #fee; color: #dc2626; border: 2px solid #fca5a5; } 
+.badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
+.badge.missed { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
+.badge.cancel { background: #f1f5f9; color: #64748b; border: 2px solid #cbd5e1; }
 .detail-actions, .confirm-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
 .btn-small:hover { transform: translateY(-1px); }
@@ -283,23 +342,14 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 #editModal .detail-row { margin-bottom: 20px; }
 #editModal select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; font-weight: 600; margin-top: 10px; }
 
-/* START: REPLACED TOAST CSS */
-/*
-.toast { position: fixed; bottom: 30px; right: 30px; background: #1a202c; color: #fff; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 12px; font-weight: 600; animation: slideIn .3s ease; transition: opacity .3s ease; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.toast.success { background: linear-gradient(135deg, #16a34a, #15803d); }
-.toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-*/
-/* END: REPLACED TOAST CSS */
-
-@media (max-width: 900px) { .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .detail-content { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .detail-content { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .filters { flex-direction: column; align-items: stretch; } }
 .detail-content {
-    padding: 0; 
+    padding: 0;
 }
 #detailModalBody {
-    padding: 24px 28px; 
-    max-height: 70vh; 
+    padding: 24px 28px;
+    max-height: 70vh;
     overflow-y: auto;
     font-size: 15px;
 }
@@ -334,20 +384,16 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     word-wrap: break-word;
 }
 .detail-value b {
-    font-weight: 600; 
+    font-weight: 600;
 }
 .detail-notes {
     display: none;
 }
 
-
-/* ======================================================= */
-/* <-- START: BAGONG CSS para sa Centered Toast Message
-/* ======================================================= */
 .toast-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(34, 49, 62, 0.6); /* Mula sa confirm-modal */
+    background: rgba(34, 49, 62, 0.6); 
     z-index: 9998;
     display: flex;
     align-items: center;
@@ -356,9 +402,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     transition: opacity 0.3s ease-out;
     backdrop-filter: blur(4px);
 }
-
 .toast {
-    /* Tinanggal ang dating position: fixed; bottom/right */
     background: #fff;
     color: #1a202c;
     padding: 24px;
@@ -372,11 +416,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     min-width: 300px;
     max-width: 450px;
     text-align: left;
-    /* Ginagamit ang existing animation mula sa modals */
-    animation: slideUp .3s ease; 
+    animation: slideUp .3s ease;
 }
-
-/* Icon para sa toast */
 .toast-icon {
     font-size: 24px;
     font-weight: 800;
@@ -389,32 +430,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     flex-shrink: 0;
     color: #fff;
 }
-
 .toast-message {
     font-size: 15px;
     line-height: 1.5;
 }
-
-/* Tinanggal ang dating background-gradient */
-.toast.success { 
+.toast.success {
     border-top: 4px solid #16a34a;
 }
 .toast.success .toast-icon {
-    background: #16a34a; 
+    background: #16a34a;
 }
-
-.toast.error { 
+.toast.error {
     border-top: 4px solid #dc2626;
 }
 .toast.error .toast-icon {
     background: #dc2626;
 }
-/* <-- END: BAGONG CSS para sa Centered Toast Message */
 
-
-/* ======================================================= */
-/* <-- START: BAGONG CSS para sa Loading Screen
-/* ======================================================= */
 #loader-overlay {
     position: fixed;
     inset: 0;
@@ -444,13 +476,85 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
-/* Animation for content fade-in */
 @keyframes fadeInContent {
     from { opacity: 0; }
     to { opacity: 1; }
 }
-/* <-- END: BAGONG CSS para sa Loading Screen */
 
+#menu-toggle {
+  display: none; 
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #334155;
+  font-size: 24px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  z-index: 2100; 
+}
+
+
+@media (max-width: 1000px) {
+  .vertical-bar {
+    display: none; 
+  }
+  header {
+    padding: 12px 20px; 
+    justify-content: space-between; 
+  }
+  .logo-section {
+    margin-right: 0; 
+  }
+  .container {
+    padding: 20px; 
+  }
+  
+  #menu-toggle {
+    display: block; 
+  }
+
+  nav#main-nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 0, 0, 0.9); 
+    backdrop-filter: blur(5px);
+    z-index: 2000; 
+    padding: 80px 20px 20px 20px;
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  nav#main-nav.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  nav#main-nav a {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  nav#main-nav a:hover {
+      background: rgba(255,255,255,0.1);
+  }
+  
+  nav#main-nav a.active {
+    background: none; 
+    color: #ff6b6b; 
+  }
+}
 
 </style>
 </head>
@@ -468,7 +572,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo"> <strong> EYE MASTER CLINIC</strong>
       </div>
-      <nav>
+      
+      <button id="menu-toggle" aria-label="Open navigation">☰</button>
+      <nav id="main-nav">
         <a href="admin_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php" >📅 Appointments</a>
         <a href="patient_record.php" class="active">📘 Patient Record</a>
@@ -489,42 +595,38 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       <?php endif; ?>
     
       <form id="filtersForm" method="get" class="filters">
+        
+        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
+
         <div>
-            <button type="button" class="btn-filter <?= $viewFilter === 'all' ? 'active' : '' ?>" data-view="all">All Appointments</button>
             <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
             <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Cert</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
             <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
         </div>
         
         <select name="status" id="statusFilter" title="Filter by status">
-            <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Status</option>
-            <option value="Pending" <?= $statusFilter==='Pending'?'selected':'' ?>>Pending</option>
-            <option value="Confirmed" <?= $statusFilter==='Confirmed'?'selected':'' ?>>Confirmed</option>
-            <option value="Missed" <?= $statusFilter==='Missed'?'selected':'' ?>>Missed</option>
+            <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Records (Completed/Cancel)</option>
             <option value="Completed" <?= $statusFilter==='Completed'?'selected':'' ?>>Completed</option>
+            <option value="Cancel" <?= $statusFilter==='Cancel'?'selected':'' ?>>Cancel</option>
         </select>
-    
+        
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="dateMode" title="Filter by date">
             <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
             <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
           </select>
           <input type="date" id="dateVisible" title="Select date"
-                 style="<?= ($dateFilter==='All' || empty($dateFilter)) ? 'display:none;' : '' ?>"
+                 placeholder="Pick a date..."
                  value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
           <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
         </div>
     
-        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
       </form>
     
       <div class="stats">
-        <div class="stat-card"><h3><?= $pendingCount ?></h3><p>Pending</p></div>
-        <div class="stat-card"><h3><?= $acceptedCount ?></h3><p>Confirmed</p></div>
-        <div class="stat-card"><h3><?= $cancelledCount ?></h3><p>Missed</p></div>
         <div class="stat-card"><h3><?= $completedCount ?></h3><p>Completed</p></div>
-        <div class="stat-card"><h3><?= $totalCount ?></h3><p>Total (Filtered)</p></div>
+        <div class="stat-card"><h3><?= $cancelledCount ?></h3><p>Cancelled</p></div>
       </div>
     
       <div style="background:#fff;border:1px solid #e6e9ee;border-radius:10px;padding:12px; overflow-x: auto;">
@@ -545,8 +647,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <?php if (!empty($appointments)): $i=0; foreach ($appointments as $appt): $i++;
               $nameParts = explode(' ', trim($appt['full_name']));
               $initials = count($nameParts) > 1
-                  ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
-                  : strtoupper(substr($appt['full_name'], 0, 1));
+                      ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
+                      : strtoupper(substr($appt['full_name'], 0, 1));
               if (strlen($initials) == 1 && strlen($appt['full_name']) > 1) { $initials .= strtoupper(substr($appt['full_name'], 1, 1)); }
               elseif (empty($initials)) { $initials = '??'; }
             ?>
@@ -578,12 +680,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
                 <td style="padding:12px 8px;vertical-align:middle;">
                   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                      <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                          <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                   </div>
                 </td>
               </tr>
             <?php endforeach; else: ?>
-              <tr><td colspan="<?= 8 + count($extraColumnNames) ?>" style="padding:30px;color:#677a82;text-align:center;">No appointments found matching your filters.</td></tr>
+              <tr><td colspan="<?= 8 + count($extraColumnNames) ?>" style="padding:30px;color:#677a82;text-align:center;">No records found matching your filters.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
@@ -599,75 +701,61 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         <div id="detailModalBody">
             </div>
         <div class="detail-actions">
-          <button id="detailClose" class="btn-small btn-close" onclick="closeDetailModal()">Close</button> 
+          <button id="detailClose" class="btn-small btn-close" onclick="closeDetailModal()">Close</button>
         </div>
       </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script>
-    // =======================================================
-    // <-- FIX #3: TINANGGAL ANG MGA FUNCTION NA HINDI NA KAILANGAN
-    // =======================================================
     
-    
-    // =======================================================
-    // <-- START: BAGONG 'showToast' FUNCTION (CENTERED)
-    // =======================================================
+    // BAGO: Ilagay ang PHP dates sa JavaScript
+    const datesWithAppointments = <?= $js_highlight_dates ?? '[]' ?>;
+
     function showToast(msg, type = 'success') {
-        // 1. Create overlay
         const overlay = document.createElement('div');
         overlay.className = 'toast-overlay';
         
-        // 2. Create toast box
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`; // Keep .toast for the box
+        toast.className = `toast ${type}`; 
         toast.innerHTML = `
             <div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div>
             <div class="toast-message">${msg}</div>
         `;
         
-        // 3. Append to body
         overlay.appendChild(toast);
         document.body.appendChild(overlay);
         
-        // 4. Auto-remove after 2.5 seconds
         const timer = setTimeout(() => {
             overlay.style.opacity = '0';
             overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
         }, 2500);
         
-        // 5. Allow click-to-close
         overlay.addEventListener('click', () => {
-            clearTimeout(timer); // Stop auto-remove if clicked
+            clearTimeout(timer); 
             overlay.style.opacity = '0';
             overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
         }, { once: true });
     }
-    // =======================================================
-    // <-- END: BAGONG 'showToast' FUNCTION
-    // =======================================================
-    
-    // Tinanggal ang showConfirm() function
-    // Tinanggal ang updateStatus() function
-    // Tinanggal ang updateStats() function
     
     function viewDetails(id) {
-      fetch('patient_record.php', { // <-- Siguraduhin na ito ay 'patient_record.php'
+      fetch('patient_record.php', { 
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
         body: new URLSearchParams({action:'viewDetails', id:id})
       })
       .then(res => res.json())
       .then(payload => {
-        if (!payload || !payload.success) { 
-            showToast(payload?.message || 'Failed to load details', 'error'); 
-            return; 
+        if (!payload || !payload.success) {
+            showToast(payload?.message || 'Failed to load details', 'error');
+            return;
         }
         
-        const d = payload.data; 
+        const d = payload.data;
         document.getElementById('detailId').textContent = '#' + d.appointment_id;
         const modalBody = document.getElementById('detailModalBody');
-        modalBody.innerHTML = ''; 
+        modalBody.innerHTML = '';
         
         const labels = {
             'full_name': 'Patient Name',
@@ -699,20 +787,20 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         };
     
         const displayOrder = [
-            'full_name', 'status_name', 'service_name', 'staff_name', 
-            'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number', 
+            'full_name', 'status_name', 'service_name', 'staff_name',
+            'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
             'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
-            'certificate_purpose', 'certificate_other', 'ishihara_test_type', 
+            'certificate_purpose', 'certificate_other', 'ishihara_test_type',
             'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
             'consent_info', 'consent_reminders', 'consent_terms'
         ];
     
-        let contentHtml = '<div class="detail-grid">'; 
+        let contentHtml = '<div class="detail-grid">';
     
         for (const key of displayOrder) {
             if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
                 let value = d[key];
-                const label = labels[key] || key; 
+                const label = labels[key] || key;
                 
                 let rowClass = 'detail-row';
                 if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) {
@@ -728,7 +816,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 } else if (key === 'status_name') {
                     value = `<span class="badge ${value.toLowerCase()}">${value}</span>`;
                 } else {
-                    value = `<b>${value}</b>`; 
+                    value = `<b>${value}</b>`;
                 }
     
                 contentHtml += `
@@ -740,8 +828,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             }
         }
         
-        contentHtml += '</div>'; 
-        modalBody.innerHTML = contentHtml; 
+        contentHtml += '</div>';
+        modalBody.innerHTML = contentHtml;
         
         document.getElementById('detailOverlay').classList.add('show');
         document.getElementById('detailOverlay').setAttribute('aria-hidden','false');
@@ -755,66 +843,82 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       overlay.setAttribute('aria-hidden','true');
     }
     
-    // Tinanggal ang openEditModal(), closeEditModal(), at saveEditStatus()
-    
     // Isara ang modals
     document.addEventListener('click', function(e){
       const detailOverlay = document.getElementById('detailOverlay');
-      // Tinanggal ang reference sa editOverlay at confirmOverlay
-      
       if (detailOverlay?.classList.contains('show') && e.target === detailOverlay) closeDetailModal();
     });
     
     document.addEventListener('keydown', function(e){
       if (e.key === 'Escape') {
           const detailModal = document.getElementById('detailOverlay');
-          // Tinanggal ang check para sa confirmModal at editModal
           if (detailModal?.classList.contains('show')){
               closeDetailModal();
           }
       }
     });
     
-    // Auto-submit filters logic
+    // BAGO: Pinalitan ang buong filter logic para gamitin ang flatpickr
     (function(){
       const form = document.getElementById('filtersForm');
       const status = document.getElementById('statusFilter');
       const dateMode = document.getElementById('dateMode');
-      const dateVisible = document.getElementById('dateVisible');
+      const dateVisible = document.getElementById('dateVisible'); // Ito yung original <input>
       const dateHidden = document.getElementById('dateHidden');
       const search = document.getElementById('searchInput');
       const viewInput = document.getElementById('viewFilterInput');
       const viewButtons = document.querySelectorAll('.btn-filter');
     
+      // BAGO: Initialize flatpickr
+      const fpInstance = flatpickr(dateVisible, {
+          dateFormat: "Y-m-d", // Format na kailangan ng database
+          onDayCreate: function(dObj, dStr, fp, dayElem){
+              // i-format ang date ng cell na "YYYY-MM-DD"
+              const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
+              // Check kung ang date na ito ay kasama sa listahan galing sa PHP
+              if (datesWithAppointments.includes(dateStr)) {
+                  dayElem.classList.add('has-appointments'); // Lagyan ng custom class
+                  dayElem.setAttribute('title', 'May records sa araw na ito');
+              }
+          },
+          onChange: function(selectedDates, dateStr, instance) {
+              // Kapag pumili ng date, ito ang mag-trigger
+              if (dateHidden) dateHidden.value = dateStr;
+              if (dateMode) dateMode.value = 'pick'; // Siguraduhin na 'pick' ang mode
+              form.submit(); // I-submit ang form
+          }
+      });
+
+      // BAGO: Kunin ang bagong ginawang input field ng flatpickr
+      const flatpickrInput = fpInstance.input;
+      flatpickrInput.classList.add('flatpickr-input'); // Para ma-style
+      
+      // BAGO: I-control ang visibility ng flatpickr input batay sa default value
+      if (dateMode.value === 'all') {
+          flatpickrInput.style.display = 'none';
+      } else {
+          flatpickrInput.style.display = 'inline-block';
+      }
+
+      // BAGO: Baguhin ang event listener ng dateMode
+      dateMode?.addEventListener('change', function(){
+          if (this.value === 'all') {
+              flatpickrInput.style.display = 'none'; // Itago ang flatpickr
+              if (dateHidden) dateHidden.value = 'All';
+              form.submit();
+          } else {
+              flatpickrInput.style.display = 'inline-block'; // Ipakita ang flatpickr
+              fpInstance.open(); // Awtomatikong buksan ang calendar
+          }
+      });
+      
+      // Ipagpatuloy ang iba pang listeners
       status?.addEventListener('change', ()=> form.submit());
       
-      dateMode?.addEventListener('change', function(){
-        if (this.value === 'all') {
-          if (dateVisible) dateVisible.style.display = 'none';
-          if (dateHidden) dateHidden.value = 'All';
-          form.submit();
-        } else {
-          if (dateVisible) {
-            dateVisible.style.display = 'inline-block';
-            if (!dateVisible.value) {
-              const today = new Date().toISOString().slice(0, 10);
-              dateVisible.value = today;
-            }
-            if (dateHidden) dateHidden.value = dateVisible.value;
-            form.submit();
-          }
-        }
-      });
-    
-      dateVisible?.addEventListener('change', function(){
-        if (dateHidden) dateHidden.value = this.value || 'All';
-        form.submit();
-      });
-    
       let timer = null;
       search?.addEventListener('input', function(){
         clearTimeout(timer);
-        timer = setTimeout(()=> form.submit(), 600); 
+        timer = setTimeout(()=> form.submit(), 600);
       });
     
       viewButtons.forEach(button => {
@@ -830,32 +934,54 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 </div>
 <script>
-// =======================================================
-// <-- BAGONG SCRIPT para sa Loading Screen
-// =======================================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Set timer for 3 seconds
     setTimeout(function() {
         const loader = document.getElementById('loader-overlay');
         const content = document.getElementById('main-content');
         
         if (loader) {
-            // Start fade out
             loader.style.opacity = '0';
-            // Remove from DOM after fade out finishes
             loader.addEventListener('transitionend', () => {
                 loader.style.display = 'none';
             }, { once: true });
         }
         
         if (content) {
-            // Show main content
             content.style.display = 'block';
-            // Apply fade-in animation
             content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 1000); // 3000 milliseconds = 3 seconds
+    }, 1000); 
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.getElementById('menu-toggle');
+  const mainNav = document.getElementById('main-nav');
+
+  if (menuToggle && mainNav) {
+    menuToggle.addEventListener('click', function() {
+      mainNav.classList.toggle('show');
+      
+      if (mainNav.classList.contains('show')) {
+        this.innerHTML = '✕'; // Close icon
+        this.setAttribute('aria-label', 'Close navigation');
+      } else {
+        this.innerHTML = '☰'; // Hamburger icon
+        this.setAttribute('aria-label', 'Open navigation');
+      }
+    });
+
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function() {
+        mainNav.classList.remove('show');
+        menuToggle.innerHTML = '☰';
+        menuToggle.setAttribute('aria-label', 'Open navigation');
+      });
+    });
+  }
+});
+</script>
+
 </body>
 </html>

@@ -28,9 +28,9 @@ if (isset($_POST['action'])) {
     $action = $_POST['action'];
 
     if ($action === 'updateProfile') {
-        $name = trim($_POST['name'] ?? ''); 
+        $name = trim($_POST['name'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? ''; 
+        $password = $_POST['password'] ?? '';
 
         // Validation
         if (!$name || !$email) {
@@ -82,7 +82,7 @@ if (isset($_POST['action'])) {
             $stmt->execute();
 
             // FIX: Update session 'full_name' para tugma sa login
-            $_SESSION['full_name'] = $name; 
+            $_SESSION['full_name'] = $name;
 
             echo json_encode(['success' => true, 'message' => 'Profile updated successfully']);
         } catch (Exception $e) {
@@ -188,15 +188,6 @@ nav a.active { background:#dc3545; color:#fff; }
 .btn-logout:hover { background:#c82333; }
 .btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
 
-/* START: REPLACED TOAST CSS */
-/*
-.toast { position:fixed; bottom:30px; right:30px; background:#1a202c; color:#fff; padding:14px 20px; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.3); z-index:9999; display:flex; align-items:center; gap:12px; font-weight:600; animation:slideIn .3s ease; transition:opacity .3s ease; }
-@keyframes slideIn { from { transform:translateX(100%); opacity: 0; } to { transform:translateX(0); opacity: 1; } }
-.toast.success { background:linear-gradient(135deg,#16a34a,#15803d); }
-.toast.error { background:linear-gradient(135deg,#dc2626,#b91c1c); }
-*/
-/* END: REPLACED TOAST CSS */
-
 .logout-overlay { display:none; position:fixed; inset:0; background:rgba(2,12,20,0.6); z-index:3000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
 .logout-overlay.show { display:flex; animation:fadeIn .2s ease; }
 .logout-card { width:450px; max-width:96%; background:#fff; border-radius:16px; padding:0; box-shadow:0 20px 60px rgba(8,15,30,0.25); animation:slideUp .3s ease; }
@@ -211,8 +202,6 @@ nav a.active { background:#dc3545; color:#fff; }
 .btn-close { background:#fff; color:#4a5568; border:2px solid #e2e8f0; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-@media (max-width:768px) { .form-grid { grid-template-columns:1fr; } }
-
 
 /* ======================================================= */
 /* <-- START: BAGONG CSS para sa Centered Toast Message
@@ -324,6 +313,92 @@ nav a.active { background:#dc3545; color:#fff; }
 /* <-- END: BAGONG CSS para sa Loading Screen */
 
 
+/* --- BAGO: Mobile Navigation Toggle --- */
+#menu-toggle {
+  display: none; /* Hidden on desktop */
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #334155;
+  font-size: 24px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  z-index: 2100; 
+}
+
+
+/* --- BAGO: Responsive Media Query --- */
+@media (max-width: 1000px) {
+  .vertical-bar {
+    display: none; /* Itago ang vertical bar */
+  }
+  header {
+    padding: 12px 20px; /* Alisin ang left padding */
+    justify-content: space-between; /* I-space out ang logo at toggle */
+  }
+  .logo-section {
+    margin-right: 0; /* Alisin ang auto margin */
+  }
+  .container {
+    padding: 20px; /* Alisin ang left padding */
+  }
+  
+  #menu-toggle {
+    display: block; /* Ipakita ang hamburger button */
+  }
+
+  /* Itago ang original nav, gawing mobile nav */
+  nav#main-nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 0, 0, 0.9); /* Mas madilim na background */
+    backdrop-filter: blur(5px);
+    z-index: 2000; /* Mataas sa header */
+    padding: 80px 20px 20px 20px;
+    
+    /* Animation */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  nav#main-nav.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  nav#main-nav a {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  nav#main-nav a:hover {
+      background: rgba(255,255,255,0.1);
+  }
+  
+  nav#main-nav a.active {
+    background: none; /* Alisin ang red background sa mobile view */
+    color: #ff6b6b; /* Ibahin ang kulay ng active link */
+  }
+}
+
+@media (max-width: 768px) { 
+    .form-grid { grid-template-columns:1fr; } 
+    .profile-header { flex-direction: column; text-align: center; }
+    .profile-meta { justify-content: center; }
+}
+
+
 </style>
 </head>
 <body>
@@ -339,7 +414,8 @@ nav a.active { background:#dc3545; color:#fff; }
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
       </div>
-      <nav>
+      <button id="menu-toggle" aria-label="Open navigation">☰</button>
+      <nav id="main-nav">
         <a href="admin_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
@@ -618,7 +694,7 @@ nav a.active { background:#dc3545; color:#fff; }
 // <-- BAGONG SCRIPT para sa Loading Screen
 // =======================================================
 document.addEventListener('DOMContentLoaded', function() {
-    // Set timer for 3 seconds
+    // Set timer for 1 second
     setTimeout(function() {
         const loader = document.getElementById('loader-overlay');
         const content = document.getElementById('main-content');
@@ -638,8 +714,40 @@ document.addEventListener('DOMContentLoaded', function() {
             // Apply fade-in animation
             content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 1000); // 3000 milliseconds = 3 seconds
+    }, 1000); // 1000 milliseconds = 1 second
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.getElementById('menu-toggle');
+  const mainNav = document.getElementById('main-nav');
+
+  if (menuToggle && mainNav) {
+    menuToggle.addEventListener('click', function() {
+      mainNav.classList.toggle('show');
+      
+      // Palitan ang icon ng button
+      if (mainNav.classList.contains('show')) {
+        this.innerHTML = '✕'; // Close icon
+        this.setAttribute('aria-label', 'Close navigation');
+      } else {
+        this.innerHTML = '☰'; // Hamburger icon
+        this.setAttribute('aria-label', 'Open navigation');
+      }
+    });
+
+    // Isara ang menu kapag pinindot ang isang link
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function() {
+        mainNav.classList.remove('show');
+        menuToggle.innerHTML = '☰';
+        menuToggle.setAttribute('aria-label', 'Open navigation');
+      });
+    });
+  }
+});
+</script>
+
 </body>
 </html>

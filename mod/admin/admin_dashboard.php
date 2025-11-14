@@ -4,7 +4,7 @@ session_start();
 // and this file is in 'EYE MASTER/admin/'
 
 
-require_once __DIR__ . '/../database.php'; 
+require_once __DIR__ . '/../database.php';
 
 
 
@@ -53,7 +53,7 @@ $monthNum = date('m', strtotime("1 {$filterMonth} {$filterYear}"));
 
 // --- YEAR DROPDOWN (Data Check) ---
 $yearDropdownItems = '';
-$availableYears = ['2025', '2024', '2023']; 
+$availableYears = ['2025', '2024', '2023'];
 $yearDataFlags = [];
 
 foreach ($availableYears as $y) {
@@ -231,8 +231,6 @@ $missedAppointments = $result_missed ? $result_missed->fetch_array()[0] : 0;
 
 // ===== CHART DATA (Inayos din ang queries) =====
 
-// ===== CHART DATA (Inayos din ang queries) =====
-
 // Daily appointments
 $sql_daily = "SELECT DATE(a.appointment_date) AS date, COUNT(a.appointment_id) AS count
               FROM appointments a
@@ -285,12 +283,6 @@ if (empty($weeklyData)) {
 if (empty($recentAppointments)) {
     $recentAppointments = [];
 }
-
-// Format display text
-$today_vs_yesterday = $percentChange >= 0 ? "+{$percentChange}% from yesterday" : "{$percentChange}% from yesterday";
-$total_patients_vs_last_month = $patientPercentChange >= 0 ? "+{$patientPercentChange}% this month" : "{$patientPercentChange}% this month";
-$pending_vs_yesterday = $pendingChange >= 0 ? "+{$pendingChange} from yesterday" : "{$pendingChange} from yesterday";
-$completed_rate = "+{$completionRate}% completion rate";
 ?>
 
 <!DOCTYPE html>
@@ -426,7 +418,7 @@ nav a.active {
 .dashboard { 
     padding: 20px 20px 20px 75px;
     max-width: 100%;
-    height: calc(100vh - 120px);
+    min-height: calc(100vh - 65px); /* BAGO: Binago ang height para sa footer */
     overflow-y: auto;
 }
 .welcome-section {
@@ -434,6 +426,8 @@ nav a.active {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    flex-wrap: wrap; /* BAGO: para sa mobile */
+    gap: 15px; /* BAGO: nagdagdag ng gap */
 }
 .welcome-text h1 { 
     font-size: 28px; 
@@ -448,6 +442,7 @@ nav a.active {
     display: flex;
     gap: 12px;
     align-items: center;
+    flex-wrap: wrap; /* BAGO: para sa mobile */
 }
 .close-btn { 
     background: #dc3545;
@@ -466,6 +461,7 @@ nav a.active {
 .filter-group {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap; /* BAGO: para sa mobile */
 }
 .filter-btn {
     background: white;
@@ -531,7 +527,8 @@ nav a.active {
 }
 .stats { 
     display: grid;
-    grid-template-columns: repeat(5, 1fr); /* <-- NEW */
+    /* BAGO: Ginawang responsive */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 15px; 
     margin-bottom: 20px;
 }
@@ -648,7 +645,7 @@ nav a.active {
     background: #d4edda;
     color: #155724;
 }
-.cancel, .cancelled { 
+.cancel, .cancelled, .missed { /* BAGO: Idinagdag ang missed */
     background: #f8d7da;
     color: #721c24;
 }
@@ -693,12 +690,7 @@ nav a.active {
 .scan-btn:hover {
     color: #dc3545;
 }
-#qr-reader { 
-    width: 100%;
-    max-width: 350px;
-    margin: 15px auto;
-    display: none;
-}
+/* BAGO: Inayos ang #popup para maging responsive */
 #popup {
     display: none;
     position: fixed;
@@ -706,16 +698,19 @@ nav a.active {
     left: 50%;
     transform: translate(-50%, -50%);
     background: white;
-    padding: 25px;
+    padding: 20px; /* BAGO: Binawasan ang padding */
     border-radius: 12px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     z-index: 2000;
-    min-width: 350px;
+    width: 90%; /* Fluid width */
+    max-width: 450px; /* BAGO: Nilakihan ng kaunti para sa 3-step */
+    min-width: auto; /* Inalis ang fixed min-width */
 }
 #popup h3 {
     margin-bottom: 15px;
     color: #2c3e50;
     font-size: 18px;
+    padding: 0 5px; /* BAGO: Dinagdag para sa alignment */
 }
 #popup button {
     background: #dc3545;
@@ -769,22 +764,59 @@ footer {
     padding: 20px;
     font-size: 13px;
 }
-.closure-calendar-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 15px;
+
+/* BAGO: CSS PARA SA 3-STEP CLOSURE FORM */
+.closure-stepper {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+.step-item {
+    font-size: 13px;
+    color: #95a5a6;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+    padding: 5px;
+    border-bottom: 3px solid transparent;
+}
+.step-item.active {
+    color: #991010;
+    border-bottom-color: #991010;
+}
+.step-item b {
+    font-size: 16px;
+    display: block;
 }
 .closure-form-container {
-    padding: 10px 0;
+    padding: 0; /* Inalis ang padding dito */
 }
+.form-step {
+    padding: 0; /* Ang step 1 (calendar) ay may sariling padding */
+}
+.form-step[data-step="2"],
+.form-step[data-step="3"] {
+    padding: 15px 5px 5px 5px; /* BAGO: Dinagdag na padding */
+}
+.closure-nav {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 5px 0 5px; /* BAGO: Dinagdag na padding */
+    border-top: 1px solid #eee;
+}
+/* Inalis ang lumang .closure-calendar-container */
+
 .closure-form-container input[type="time"],
 .closure-form-container input[type="text"] {
     width: 100%;
-    padding: 8px;
+    padding: 8px 10px; /* Inayos ang padding */
     margin-bottom: 10px;
     border: 1px solid #ddd;
     border-radius: 4px;
     box-sizing: border-box;
+    font-size: 14px;
 }
 .closure-form-container label {
     display: block;
@@ -796,7 +828,7 @@ footer {
     max-height: 150px;
     overflow-y: auto;
     border-top: 1px solid #eee;
-    padding-top: 10px;
+    padding: 10px 5px 0 5px; /* BAGO: Dinagdag na padding */
 }
 .closure-item {
     display: flex;
@@ -809,20 +841,22 @@ footer {
 .closure-item-info {
     flex-grow: 1;
     text-align: left;
+    margin-right: 10px; /* BAGO: Nagdagdag ng space */
 }
 .closure-item-info b {
     font-size: 14px;
 }
+/* BAGO: Ginawang btn-small ang buttons */
 .closure-item button {
-    background: #2196f3;
     margin-left: 5px;
     padding: 4px 8px;
     font-size: 11px;
-    border-radius: 4px;
 }
-.closure-item button.delete {
-    background: #e74c3c;
-}
+.closure-item .btn-edit { background: #f59e0b; color: #fff; border:none; }
+.closure-item .btn-danger { background: #dc3545; color: #fff; border:none; }
+.closure-item .btn-view { background: #1d4ed8; color: #fff; border:none; } /* BAGO: View button style */
+
+
 .closure-calendar {
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -878,31 +912,31 @@ footer {
     background: #dc3545;
     color: white;
 }
-.calendar-day.closed {
-    background: #e74c3c;
-    color: white;
-    pointer-events: none; 
+/* BAGO: Inayos ang style ng disabled dates */
+.calendar-day.closed, .calendar-day.partial-closed {
+    background: #f8d7da;
+    color: #721c24;
+    cursor: not-allowed; 
+    opacity: 0.7;
+    text-decoration: line-through;
 }
 .calendar-day.open {
     background: #d4edda;
     color: #155724;
     pointer-events: none;
 }
-.calendar-day.partial-closed {
-    background: #f39c12;
-    color: white;
-}
 .calendar-day.empty {
     opacity: 0.3;
     cursor: default;
 }
+
 .container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; }
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
-.stats { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:18px; }
+.stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:18px; } /* Inayos na 'to */
 .stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
 .stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
 .stat-card p { color:#6b7f86; font-size:13px; }
@@ -916,8 +950,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .detail-overlay.show, .confirm-modal.show { display: flex; animation: fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 .detail-card, .confirm-card { max-width: 96%; background: #fff; border-radius: 16px; padding: 0; box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; }
-.detail-card { width: 700px; } 
-.confirm-card { width: 440px; padding: 24px; } 
+.detail-card { width: 700px; max-width: 96%; } /* Inayos para sa mobile */
+.confirm-card { width: 440px; max-width: 96%; padding: 24px; } /* Inayos para sa mobile */
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 .detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
 .detail-title { font-weight: 800; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 10px; }
@@ -941,6 +975,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .btn-accept { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
 .btn-cancel { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
 .btn-edit { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+.btn-save { background: #28a745; color: #fff; } /* BAGO: Dinagdag para sa closure save */
+.btn-save:hover { background: #218838; } /* BAGO: Dinagdag para sa closure save */
 .confirm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .confirm-icon { width: 56px; height: 56px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; flex: 0 0 56px; }
 .confirm-title { font-weight: 800; color: #1a202c; font-size: 20px; }
@@ -950,11 +986,70 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 #editModal .detail-content { padding: 28px; display: block; }
 #editModal .detail-row { margin-bottom: 20px; }
 #editModal select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; font-weight: 600; margin-top: 10px; }
-.toast { position: fixed; bottom: 30px; right: 30px; background: #1a202c; color: #fff; padding: 14px 20px; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 12px; font-weight: 600; animation: slideIn .3s ease; transition: opacity .3s ease; }
-@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-.toast.success { background: linear-gradient(135deg, #16a34a, #15803d); }
-.toast.error { background: linear-gradient(135deg, #dc2626, #b91c1c); }
-@media (max-width: 900px) { .stats { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } .detail-content { grid-template-columns: 1fr; } }
+
+/* BAGO: Pinalitan ang toast. Gagamitin na ang overlay. */
+.toast-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(34, 49, 62, 0.6); 
+    z-index: 9998;
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease-out;
+    backdrop-filter: blur(4px);
+}
+.toast-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+.toast {
+    background: #fff;
+    color: #1a202c;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-weight: 600;
+    min-width: 300px;
+    max-width: 450px;
+    text-align: left;
+    animation: slideUp .3s ease; 
+}
+.toast-icon {
+    font-size: 24px;
+    font-weight: 800;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #fff;
+}
+.toast-message {
+    font-size: 15px;
+    line-height: 1.5;
+}
+.toast.success { 
+    border-top: 4px solid #16a34a;
+}
+.toast.success .toast-icon {
+    background: #16a34a; 
+}
+.toast.error { 
+    border-top: 4px solid #dc2626;
+}
+.toast.error .toast-icon {
+    background: #dc2626;
+}
+/* ----- END TOAST ----- */
+@media (max-width: 900px) { .detail-content { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .filters { flex-direction: column; align-items: stretch; } }
 #loader-overlay {
     display: none;
@@ -987,6 +1082,175 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* --- BAGO: Mobile Navigation Toggle --- */
+#menu-toggle {
+  display: none; /* Hidden on desktop */
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #334155;
+  font-size: 24px;
+  padding: 5px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 10px;
+  z-index: 2100; 
+}
+
+
+/* --- BAGO: Responsive Media Query --- */
+@media (max-width: 1000px) {
+  .vertical-bar {
+    display: none; /* Itago ang vertical bar */
+  }
+  header {
+    padding: 12px 20px; /* Alisin ang left padding */
+    justify-content: space-between; /* I-space out ang logo at toggle */
+  }
+  .logo-section {
+    margin-right: 0; /* Alisin ang auto margin */
+  }
+  .dashboard, .container, footer { /* BAGO: Isinama ang dashboard at footer */
+    padding: 20px; /* Alisin ang left padding */
+  }
+  
+  #menu-toggle {
+    display: block; /* Ipakita ang hamburger button */
+  }
+
+  /* Itago ang original nav, gawing mobile nav */
+  nav#main-nav {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(20, 0, 0, 0.9); /* Mas madilim na background */
+    backdrop-filter: blur(5px);
+    z-index: 2000; /* Mataas sa header */
+    padding: 80px 20px 20px 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+  }
+
+  nav#main-nav.show {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  nav#main-nav a {
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+  }
+  
+  nav#main-nav a:hover {
+      background: rgba(255,255,255,0.1);
+  }
+  
+  nav#main-nav a.active {
+    background: none; /* Alisin ang red background sa mobile view */
+    color: #ff6b6b; /* Ibahin ang kulay ng active link */
+  }
+
+  /* BAGO: Ayusin ang layout ng charts at stats */
+  .stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .charts-grid, .bottom-section, .right-section {
+    grid-template-columns: 1fr; /* Stack everything vertically */
+  }
+  .welcome-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+}
+
+/* =================================== */
+/* <-- BAGO: CSS PARA SA QR SCANNER MODAL
+/* =================================== */
+.qr-modal-overlay {
+    display: none; /* Naka-tago by default */
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 12, 20, 0.6); /* Semi-transparent background */
+    z-index: 4000; /* Mataas para nasa ibabaw ng lahat */
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(4px); /* Ito 'yung blur effect */
+    animation: fadeIn .2s ease; /* Galing sa existing styles mo */
+}
+
+.qr-modal-content {
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25);
+    animation: slideUp .3s ease; /* Galing sa existing styles mo */
+    width: 90%;
+    max-width: 500px; /* Pwede mong i-adjust 'to */
+    text-align: center;
+    position: relative; /* Para sa "X" button */
+}
+
+.qr-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: #f1f5f9;
+    border: 2px solid #e2e8f0;
+    color: #334155;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qr-modal-close:hover {
+    background: #e2e8f0;
+}
+
+.qr-modal-content h3 {
+    font-size: 20px;
+    color: #1a202c;
+    margin-bottom: 8px;
+}
+
+.qr-modal-content p {
+    font-size: 14px;
+    color: #4a5568;
+    margin-bottom: 20px;
+}
+
+#qr-reader-container {
+    width: 100%;
+    max-width: 400px; 
+    margin: 0 auto;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden; /* Para 'yung video ay sakto sa box */
+}
+
+#qr-reader {
+    width: 100%;
+    /* Hayaan na ang library ang mag-set ng height */
+}
+/* --- END QR SCANNER MODAL CSS --- */
+
 </style>
 </head>
 <body>
@@ -1004,6 +1268,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 </div>
 
+<div id="toast-overlay-global" class="toast-overlay" style="z-index: 10000;">
+    </div>
+
 
 <div class="vertical-bar">
     <div class="circle"></div>
@@ -1013,13 +1280,13 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 <header>
     <div class="logo-section">
-    <img src="/../photo/LOGO.jpg" alt="Logo">
-        <strong>EYE MASTER CLINIC</strong>
+        <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
     </div>
-    <nav>
+    <button id="menu-toggle" aria-label="Open navigation">☰</button>
+    <nav id="main-nav">
         <a href="admin_dashboard.php" class="active">🏠 Dashboard</a>
         <a href="appointment.php">📅 Appointments</a>
-                <a href="patient_record.php">📘 Patient Record</a>
+        <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
         <a href="account.php">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
@@ -1071,36 +1338,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         <div class="card">
             <p>Total Appointments</p>
             <h2><?= $totalAppointmentsToday ?></h2>
-            <span class="change <?= $percentChange < 0 ? 'negative' : '' ?>">
-                <?= $today_vs_yesterday ?>
-            </span>
         </div>
         <div class="card">
             <p>Total Patients</p>
             <h2><?= $totalPatients ?></h2>
-            <span class="change <?= $patientPercentChange < 0 ? 'negative' : '' ?>">
-                <?= $total_patients_vs_last_month ?>
-            </span>
         </div>
 <div class="card">
             <p>Pending Appointments</p>
             <h2><?= $pendingAppointments ?></h2>
-            <span class="change <?= $pendingChange < 0 ? 'negative' : '' ?>">
-                <?= $pending_vs_yesterday ?>
-            </span>
         </div>
 
         <div class="card">
             <p>Missed Appointments</p>
             <h2><?= $missedAppointments ?></h2>
-            <span class="change negative">
-                <?= $missedAppointments ?> missed
-            </span>
         </div>
         <div class="card">
             <p>Completed Appointments</p>
             <h2><?= $completedToday ?></h2>
-            <span class="change">+<?= $completionRate ?>% completion rate</span>
         </div>
     </div>
 
@@ -1153,8 +1407,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EYEMASTER_CLINIC_<?= time() ?>" alt="QR Code">
                 </div>
                 <button class="scan-btn" onclick="startScan()">Click to Scan</button>
-                <div id="qr-reader"></div>
-            </div>
+                </div>
         </div>
     </div>
 </div>
@@ -1234,6 +1487,50 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 </div>
 
+<div class="detail-overlay" id="closureDetailModal">
+    <div class="detail-card" style="width: 500px; max-width: 96%;">
+        <div class="detail-header">
+            <div class="detail-title" id="closureDetailTitle">Closure Details</div>
+        </div>
+        <div id="closureDetailToastContainer" style="display: none; padding: 20px 28px 0 28px;"></div>
+        <div class="detail-content" style="display: block; padding: 28px;">
+            <input type="hidden" id="closureDetailId">
+            
+            <div class="detail-row" style="margin-bottom: 15px;">
+                <span class="detail-label">Date</span>
+                <input type="text" id="closureDetailDate" readonly disabled style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; background: #eee;">
+            </div>
+            <div class="detail-row" style="margin-bottom: 15px;">
+                <span class="detail-label">Start Time</span>
+                <input type="time" id="closureDetailStartTime" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
+            </div>
+            <div class="detail-row" style="margin-bottom: 15px;">
+                <span class="detail-label">End Time</span>
+                <input type="time" id="closureDetailEndTime" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Reason</span>
+                <input type="text" id="closureDetailReason" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
+            </div>
+        </div>
+        <div class="detail-actions">
+            <button id="closureDetailDeleteBtn" class="btn-small btn-danger" onclick="deleteClosureFromDetail()">Remove</button>
+            <button id="closureDetailSaveBtn" class="btn-small btn-save" onclick="saveClosureFromDetail()">Save Changes</button>
+            <button class="btn-small btn-close" onclick="closeClosureDetailModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="qr-modal-overlay" id="qrScannerModal" style="display: none;">
+    <div class="qr-modal-content">
+        <button class="qr-modal-close" onclick="stopScan()">✕</button>
+        <h3>Scan Appointment QR Code</h3>
+        <p>Hold the QR code steady in the center of the frame.</p>
+        <div id="qr-reader-container">
+            <div id="qr-reader"></div>
+        </div>
+    </div>
+</div>
 <footer>
     © 2025 EyeMaster. All rights reserved.
 </footer>
@@ -1258,7 +1555,7 @@ function hideLoader() {
 }
 
 // ===================================
-// <-- FIX #5: BAGONG 3-SECOND PAGE LOADER
+// <-- FIX #5: BAGONG 1-SECOND PAGE LOADER
 // ===================================
 document.addEventListener('DOMContentLoaded', () => {
     const pageLoader = document.getElementById('page-loader-overlay');
@@ -1272,47 +1569,140 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             pageLoader.style.display = 'none'; // Itago ang loader pagkatapos ng fade
-        }, 1000); // 0.5s fade duration (tugma sa CSS transition)
-    }, 1000); // 3-second delay
+        }, 500); // 0.5s fade duration (tugma sa CSS transition)
+    }, 1000); // 1-second delay
 });
 
 
-// --- NEW CLOSURE SCHEDULING LOGIC ---
+// --- BAGO: CLOSURE SCHEDULING LOGIC (3-STEP) ---
 const closureData = []; // To store fetched closures
+let currentClosureStep = 1;
 
 function formatTime(time24) {
+    if (!time24) return 'N/A';
     const [hours, minutes] = time24.split(':');
     const date = new Date();
     date.setHours(parseInt(hours), parseInt(minutes));
     return date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
 }
 
-function openClosureModal(id = null, date = null) {
-    document.getElementById('qr-reader').style.display = 'none';
+// BAGO: Function to control steps
+function showClosureStep(step) {
+    currentClosureStep = step;
+    
+    // Hide all steps
+    document.querySelectorAll('.form-step').forEach(el => el.style.display = 'none');
+    // Show current step
+    const currentStepEl = document.querySelector(`.form-step[data-step="${step}"]`);
+    if(currentStepEl) currentStepEl.style.display = 'block';
 
+    // Update stepper UI
+    document.querySelectorAll('.step-item').forEach(el => {
+        if (parseInt(el.dataset.step) === step) {
+            el.classList.add('active');
+        } else {
+            el.classList.remove('active');
+        }
+    });
+
+    // Update navigation buttons
+    const backBtn = document.getElementById('closureBackBtn');
+    const nextBtn = document.getElementById('closureNextBtn');
+    const saveBtn = document.getElementById('closureSaveBtn');
+
+    if (backBtn) backBtn.style.display = (step > 1) ? 'inline-flex' : 'none';
+    if (nextBtn) nextBtn.style.display = (step < 3) ? 'inline-flex' : 'none';
+    if (saveBtn) saveBtn.style.display = (step === 3) ? 'inline-flex' : 'none';
+
+    // BAGO: I-disable ang Next button sa Step 1 kung walang date
+    if (step === 1 && nextBtn) {
+        nextBtn.disabled = !document.getElementById('closureDate').value;
+    }
+}
+
+// BAGO: Navigation function
+function navigateClosureStep(direction) {
+    // Basic validation before going next
+    if (direction > 0) {
+        if (currentClosureStep === 1) {
+            if (!document.getElementById('closureDate').value) {
+                // Gagamitin na natin ang bagong toast
+                showToastInPopup('Please select a date from the calendar first.', 'error');
+                return;
+            }
+        }
+        if (currentClosureStep === 2) {
+             const startTime = document.getElementById('startTime').value;
+             const endTime = document.getElementById('endTime').value;
+             const timeErrorEl = document.getElementById('timeError');
+             if (timeErrorEl) timeErrorEl.style.display = 'none';
+
+             if (!startTime || !endTime) {
+                 showToastInPopup('Please set a Start Time and End Time.', 'error');
+                 return;
+             }
+             if (startTime >= endTime) {
+                 if(timeErrorEl) {
+                     timeErrorEl.textContent = 'End Time must be after Start Time.';
+                     timeErrorEl.style.display = 'block';
+                 }
+                 return;
+             }
+        }
+    }
+    showClosureStep(currentClosureStep + direction);
+}
+
+
+function openClosureModal(id = null, date = null) {
+    
+    // BAGO: Itago ang modal ng scanner kung nakabukas
+    const qrModal = document.getElementById('qrScannerModal');
+    if (qrModal && qrModal.style.display !== 'none') {
+        stopScan(); // Gamitin ang stopScan para maayos na maisara
+    }
+
+    // BAGO: 3-step HTML structure
     openPopup(
         id ? 'Edit Closure Schedule' : 'Set Closure Schedule',
         `
-        <div class="closure-calendar-container">
-            <div id="closureCalendar" class="closure-calendar"></div>
-            <div class="closure-form-container">
-                <input type="hidden" id="closureId" value="${id || ''}">
-                <label for="closureDate">Date:</label>
-                <input type="text" id="closureDate" value="${date || ''}" readonly placeholder="Select a date from the calendar" style="font-weight: 600;">
-                
+        <div id="closureToastContainer" style="display: none; margin-bottom: 15px;"></div>
+
+        <div class="closure-stepper">
+            <div class="step-item active" data-step="1"><b>1.</b> Select Date</div>
+            <div class="step-item" data-step="2"><b>2.</b> Set Time</div>
+            <div class="step-item" data-step="3"><b>3.</b> Add Reason</div>
+        </div>
+
+        <div class="closure-form-container">
+            <div class="form-step" data-step="1">
+                <div id="closureCalendar" class="closure-calendar"></div>
+                <input type="hidden" id="closureDate"> </div>
+            
+            <div class="form-step" data-step="2" style="display: none;">
                 <label for="startTime">Start Time (e.g., 08:00):</label>
-                <input type="time" id="startTime" value="" required>
+                <input type="time" id="startTime" required>
                 
                 <label for="endTime">End Time (e.g., 17:00):</label>
-                <input type="time" id="endTime" value="" required>
+                <input type="time" id="endTime" required>
 
+                <p id="timeError" style="color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;"></p>
+            </div>
+
+            <div class="form-step" data-step="3" style="display: none;">
                 <label for="reason">Reason:</label>
-                <input type="text" id="reason" value="" placeholder="e.g., Staff Training" required>
-                
-                <p id="timeError" style="color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;">End time must be after start time, and time must span AM/PM.</p>
-                <button onclick="saveClosure()" style="width: 100%; background: #27ae60; margin-top: 15px;">Save Schedule</button>
+                <input type="text" id="reason" placeholder="e.g., Staff Training" required>
             </div>
         </div>
+
+        <div class="closure-nav">
+            <button id="closureBackBtn" class="btn-small btn-close" onclick="navigateClosureStep(-1)" style="display: none;">Back</button>
+            <button id="closureNextBtn" class="btn-small btn-accept" onclick="navigateClosureStep(1)" style="display: none;" disabled>Next</button>
+            <button id="closureSaveBtn" class="btn-small btn-save" onclick="saveClosure()" style="display: none;">Save Schedule</button>
+        </div>
+        
+        <input type="hidden" id="closureId" value="${id || ''}">
+        
         <h4 style="margin-top: 15px; font-size: 14px; color: #2c3e50;">Current Closures:</h4>
         <div class="closure-list" id="currentClosuresList">Loading...</div>
         `,
@@ -1323,21 +1713,46 @@ function openClosureModal(id = null, date = null) {
     const initialYear = today.getFullYear();
     const initialMonth = today.getMonth() + 1;
     
-    renderCalendar(initialYear, initialMonth);
-    fetchAndDisplayClosures();
-    
-    if (id) {
-        fetchClosureDetails(id);
-    } else {
-        const todayDateStr = today.toISOString().slice(0, 10);
-        setTimeout(() => {
+    // BAGO: Ginamit ang .then() para siguradong loaded na ang data
+    fetchAndDisplayClosures().then(() => {
+        renderCalendar(initialYear, initialMonth); // I-render ulit ang calendar na may data
+        
+        if (id) {
+            // --- Simula ng Add Logic (walang ID) ---
+            currentClosureStep = 1;
+            showClosureStep(1);
+            
+            const todayDateStr = today.toISOString().slice(0, 10);
             const todayElement = document.querySelector(`.calendar-day[data-date="${todayDateStr}"]`);
-            if (todayElement && !todayElement.classList.contains('empty')) {
-                selectDate(todayElement, today.getDate());
+            
+            // Check kung 'yung araw ngayon ay available
+            if (todayElement && !todayElement.classList.contains('empty') && !todayElement.classList.contains('closed') && !todayElement.classList.contains('partial-closed')) {
+                // Pre-select today kung available
+                todayElement.classList.add('selected');
+                document.getElementById('closureDate').value = todayDateStr;
+                document.getElementById('closureNextBtn').disabled = false; // Enable ang next button
             }
-        }, 0);
-    }
+            // --- Katapusan ng Add Logic ---
+            
+        } else {
+             // Set default state for adding
+            currentClosureStep = 1;
+            showClosureStep(1);
+            
+            const todayDateStr = today.toISOString().slice(0, 10);
+            const todayElement = document.querySelector(`.calendar-day[data-date="${todayDateStr}"]`);
+            
+            // Check kung 'yung araw ngayon ay available
+            if (todayElement && !todayElement.classList.contains('empty') && !todayElement.classList.contains('closed') && !todayElement.classList.contains('partial-closed')) {
+                // Pre-select today kung available
+                todayElement.classList.add('selected');
+                document.getElementById('closureDate').value = todayDateStr;
+                document.getElementById('closureNextBtn').disabled = false; // Enable ang next button
+            }
+        }
+    });
 }
+
 
 // Global state for calendar month/year
 let currentCalYear = parseInt('<?= $filterYear ?>');
@@ -1352,7 +1767,7 @@ function changeMonth(delta) {
         currentCalMonth = 12;
         currentCalYear--;
     }
-    renderCalendar(currentCalYear, currentCalMonth);
+    // BAGO: I-re-render na lang sa loob ng fetchAndDisplayClosures
     fetchAndDisplayClosures(); // Fetch new data for the new month
 }
 
@@ -1397,14 +1812,21 @@ function renderCalendar(year, month) {
         const closuresForDay = closureData.filter(c => c.closure_date === fullDate);
         
         if (fullDate < todayDate) {
-            classList = 'calendar-day empty';
+            classList += ' empty'; // BAGO: pinalitan ng +=
             clickHandler = '';
         } else {
             if (fullDate === todayDate) classList += ' today';
             
+            // BAGO: Inayos ang logic para sa pag-disable ng click
             if (closuresForDay.length > 0) {
                 const isFullDay = closuresForDay.some(c => c.start_time === '00:00:00' && c.end_time === '23:59:00');
-                classList += isFullDay ? ' closed' : ' partial-closed';
+                if (isFullDay) {
+                    classList += ' closed';
+                } else {
+                    classList += ' partial-closed';
+                }
+                // Bawal na i-click kapag may closure na
+                clickHandler = ''; 
             }
         }
 
@@ -1417,8 +1839,10 @@ function renderCalendar(year, month) {
     currentCalMonth = month;
 }
 
+// BAGO: Inayos ang selectDate para mag-check ng class at mag-enable ng button
 function selectDate(element, day) {
-    if (element.classList.contains('empty')) {
+    // Bawal piliin kung 'empty' or may 'closed' or 'partial-closed' class
+    if (element.classList.contains('empty') || element.classList.contains('closed') || element.classList.contains('partial-closed')) {
         return;
     }
     
@@ -1428,11 +1852,11 @@ function selectDate(element, day) {
     const fullDate = element.getAttribute('data-date');
     document.getElementById('closureDate').value = fullDate;
 
-    document.getElementById('closureId').value = '';
-    document.getElementById('startTime').value = '';
-    document.getElementById('endTime').value = '';
-    document.getElementById('reason').value = '';
-    document.getElementById('timeError').style.display = 'none';
+    // I-enable ang Next button
+    document.getElementById('closureNextBtn').disabled = false;
+
+    // Awtomatikong pumunta sa Step 2
+    navigateClosureStep(1);
 }
 
 function fetchAndDisplayClosures() {
@@ -1442,7 +1866,8 @@ function fetchAndDisplayClosures() {
 
     showLoader('Fetching closures...');
 
-    fetch(`store_closure_handler.php?action=fetch_closures&year=${currentCalYear}&month_num=${String(currentCalMonth).padStart(2, '0')}`)
+    // BAGO: Nag-return ng Promise para malaman kung kailan tapos
+    return fetch(`store_closure_handler.php?action=fetch_closures&year=${currentCalYear}&month_num=${String(currentCalMonth).padStart(2, '0')}`)
         .then(res => res.json())
         .then(data => {
             hideLoader(); 
@@ -1455,16 +1880,36 @@ function fetchAndDisplayClosures() {
                     listEl.innerHTML = '<div class="empty-state">No closures scheduled for this month.</div>';
                     return;
                 }
-                listEl.innerHTML = data.closures.map(c => `
-                    <div class="closure-item">
-                        <div class="closure-item-info">
-                            <b>${c.closure_date}</b> (${formatTime(c.start_time)} - ${formatTime(c.end_time)})
-                            <br>${c.reason}
+                
+                // BAGO: Logika para sa View/Edit/Remove buttons
+                const today = new Date().toISOString().slice(0, 10);
+                
+                listEl.innerHTML = data.closures.map(c => {
+                    let buttonsHTML = '';
+                    
+                    if (c.closure_date < today) {
+                        // Nakalipas na: View button lang
+                        buttonsHTML = `<button class="btn-small view btn-view" onclick='openClosureDetailModal(${c.id}, true)'>View</button>`;
+                    } else {
+                        // Ngayon o sa future: Edit at Remove buttons
+                        buttonsHTML = `
+                            <button class="btn-small btn-edit" style="background: #f59e0b;" onclick="openClosureDetailModal(${c.id}, false)">Edit</button>
+                            <button class="btn-small btn-danger" onclick="deleteClosureConfirm(${c.id}, '${c.closure_date}')">Remove</button>
+                        `;
+                    }
+
+                    return `
+                        <div class="closure-item">
+                            <div class="closure-item-info">
+                                <b>${c.closure_date}</b> (${formatTime(c.start_time)} - ${formatTime(c.end_time)})
+                                <br>${c.reason}
+                            </div>
+                            <div style="display: flex; gap: 5px;">
+                                ${buttonsHTML}
+                            </div>
                         </div>
-                        <button onclick="editClosure(${c.id})">Edit</button>
-                        <button class="delete" onclick="deleteClosureConfirm(${c.id}, '${c.closure_date}')">Delete</button>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
                 listEl.innerHTML = '<div class="empty-state" style="color: #e74c3c;">Failed to load closures.</div>';
             }
@@ -1476,49 +1921,15 @@ function fetchAndDisplayClosures() {
         });
 }
 
-function fetchClosureDetails(id) {
-    showLoader('Loading details...');
-    fetch('store_closure_handler.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fetch_closure_details', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideLoader(); 
-        if (data.success) {
-            const c = data.closure;
-            document.getElementById('closureId').value = c.id;
-            document.getElementById('closureDate').value = c.closure_date;
-            document.getElementById('startTime').value = c.start_time.substring(0, 5);
-            document.getElementById('endTime').value = c.end_time.substring(0, 5);
-            document.getElementById('reason').value = c.reason;
-            
-            document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
-            const dayElement = document.querySelector(`.calendar-day[data-date="${c.closure_date}"]`);
-            if (dayElement) dayElement.classList.add('selected');
-
-            document.querySelector('#popup h3').textContent = 'Edit Closure Schedule';
-
-        } else {
-            showToast('Failed to load closure details.', 'error'); // FIX: Ginamit ang showToast
-        }
-    })
-    .catch(err => {
-        hideLoader(); 
-        console.error('Fetch error:', err);
-        showToast('Failed to load closure details.', 'error'); // FIX: Ginamit ang showToast
-    });
-}
-
+// BAGO: Pinalitan ang function na 'to. Gagamitin na ang openClosureDetailModal
 function editClosure(id) {
-    openClosureModal(id); 
+    openClosureDetailModal(id, false); // false = not read-only
 }
 
 function deleteClosureConfirm(id, date) {
     openPopup(
         'Confirm Deletion',
-        `<p style="font-size: 14px;">Are you sure you want to delete the closure scheduled for <b>${date}</b>?</p>`,
+        `<p style="font-size: 14px;">Are you sure you want to remove the closure scheduled for <b>${date}</b>?</p>`,
         true,
         () => deleteClosure(id)
     );
@@ -1535,31 +1946,46 @@ function deleteClosure(id) {
     .then(data => {
         hideLoader(); 
         if (data.success) {
-            showToast(data.message, 'success'); // FIX: Ginamit ang showToast
-            fetchAndDisplayClosures(); 
+            // BAGO: Gagamitin ang global toast
+            showGlobalToast(data.message, 'success'); 
+            
+            // I-refresh ang listahan sa *kabilang* modal (Add/Set modal)
+            if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
+                fetchAndDisplayClosures(); 
+            }
+            // Isara ang 'Edit' modal kung nakabukas
+            if (document.getElementById('closureDetailModal').classList.contains('show')) {
+                closeClosureDetailModal();
+            }
         } else {
-            showToast(data.message, 'error'); // FIX: Ginamit ang showToast
+            showGlobalToast(data.message, 'error'); 
         }
     })
     .catch(err => {
         hideLoader(); 
         console.error('Fetch error:', err);
-        showToast('Network error while deleting closure.', 'error'); // FIX: Ginamit ang showToast
+        showGlobalToast('Network error while deleting closure.', 'error'); 
     });
 }
 
+// BAGO: Inayos para kunin ang data mula sa lahat ng steps
 function saveClosure() {
     const id = document.getElementById('closureId').value;
     const date = document.getElementById('closureDate').value;
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
     const reason = document.getElementById('reason').value;
-    const timeErrorEl = document.getElementById('timeError');
+    const timeErrorEl = document.getElementById('timeError'); // Ang error message ay nasa step 2 na
 
-    timeErrorEl.style.display = 'none';
+    if(timeErrorEl) timeErrorEl.style.display = 'none';
 
     if (!date || !startTime || !endTime || !reason) {
-        showToast('All fields (Date, Start Time, End Time, Reason) are required.', 'error'); // FIX: Ginamit ang showToast
+        showToastInPopup('All fields (Date, Start Time, End Time, Reason) are required.', 'error'); 
+        
+        // Bumalik sa step kung saan may kulang
+        if (!date) showClosureStep(1);
+        else if (!startTime || !endTime) showClosureStep(2);
+        
         return;
     }
     
@@ -1568,14 +1994,30 @@ function saveClosure() {
     const startPeriod = startHour < 12 ? 'AM' : 'PM';
     const endPeriod = endHour < 12 ? 'AM' : 'PM';
     
-    if (startPeriod === endPeriod) {
-        timeErrorEl.textContent = 'Closure must span across morning and afternoon (e.g., AM to PM).';
-        timeErrorEl.style.display = 'block';
+    // BAGO: Inayos ang logic para sa AM/PM span
+    if (startPeriod === endPeriod && (startHour < 12 && endHour < 12) ) { // Parehong AM
+        showClosureStep(2);
+        if(timeErrorEl) {
+            timeErrorEl.textContent = 'Closure must span across morning and afternoon (e.g., AM to PM).';
+            timeErrorEl.style.display = 'block';
+        }
         return;
     }
+     if (startPeriod === endPeriod && (startHour > 12 && endHour > 12) ) { // Parehong PM
+        showClosureStep(2);
+        if(timeErrorEl) {
+            timeErrorEl.textContent = 'Closure must span across morning and afternoon (e.g., AM to PM).';
+            timeErrorEl.style.display = 'block';
+        }
+        return;
+    }
+    
     if (startTime >= endTime) {
-        timeErrorEl.textContent = 'End Time must be strictly after Start Time.';
-        timeErrorEl.style.display = 'block';
+        showClosureStep(2);
+        if(timeErrorEl) {
+            timeErrorEl.textContent = 'End Time must be strictly after Start Time.';
+            timeErrorEl.style.display = 'block';
+        }
         return;
     }
 
@@ -1597,20 +2039,31 @@ function saveClosure() {
     .then(data => {
         hideLoader(); 
         if (data.success) {
-            // Isara ang popup, at buksan ulit pagkatapos
-            closePopup();
-            setTimeout(() => {
-                showToast(data.message, 'success');
-                openClosureModal(); // I-refresh ang modal
-            }, 500); 
+            // BAGO: Hindi na mag-ko-close ang popup
+            showToastInPopup(data.message, 'success');
+            
+            // I-reset ang form fields
+            document.getElementById('closureId').value = '';
+            document.getElementById('startTime').value = '';
+            document.getElementById('endTime').value = '';
+            document.getElementById('reason').value = '';
+            document.getElementById('closureDate').value = ''; // I-clear din ang date
+            document.getElementById('closureNextBtn').disabled = true;
+            
+            // I-refresh ang calendar at list
+            fetchAndDisplayClosures().then(() => {
+                // Bumalik sa step 1
+                showClosureStep(1);
+            });
+            
         } else {
-            showToast(data.message, 'error'); // FIX: Ginamit ang showToast
+            showToastInPopup(data.message, 'error'); 
         }
     })
     .catch(err => {
         hideLoader(); 
         console.error('Fetch error:', err);
-        showToast('Network error while saving closure.', 'error'); // FIX: Ginamit ang showToast
+        showToastInPopup('Network error while saving closure.', 'error'); 
     });
 }
 // Real data from PHP
@@ -1739,13 +2192,90 @@ const confirmBtn = document.getElementById('confirmActionBtn');
 let html5QrCode = null;
 
 // ===================================
-// <-- FIX #5: Pinalitan ang showToast
+// BAGO: Dalawang klase ng Toast
 // ===================================
-function showToast(msg, type = 'success') {
-    const title = (type === 'success') ? 'Success' : 'Error';
-    // Gagamitin ang existing popup system para sa centered message
-    openPopup(title, `<p style="font-size: 16px; line-height: 1.5;">${msg}</p>`);
+
+// Ito yung lilitaw sa gitna ng screen, sa ibabaw ng LAHAT
+function showGlobalToast(msg, type = 'success') {
+    // 1. Hanapin muna kung may existing overlay
+    let overlay = document.getElementById('toast-overlay-global');
+    if (!overlay) {
+        // Kung wala, create
+        overlay = document.createElement('div');
+        overlay.id = 'toast-overlay-global';
+        overlay.className = 'toast-overlay';
+        document.body.appendChild(overlay);
+    }
+    
+    // 2. Create toast box
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`; 
+    toast.innerHTML = `
+        <div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div>
+        <div class="toast-message">${msg}</div>
+    `;
+    
+    // 3. Append to overlay
+    overlay.innerHTML = ''; // Linisin muna kung may luma
+    overlay.appendChild(toast);
+    overlay.classList.add('show');
+    
+    // 4. Auto-remove after 2.5 seconds
+    const timer = setTimeout(() => {
+        if(overlay) overlay.classList.remove('show');
+    }, 2500);
+    
+    // 5. Allow click-to-close
+    overlay.addEventListener('click', () => {
+        clearTimeout(timer); // Stop auto-remove if clicked
+        if(overlay) overlay.classList.remove('show');
+    }, { once: true });
 }
+
+// BAGO: Ito yung lilitaw sa loob MISMO ng closure modal
+function showToastInPopup(msg, type = 'success') {
+    const container = document.getElementById('closureToastContainer');
+    if (!container) {
+        // Fallback kung sakaling wala yung container
+        showGlobalToast(msg, type);
+        return;
+    }
+
+    // Gagawa ng toast-like message sa loob ng container
+    container.innerHTML = `
+        <div class_name="toast-message" style="
+            padding: 10px 15px; 
+            border-radius: 8px; 
+            background: ${type === 'success' ? '#d4edda' : '#f8d7da'}; 
+            color: ${type === 'success' ? '#155724' : '#721c24'}; 
+            border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
+            font-weight: 600;
+            font-size: 14px;
+        ">
+            ${type === 'success' ? '✓' : '✕'} ${msg}
+        </div>
+    `;
+    container.style.display = 'block';
+    
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        if(container) container.style.display = 'none';
+    }, 3000);
+}
+
+
+// Ito ang gagamitin ng lahat ng function na HINDI related sa closure modal
+function showToast(msg, type = 'success') {
+    // Check kung ang closure modal ay nakabukas
+    if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
+        // Kung nakabukas, gamitin ang special toast sa loob ng modal
+        showToastInPopup(msg, type);
+    } else {
+        // BAGO: Gamitin na rin ang global toast para consistent
+        showGlobalToast(msg, type);
+    }
+}
+
 
 // Popup Functions
 function openPopup(header, content, isConfirmation = false, callback = null) {
@@ -1771,13 +2301,11 @@ function closePopup() {
     popup.classList.remove('active');
     popupOverlay.classList.remove('active');
     
-    const qrReader = document.getElementById('qr-reader');
-    if (html5QrCode && qrReader.style.display === 'block') {
-        html5QrCode.stop().then(() => {
-            qrReader.style.display = 'none';
-        }).catch(err => {
-            console.error('Error stopping scanner:', err);
-        });
+    // BAGO: Isinama ang pag-stop ng scanner dito
+    // para kung i-click man ang overlay, hihinto rin ang scanner
+    const qrModal = document.getElementById('qrScannerModal');
+    if (qrModal && qrModal.style.display !== 'none') {
+         stopScan();
     }
 }
 
@@ -1841,70 +2369,113 @@ function closeStore() {
     .then(data => {
         hideLoader(); 
         if (data.success) {
-            showToast('Store closed successfully. You will be logged out now.', 'success'); // FIX: Ginamit ang showToast
+            showGlobalToast('Store closed successfully. You will be logged out now.', 'success'); 
             setTimeout(() => { window.location.href = 'logout.php'; }, 1500);
         } else {
-            showToast(data.message || 'Unknown error', 'error'); // FIX: Ginamit ang showToast
+            showGlobalToast(data.message || 'Unknown error', 'error'); 
         }
     })
     .catch(error => {
         hideLoader();
         console.error('Error:', error);
-        showToast('An error occurred while closing the store.', 'error'); // FIX: Ginamit ang showToast
+        showGlobalToast('An error occurred while closing the store.', 'error'); 
     });
 }
 
-function startScan() {
-        const qrReader = document.getElementById('qr-reader');
-        qrReader.style.display = 'block';
-        
-        if (html5QrCode) {
-            html5QrCode.stop().catch(err => console.error('Error stopping previous scanner:', err));
-        }
-        html5QrCode = new Html5Qrcode("qr-reader");
+// ===================================
+// <-- BAGO: Function para isara ang QR Modal
+// ===================================
+function stopScan() {
+    const qrModal = document.getElementById('qrScannerModal');
+    if (qrModal) {
+        qrModal.style.display = 'none'; // Itago ang modal
+    }
 
-        html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 250 } },
-            qrCodeMessage => {
-                html5QrCode.stop().then(() => {
-                    qrReader.style.display = 'none';
-                    showLoader('Verifying QR Code...');
-                    fetch('verify_qr.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ qr_code: qrCodeMessage })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        hideLoader();
-                        if (data.success && data.id) {
-                            openAppointmentDetailModal(data);
-                        } else {
-                            showToast(data.message || 'Patient or appointment not found', 'error'); // FIX: Ginamit ang showToast
-                        }
-                    })
-                    .catch(error => {
-                        hideLoader();
-                        console.error('Fetch Error:', error);
-                        showToast('Error verifying QR code.', 'error'); // FIX: Ginamit ang showToast
-                    });
-                }).catch(err => {
-                    console.error('Error stopping scanner:', err);
-                    qrReader.style.display = 'none';
-                });
-            },
-            errorMessage => {
-                // Ignore scanning errors
-            }
-        ).catch(err => {
-            console.error('Unable to start scanner:', err);
-            qrReader.style.display = 'none';
-            showToast('Unable to access camera. Please check permissions.', 'error'); // FIX: Ginamit ang showToast
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => {
+            console.log("QR Scanner stopped.");
+            // Linisin ang laman ng qr-reader para sa susunod na scan
+            const qrReader = document.getElementById('qr-reader');
+            if(qrReader) qrReader.innerHTML = '';
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+            // Kahit nag-error, linisin pa rin
+            const qrReader = document.getElementById('qr-reader');
+            if(qrReader) qrReader.innerHTML = '';
         });
     }
+}
+
+// ===================================
+// <-- PALITAN: Inayos ang startScan() para gumamit ng Modal
+// ===================================
+function startScan() {
+    // 1. Ipakita ang bagong modal
+    const qrModal = document.getElementById('qrScannerModal');
+    if (!qrModal) {
+        console.error('QR Scanner Modal not found!');
+        return;
+    }
+    qrModal.style.display = 'flex'; // Ipakita ang overlay
+
+    // 2. Ito 'yung ID ng div sa loob ng modal
+    const qrReaderId = "qr-reader";
+    
+    // 3. Siguraduhin na huminto ang dating instance kung meron man
+    if (html5QrCode) {
+        html5QrCode.stop().catch(err => console.error('Error stopping previous scanner:', err));
+    }
+    
+    // 4. Gumawa ng bagong instance
+    html5QrCode = new Html5Qrcode(qrReaderId);
+
+    // 5. Simulan ang scanner
+    html5QrCode.start(
+        { facingMode: "environment" }, // Mas prefer ang rear camera
+        { fps: 10, qrbox: { width: 250, height: 250 } }, // 'qrbox' ay para sa area, hindi sa actual video size
+        
+        // --- onSuccess ---
+        qrCodeMessage => {
+            // 6. Natagpuan ang QR! Itigil ang scanner at isara ang modal
+            stopScan(); 
+            
+            // 7. Ipagpatuloy ang dating logic (verification)
+            showLoader('Verifying QR Code...');
+            fetch('verify_qr.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ qr_code: qrCodeMessage })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoader();
+                if (data.success && data.id) {
+                    openAppointmentDetailModal(data);
+                } else {
+                    showGlobalToast(data.message || 'Patient or appointment not found', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoader();
+                console.error('Fetch Error:', error);
+                showGlobalToast('Error verifying QR code.', 'error');
+            });
+        },
+        
+        // --- onScanFailure ---
+        errorMessage => {
+            // Huwag mag-log ng error, para tahimik lang habang naghahanap
+        }
+    ).catch(err => {
+        // 8. Nag-fail simulan (e.g., walang camera, walang permission)
+        console.error('Unable to start scanner:', err);
+        stopScan(); // Isara ang modal kahit nag-fail
+        showGlobalToast('Unable to access camera. Please check permissions.', 'error');
+    });
+}
+
 
 // ======================================================================
 // <-- START: QR CODE FIX 
@@ -1958,7 +2529,7 @@ function updateScannedStatus(newStatus) {
     const appointmentId = document.getElementById('modal_appointment_id').value;
     
     if (!appointmentId) {
-        showToast('Error: No Appointment ID found.', 'error');
+        showGlobalToast('Error: No Appointment ID found.', 'error');
         return;
     }
 
@@ -1980,23 +2551,248 @@ function updateScannedStatus(newStatus) {
     .then(data => {
         hideLoader();
         if (data.success) {
-            showToast(`Appointment marked as ${newStatus}.`, 'success');
+            showGlobalToast(`Appointment marked as ${newStatus}.`, 'success');
             closeAppointmentDetailModal();
             // You might want to reload the dashboard data here
             // location.reload(); 
         } else {
-            showToast(data.message || 'Failed to update status.', 'error');
+            showGlobalToast(data.message || 'Failed to update status.', 'error');
         }
     })
     .catch(err => {
         hideLoader();
         console.error('Update Error:', err);
-        showToast('Network error. Could not update status.', 'error');
+        showGlobalToast('Network error. Could not update status.', 'error');
     });
 }
 // ======================================================================
 // <-- END: QR CODE FIX
 // ======================================================================
+
+// BAGO: Functions para sa View/Edit Closure Modal
+function closeClosureDetailModal() {
+    document.getElementById('closureDetailModal').classList.remove('show');
+}
+
+function openClosureDetailModal(id, isReadOnly = false) {
+    showLoader('Loading details...');
+    fetch('store_closure_handler.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fetch_closure_details', id: id })
+    })
+    .then(res => res.json())
+    .then(data => {
+        hideLoader();
+        if (data.success) {
+            const c = data.closure;
+            
+            // Populate data
+            document.getElementById('closureDetailId').value = c.id;
+            document.getElementById('closureDetailDate').value = c.closure_date;
+            document.getElementById('closureDetailStartTime').value = c.start_time.substring(0, 5);
+            document.getElementById('closureDetailEndTime').value = c.end_time.substring(0, 5);
+            document.getElementById('closureDetailReason').value = c.reason;
+
+            // Get elements
+            const startTimeInput = document.getElementById('closureDetailStartTime');
+            const endTimeInput = document.getElementById('closureDetailEndTime');
+            const reasonInput = document.getElementById('closureDetailReason');
+            const saveBtn = document.getElementById('closureDetailSaveBtn');
+            const deleteBtn = document.getElementById('closureDetailDeleteBtn');
+            const title = document.getElementById('closureDetailTitle');
+            const toastContainer = document.getElementById('closureDetailToastContainer');
+
+            toastContainer.style.display = 'none'; // Itago ang toast
+            
+            if (isReadOnly) {
+                // --- VIEW MODE (PAST) ---
+                title.textContent = 'View Past Closure';
+                startTimeInput.readOnly = true;
+                endTimeInput.readOnly = true;
+                reasonInput.readOnly = true;
+                
+                // I-disable ang fields
+                startTimeInput.style.background = '#eee';
+                endTimeInput.style.background = '#eee';
+                reasonInput.style.background = '#eee';
+
+                // Itago ang buttons
+                saveBtn.style.display = 'none';
+                deleteBtn.style.display = 'none';
+            } else {
+                // --- EDIT MODE (FUTURE) ---
+                title.textContent = 'Edit Closure Schedule';
+                startTimeInput.readOnly = false;
+                endTimeInput.readOnly = false;
+                reasonInput.readOnly = false;
+
+                // I-enable ang fields
+                startTimeInput.style.background = '#fff';
+                endTimeInput.style.background = '#fff';
+                reasonInput.style.background = '#fff';
+
+                // Ipakita ang buttons
+                saveBtn.style.display = 'inline-flex';
+                deleteBtn.style.display = 'inline-flex';
+            }
+            
+            document.getElementById('closureDetailModal').classList.add('show');
+        } else {
+            showGlobalToast(data.message || 'Failed to load details.', 'error');
+        }
+    })
+    .catch(err => {
+        hideLoader();
+        console.error('Fetch error:', err);
+        showGlobalToast('Network error. Could not load details.', 'error');
+    });
+}
+
+// BAGO: Function para mag-save galing sa detail modal
+function saveClosureFromDetail() {
+    const id = document.getElementById('closureDetailId').value;
+    const date = document.getElementById('closureDetailDate').value; // Ito ay readonly
+    const startTime = document.getElementById('closureDetailStartTime').value;
+    const endTime = document.getElementById('closureDetailEndTime').value;
+    const reason = document.getElementById('closureDetailReason').value;
+
+    // 1. Check for empty fields
+    if (!startTime || !endTime || !reason) {
+        showToastInDetailModal('All fields are required.', 'error');
+        return;
+    }
+
+    // 2. Check if End Time is after Start Time
+    if (startTime >= endTime) {
+        showToastInDetailModal('End Time must be after Start Time.', 'error');
+        return;
+    }
+    
+    // 3. Check for AM/PM span
+    const startHour = parseInt(startTime.split(':')[0]);
+    const endHour = parseInt(endTime.split(':')[0]);
+    const startPeriod = startHour < 12 ? 'AM' : 'PM';
+    const endPeriod = endHour < 12 ? 'AM' : 'PM';
+    
+    if (startPeriod === endPeriod && (startHour < 12 && endHour < 12) ) { // Parehong AM
+         showToastInDetailModal('Closure must span across morning and afternoon (e.g., AM to PM).', 'error');
+         return;
+    }
+    if (startPeriod === endPeriod && (startHour > 12 && endHour > 12) ) { // Parehong PM (13:00 to 23:00)
+        showToastInDetailModal('Closure must span across morning and afternoon (e.g., AM to PM).', 'error');
+        return;
+    }
+    
+    showLoader('Saving changes...');
+    
+    fetch('store_closure_handler.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action: 'save_closure', // Same action, different source
+            id: id,
+            date: date,
+            start_time: startTime + ':00',
+            end_time: endTime + ':00',
+            reason: reason
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        hideLoader();
+        if (data.success) {
+            showToastInDetailModal(data.message, 'success');
+            // I-refresh ang listahan sa *kabilang* modal (Add/Set modal)
+            if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
+                fetchAndDisplayClosures();
+            }
+        } else {
+            showToastInDetailModal(data.message, 'error');
+        }
+    })
+    .catch(err => {
+        hideLoader();
+        console.error('Fetch error:', err);
+        showToastInDetailModal('Network error while saving.', 'error');
+    });
+}
+
+// BAGO: Function para mag-delete galing sa detail modal
+function deleteClosureFromDetail() {
+    const id = document.getElementById('closureDetailId').value;
+    const date = document.getElementById('closureDetailDate').value;
+    
+    // Isara muna ang detail modal
+    closeClosureDetailModal();
+    
+    // Buksan ang confirmation modal
+    openPopup(
+        'Confirm Deletion',
+        `<p style="font-size: 14px;">Are you sure you want to remove the closure scheduled for <b>${date}</b>?</p>`,
+        true,
+        () => deleteClosure(id) // Ang deleteClosure() ay mag-h-handle ng global toast at refresh
+    );
+}
+
+// BAGO: Function para sa toast sa loob ng edit/view modal
+function showToastInDetailModal(msg, type = 'success') {
+    const container = document.getElementById('closureDetailToastContainer');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class_name="toast-message" style="
+            padding: 10px 15px; 
+            border-radius: 8px; 
+            background: ${type === 'success' ? '#d4edda' : '#f8d7da'}; 
+            color: ${type === 'success' ? '#155724' : '#721c24'}; 
+            border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
+            font-weight: 600;
+            font-size: 14px;
+        ">
+            ${type === 'success' ? '✓' : '✕'} ${msg}
+        </div>
+    `;
+    container.style.display = 'block';
+    
+    setTimeout(() => {
+        if(container) container.style.display = 'none';
+    }, 3000);
+}
+
+
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const menuToggle = document.getElementById('menu-toggle');
+  const mainNav = document.getElementById('main-nav');
+
+  if (menuToggle && mainNav) {
+    menuToggle.addEventListener('click', function() {
+      mainNav.classList.toggle('show');
+      
+      // Palitan ang icon ng button
+      if (mainNav.classList.contains('show')) {
+        this.innerHTML = '✕'; // Close icon
+        this.setAttribute('aria-label', 'Close navigation');
+      } else {
+        this.innerHTML = '☰'; // Hamburger icon
+        this.setAttribute('aria-label', 'Open navigation');
+      }
+    });
+
+    // Isara ang menu kapag pinindot ang isang link
+    mainNav.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', function() {
+        mainNav.classList.remove('show');
+        menuToggle.innerHTML = '☰';
+        menuToggle.setAttribute('aria-label', 'Open navigation');
+      });
+    });
+  }
+});
+</script>
+
 </body>
 </html>

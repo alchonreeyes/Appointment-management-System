@@ -22,7 +22,7 @@ function sendOTP($toEmail, $otp, $userRole) {
         // Put your Gmail address and your 16-character App Password here
         // ==========================================================
         $mail->Username   = 'rogerjuancito0621@gmail.com';     // ← Your full Gmail address
-        $mail->Password   = 'r h t s t r o p g t n f g i p b';      // ← Your 16-character App Password
+        $mail->Password   = 'r h t s t r o p g t n f g i p b';       // ← Your 16-character App Password
         
         $mail->SMTPSecure = 'tls';
         $mail->Port       = 587;
@@ -224,7 +224,14 @@ $conn->close();
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    
+    /* === BAGONG BACKGROUND IMAGE === */
+    background-image: url('https://images.unsplash.com/photo-1579684385127-1ef15d508118?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzEyMywxMjA3fDB8MXxzZWFyY2h8MTB8fG1lZGljYWwlMjBiYWNrZ3JvdW5kfGVufDB8fHx8MTcyMDY1NDU3NXww&ixlib=rb-4.0.3&q=80&w=1080');
+    background-size: cover;
+    background-position: center center;
+    background-attachment: fixed;
+    /* === END NG BACKGROUND IMAGE === */
+    
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -242,6 +249,10 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
+    
+    /* === BAGONG OVERLAY === */
+    background-color: rgba(255, 255, 255, 0.5); /* White overlay */
+    
     background-image: 
         radial-gradient(circle at 20% 30%, rgba(220, 20, 60, 0.03) 0%, transparent 50%),
         radial-gradient(circle at 80% 70%, rgba(220, 20, 60, 0.03) 0%, transparent 50%);
@@ -416,9 +427,9 @@ body::after {
 }
 
 .step.active .step-circle {
-    background: var(--success-color);
-    border-color: var(--success-color);
-    color: var(--white);
+    background: var(--success-color);
+    border-color: var(--success-color);
+    color: var(--white);
 }
 
 .step.completed .step-circle {
@@ -434,8 +445,8 @@ body::after {
 }
 
 .step.active .step-label {
-    color: var(--success-color);
-    font-weight: 600;
+    color: var(--success-color);
+    font-weight: 600;
 }
 
 .step.completed .step-label {

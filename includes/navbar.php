@@ -108,7 +108,7 @@ if (session_status() === PHP_SESSION_NONE) {
         <!-- ✅ Logged in -->
         <div class="user-menu">
             <button class="user-icon">
-                <i class="fa-regular fa-user"></i>
+                <a href="../client/profile.php"><i class="fa-regular fa-user"></i></a>
             </button>
             <div class="dropdown-menu">
                 <a href="../client/profile.php">Profile</a>
