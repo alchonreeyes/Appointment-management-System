@@ -2,6 +2,25 @@
 session_start();
 include '../config/db.php';
 
+// ========================================
+// SIMPLE COOLDOWN CHECK - 3 minutes
+// ========================================
+$cooldown_minutes = 3;
+
+if (isset($_SESSION['last_appointment_time'])) {
+    $time_passed = time() - $_SESSION['last_appointment_time'];
+    $time_remaining = ($cooldown_minutes * 60) - $time_passed;
+    
+    if ($time_remaining > 0) {
+        $minutes_left = ceil($time_remaining / 60);
+        echo json_encode([
+            'success' => false, 
+            'message' => "Please wait $minutes_left minute(s) before creating another appointment."
+        ]);
+        exit;
+    }
+}
+
 try {
     $db = new Database();
     $pdo = $db->getConnection();
@@ -37,7 +56,7 @@ try {
     if (isset($_POST['certificate_purpose'])) $type = 'medical';
     elseif (isset($_POST['ishihara_test_type'])) $type = 'ishihara';
 
-    // Parse the appointment dates JSON (should contain array of {date, time} objects)
+    // Parse the appointment dates JSON
     $appointments = [];
     if (!empty($_POST['appointment_dates_json'])) {
         $decoded = json_decode($_POST['appointment_dates_json'], true);
@@ -64,13 +83,13 @@ try {
 
         if (empty($date) || empty($time)) continue;
 
-        // ✅ Check if this specific date+time slot is full (max 3 confirmed)
+        // Check if this specific date+time slot is full
         $stmt = $pdo->prepare("
             SELECT COUNT(*) AS confirmed_count
             FROM appointments
             WHERE appointment_date = ?
               AND appointment_time = ?
-              AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
+              AND status_id IN (1, 2)
         ");
         $stmt->execute([$date, $time]);
         $confirmedCount = $stmt->fetchColumn();
@@ -85,7 +104,7 @@ try {
             exit;
         }
 
-        // ✅ Insert appointment based on type
+        // Insert appointment based on type
         if ($type === 'medical') {
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
@@ -111,8 +130,8 @@ try {
                 ':age' => $age,
                 ':phone_number' => $phone_number,
                 ':occupation' => $occupation,
-                ':certificate_purpose' => 'Medical Purposes',  // Automatically fills when booking a medical type
-                ':certificate_other' => '', // leave blank if not applicable
+                ':certificate_purpose' => 'Medical Purposes',
+                ':certificate_other' => '',
                 ':appointment_date' => $date,
                 ':appointment_time' => $time,
                 ':consent_info' => $consent_info,
@@ -197,6 +216,11 @@ try {
 
     // Commit all appointments
     $pdo->commit();
+
+    // ========================================
+    // SET COOLDOWN - User can't book again for 5 minutes
+    // ========================================
+    $_SESSION['last_appointment_time'] = time();
 
     echo json_encode([
         'success' => true,

@@ -12,6 +12,18 @@
     const progressLines = Array.from(document.querySelectorAll('.progress-line'));
     let formStepIndex = 0;
 
+    let formSubmitted = false;
+
+appointmentForm.addEventListener('submit', function(e) {
+    if (formSubmitted) {
+        alert('Processing... Please wait.');
+        return;
+    }
+    formSubmitted = true;
+    submitBtn.disabled = true;
+    // ... rest of your code
+});
+
     function updateProgress(stepIndex) {
       progressSteps.forEach((step, i) => {
         step.classList.toggle('completed', i < stepIndex);
