@@ -112,12 +112,12 @@ if (session_status() === PHP_SESSION_NONE) {
                         <button class="user-icon">
                             <a href="../client/profile.php"><i class="fa-regular fa-user"></i></a>
                         </button>
-                        <div class="dropdown-menu">
+                        <!-- <div class="dropdown-menu">
                             <a href="../client/profile.php">Profile</a>
                             <a href="../public/my-appointments.php">My Appointments</a>
                             <a href="../public/settings.php">Settings</a>
                             <a href="../actions/logout.php">Logout</a>
-                        </div>
+                        </div> -->
                     </div>
                     <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
                 <?php endif; ?>

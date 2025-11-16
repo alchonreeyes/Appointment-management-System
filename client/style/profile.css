@@ -7,7 +7,7 @@
 body {
     overflow-x: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: #dedede;
+    background: rgb(245, 245, 245);
 }
 
 /* Breadcrumb Navigation */

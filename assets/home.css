@@ -66,9 +66,9 @@
 
 .service{
     width: 100%;
-    height: 10vh;
+    height: 9vh;
     gap: 50px;
-    background-color: rgb(209, 209, 209); /* A light gray background color */
+    background-color: rgb(192, 0, 0); /* A light gray background color */
     display: flex; 
     flex-direction: row ;/* Enables flexbox layout */
     justify-content: center; /* Centers the items horizontally */
@@ -76,7 +76,7 @@
     font-size: 2rem;
     font-weight: bold;
     padding: 10px 20px;
-    color: black;
+    color: white;
 }
 .service-description{
     display: flex;

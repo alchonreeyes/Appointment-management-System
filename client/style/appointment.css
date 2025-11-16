@@ -1,0 +1,480 @@
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+             background-color: rgb(245, 245, 245);
+            min-height: 100vh;
+            
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .header-section {
+            background: linear-gradient(135deg, #b92b27 0%, #8b1a1a 100%);
+            border-radius: 15px 15px 0 0;
+            padding: 30px;
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        .user-details h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .user-details .badge {
+            display: inline-block;
+            background: white;
+            color: #b92b27;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 0 0 15px 15px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .section-header i {
+            color: #b92b27;
+            font-size: 24px;
+        }
+
+        .section-header h2 {
+            color: #333;
+            font-size: 22px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .appointments-grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .appointment-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .appointment-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .appointment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .appointment-title {
+            flex: 1;
+        }
+
+        .appointment-title h3 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .appointment-title .service-name {
+            color: #666;
+            font-size: 14px;
+            text-transform: capitalize;
+        }
+
+        .status-badge {
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-confirmed {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .status-completed {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .status-missed {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .status-cancel {
+            background: #e2e3e5;
+            color: #41464b;
+        }
+
+        .appointment-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .detail-icon {
+            width: 35px;
+            height: 35px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #b92b27;
+        }
+
+        .detail-text {
+            flex: 1;
+        }
+
+        .detail-label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .detail-value {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .appointment-info {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .appointment-info p {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .appointment-info strong {
+            color: #333;
+        }
+
+        .appointment-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-cancel {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-disabled {
+            background: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .btn-disabled:hover {
+            transform: none;
+            box-shadow: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-state img {
+            width: 150px;
+            opacity: 0.5;
+            margin-bottom: 20px;
+        }
+
+        .empty-state h3 {
+            color: #666;
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .back-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: white;
+            color: #b92b27;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background: #f5f5f5;
+            transform: translateX(-5px);
+        }
+
+        .group-indicator {
+            display: inline-block;
+            background: #e7f3ff;
+            color: #0066cc;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+        /* Add these styles to your existing appointment.css */
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 10% auto;
+    padding: 30px;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-content h2 {
+    color: #333;
+    font-size: 22px;
+    margin-bottom: 10px;
+}
+
+.modal-content p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 20px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 20px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close:hover,
+.close:focus {
+    color: #000;
+}
+
+#cancellationForm textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+    margin-bottom: 20px;
+}
+
+#cancellationForm textarea:focus {
+    outline: none;
+    border-color: #b92b27;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.btn-secondary {
+    background: #e0e0e0;
+    color: #333;
+}
+
+.btn-secondary:hover {
+    background: #d0d0d0;
+}
+
+.btn-warning {
+    background: #ff9800;
+    color: white;
+    cursor: not-allowed;
+}
+
+/* Responsive Modal */
+@media (max-width: 768px) {
+    .modal-content {
+        margin: 20% auto;
+        width: 95%;
+        padding: 20px;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+    }
+}
+
+        @media (max-width: 768px) {
+            .appointment-details {
+                grid-template-columns: 1fr;
+            }
+
+            .header-section {
+                padding: 20px;
+            }
+
+            .user-avatar {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+
+            .user-details h1 {
+                font-size: 22px;
+            }
+        }
