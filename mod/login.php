@@ -14,7 +14,7 @@ if (!isset($_SESSION['last_attempt_time'])) {
 // Check if the user is temporarily locked out
 $is_locked_out = false;
 $remaining_lockout = 0;
-if ($_SESSION['login_attempts'] >= 5) { // Reduced for demonstration
+if ($_SESSION['login_attempts'] >= 3) { // Reduced for demonstration
     $lockout_time = 30; // 30 seconds lockout
     $remaining_lockout = $lockout_time - (time() - $_SESSION['last_attempt_time']);
     
@@ -27,8 +27,10 @@ if ($_SESSION['login_attempts'] >= 5) { // Reduced for demonstration
     }
 }
 
-// Authentication result
-$auth_status = 'idle';
+// --- FIX: Replaced auth_status with message variables ---
+$message = '';
+$message_type = 'info'; // Default type
+// --- End of FIX ---
 
 // Check if the form is submitted
 if (isset($_POST['login']) && !$is_locked_out) {
@@ -37,7 +39,6 @@ if (isset($_POST['login']) && !$is_locked_out) {
 
     // =================================================================
     // MODIFIED QUERY: Added the 'status' column
-    // Admins get a placeholder 'Active' status.
     // =================================================================
     $query = "(SELECT 
                 id as original_id, 
@@ -78,11 +79,10 @@ if (isset($_POST['login']) && !$is_locked_out) {
             // =================================================================
             if ($user['role'] === 'staff' && $user['status'] === 'Inactive') {
                 
-                // Set a specific auth status for the JavaScript to catch
-                $auth_status = 'inactive_error'; 
-                
-                // Note: We don't increment login attempts because the password was correct.
-                // This is an administrative block, not a security failure.
+                // --- FIX: Set message for toast ---
+                $message = 'YOUR ACCOUNT IS INACTIVE, CONTACT ADMIN TO ACTIVE YOUR ACCOUNT.';
+                $message_type = 'error';
+                // --- End of FIX ---
             
             } else {
                 // <-- END: NEW CHECK
@@ -101,8 +101,10 @@ if (isset($_POST['login']) && !$is_locked_out) {
                 $_SESSION['full_name'] = $user['full_name'];
                 $_SESSION['user_role'] = $user['role'];
                 
-                // Set authentication status
-                $auth_status = 'success';
+                // --- FIX: Set message for toast ---
+                $message = 'Login Successful! Redirecting...';
+                $message_type = 'success';
+                // --- End of FIX ---
                 
                 // Set role-specific session variables for backward compatibility
                 switch ($user['role']) {
@@ -116,13 +118,16 @@ if (isset($_POST['login']) && !$is_locked_out) {
                         $redirect = "staff/staff_dashboard.php";
                         break;
                     default:
-                        $auth_status = 'error';
+                        // --- FIX: Set message for toast ---
+                        $message = 'Login Failed. Unknown user role.';
+                        $message_type = 'error';
+                        // --- End of FIX ---
                         break;
                 }
                 
                 if (isset($redirect)) {
                     // Introduce a delay before redirecting
-                    sleep(3);  // Delay for 1 second
+                    sleep(3);  // Delay for 3 seconds (as per your original code)
                     header("Location: $redirect");
                     exit();
                 }
@@ -131,13 +136,31 @@ if (isset($_POST['login']) && !$is_locked_out) {
             // Increment login attempts (WRONG PASSWORD)
             $_SESSION['login_attempts']++;
             $_SESSION['last_attempt_time'] = time();
-            $auth_status = 'error';
+            
+            // --- FIX: Set message for toast ---
+            $remaining = 3 - $_SESSION['login_attempts'];
+            if ($remaining > 0) {
+                $message = "Login Failed. Invalid credentials. $remaining attempts remaining.";
+            } else {
+                $message = "Login Failed. Too many attempts. Please wait for the lockout.";
+            }
+            $message_type = 'error';
+            // --- End of FIX ---
         }
     } else {
         // Increment login attempts (USER NOT FOUND)
         $_SESSION['login_attempts']++;
         $_SESSION['last_attempt_time'] = time();
-        $auth_status = 'error';
+        
+        // --- FIX: Set message for toast ---
+        $remaining = 3 - $_SESSION['login_attempts'];
+        if ($remaining > 0) {
+            $message = "Login Failed. User not found. $remaining attempts remaining.";
+        } else {
+            $message = "Login Failed. Too many attempts. Please wait for the lockout.";
+        }
+        $message_type = 'error';
+        // --- End of FIX ---
     }
 }
 
@@ -622,8 +645,9 @@ body::after {
     font-weight: 600;
 }
 
-/* Overlays */
-.auth-overlay,
+/* --- FIX: Removed .auth-overlay, .auth-box, etc. --- */
+
+/* Lockout Overlay (Kept) */
 .lockout-overlay {
     display: none;
     position: fixed;
@@ -638,7 +662,6 @@ body::after {
     align-items: center;
 }
 
-.auth-box,
 .lockout-box {
     background: var(--white);
     padding: 50px;
@@ -661,23 +684,9 @@ body::after {
     }
 }
 
-.auth-icon {
+.auth-icon { /* This is used by Lockout box, so we keep it */
     font-size: 80px;
     margin-bottom: 20px;
-}
-
-.auth-success .auth-icon {
-    color: var(--success-color);
-}
-
-.auth-error .auth-icon {
-    color: var(--error-color);
-}
-
-.auth-message {
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text-dark);
 }
 
 .lockout-timer {
@@ -687,7 +696,7 @@ body::after {
     margin: 20px 0;
 }
 
-/* Loading Overlay */
+/* Loading Overlay (Kept) */
 .loading-overlay {
     display: none;
     position: fixed;
@@ -729,6 +738,33 @@ body::after {
     opacity: 0.5;
 }
 
+
+/* --- START: NEW Toast CSS (from appointment.php) --- */
+.toast-overlay {
+    position: fixed; inset: 0; background: rgba(34, 49, 62, 0.6);
+    z-index: 9998; display: flex; align-items: center; justify-content: center;
+    opacity: 1; transition: opacity 0.3s ease-out; backdrop-filter: blur(4px);
+}
+.toast {
+    background: #fff; color: #1a202c; padding: 24px; border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999;
+    display: flex; align-items: center; gap: 16px;
+    font-weight: 600; min-width: 300px; max-width: 450px;
+    text-align: left; animation: slideUp .3s ease;
+}
+.toast-icon {
+    font-size: 24px; font-weight: 800; width: 44px; height: 44px;
+    border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; flex-shrink: 0; color: #fff;
+}
+.toast-message { font-size: 15px; line-height: 1.5; }
+.toast.success { border-top: 4px solid var(--success-color); }
+.toast.success .toast-icon { background: var(--success-color); }
+.toast.error { border-top: 4px solid var(--error-color); }
+.toast.error .toast-icon { background: var(--error-color); }
+/* --- End of Toast CSS --- */
+
+
 /* Responsive */
 @media (max-width: 480px) {
     .login-form {
@@ -762,15 +798,6 @@ body::after {
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">Authenticating...</div>
-    </div>
-
-    <div id="authOverlay" class="auth-overlay">
-        <div class="auth-box">
-            <div class="auth-icon">
-                <i id="authIcon" class="fas"></i>
-            </div>
-            <div class="auth-message" id="authMessage">Authentication Status</div>
-        </div>
     </div>
 
     <div id="lockoutOverlay" class="lockout-overlay">
@@ -833,11 +860,41 @@ body::after {
     </div>
 
     <script>
-        // Configuration (replace with PHP values)
-        const authStatus = <?php echo json_encode($auth_status); ?>;
+        // --- START: NEW JS Function from appointment.php ---
+        function showToast(msg, type = 'success') {
+            // auto-convert 'info' (our new default) to 'success' for the toast
+            const toastType = (type === 'info' || type === 'success') ? 'success' : 'error';
+            const icon = toastType === 'success' ? '✓' : '✕';
+
+            const overlay = document.createElement('div');
+            overlay.className = 'toast-overlay';
+            const toast = document.createElement('div');
+            toast.className = `toast ${toastType}`;
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-message">${msg}</div>
+            `;
+            overlay.appendChild(toast);
+            document.body.appendChild(overlay);
+            const timer = setTimeout(() => {
+                overlay.style.opacity = '0';
+                overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+            }, 3000); // 3 seconds for login messages
+            overlay.addEventListener('click', () => {
+                clearTimeout(timer);
+                overlay.style.opacity = '0';
+                overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+            }, { once: true });
+        }
+        // --- END: NEW JS Function from appointment.php ---
+
+
+        // Configuration (from PHP)
+        // --- FIX: Renamed authStatus to phpMessage/Type ---
+        const phpMessage = <?php echo json_encode($message); ?>;
+        const phpMessageType = <?php echo json_encode($message_type); ?>;
         const isLockedOut = <?php echo $is_locked_out ? 'true' : 'false'; ?>;
         const remainingLockout = <?php echo $remaining_lockout; ?>;
-        // REMOVED: const isFirstVisit = false;
 
         // DOM Elements
         const loginForm = document.getElementById('loginForm');
@@ -847,14 +904,9 @@ body::after {
         const toggleIcon = document.getElementById('toggleIcon');
         const loginButton = document.getElementById('loginButton');
         const loadingOverlay = document.getElementById('loadingOverlay');
-        const authOverlay = document.getElementById('authOverlay');
-        const authIcon = document.getElementById('authIcon');
-        const authMessage = document.getElementById('authMessage');
         const lockoutOverlay = document.getElementById('lockoutOverlay');
         const lockoutTimer = document.getElementById('lockoutTimer');
-        // REMOVED: const termsModal = document.getElementById('termsModal');
-        // REMOVED: const openModalBtn = document.getElementById('openModal');
-        // REMOVED: const closeModalBtn = document.getElementById('closeModal');
+        // --- FIX: Removed authOverlay elements ---
 
         // Password Toggle
         passwordToggle.addEventListener('click', function() {
@@ -864,9 +916,7 @@ body::after {
             toggleIcon.classList.toggle('fa-eye-slash');
         });
 
-        // REMOVED: Terms Modal Functions (openTermsModal, closeTermsModal, event listeners)
-
-        // Lockout Mechanism
+        // Lockout Mechanism (Unchanged)
         function initializeLockout() {
             if (isLockedOut) {
                 emailInput.disabled = true;
@@ -884,49 +934,15 @@ body::after {
 
                     if (timeLeft <= 0) {
                         clearInterval(lockoutInterval);
-                        // Reload the page to reset the state from PHP
                         window.location.reload(); 
                     }
                 }, 1000);
             }
         }
 
-        // Auth Status Display
-        function showAuthStatus() {
-            if (authStatus === 'success') {
-                authOverlay.classList.add('auth-success');
-                authIcon.classList.add('fa-check-circle');
-                authMessage.textContent = 'Login Successful!';
-                authOverlay.style.display = 'flex';
-                // No timeout, user will be redirected by PHP
-            } else if (authStatus === 'error') {
-                authOverlay.classList.add('auth-error');
-                authIcon.classList.add('fa-times-circle');
-                authMessage.textContent = 'Login Failed';
-                authOverlay.style.display = 'flex';
-                setTimeout(() => {
-                    authOverlay.style.display = 'none';
-                }, 2000);
-            
-            // =================================================================
-            // <-- START: NEW JAVASCRIPT BLOCK for 'Inactive' Staff
-            // =================================================================
-            } else if (authStatus === 'inactive_error') {
-                authOverlay.classList.add('auth-error'); // Use the red icon style
-                authIcon.classList.add('fa-times-circle'); // Use the same error icon
-                authMessage.textContent = 'YOUR ACCOUNT IS INACTIVE, CONTACT ADMIN TO ACTIVE YOUR ACCOUNT.';
-                authOverlay.style.display = 'flex';
-                // Keep the message on screen longer for them to read
-                setTimeout(() => {
-                    authOverlay.style.display = 'none';
-                }, 4000); // 4 seconds
-            }
-            // =================================================================
-            // <-- END: NEW JAVASCRIPT BLOCK
-            // =================================================================
-        }
+        // --- FIX: Removed showAuthStatus() function ---
 
-        // Form Submission
+        // Form Submission (Unchanged)
         loginForm.addEventListener('submit', function(e) {
             // Email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -950,12 +966,17 @@ body::after {
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             initializeLockout();
-            showAuthStatus();
-
-            // REMOVED: if (isFirstVisit) { ... }
+            
+            // --- FIX: Replaced showAuthStatus() with showToast() ---
+            if (phpMessage && phpMessageType !== 'info') { 
+                // Strip HTML tags for the toast
+                const cleanMessage = phpMessage.replace(/<[^>]+>/g, '');
+                showToast(cleanMessage, phpMessageType);
+            }
+            // --- End of FIX ---
         });
 
-        // Prevent back button
+        // Prevent back button (Unchanged)
         history.pushState(null, null, location.href);
         window.onpopstate = function () {
             history.go(1);

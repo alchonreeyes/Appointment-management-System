@@ -19,7 +19,7 @@
             <!-- Logo container with dropdown - CHANGED -->
             <div class="logo-container">
             <div class="logo">
-                <img src="" alt="Logo">
+                <img src="../mod/photo/LOGO.jpg" alt="Logo">
                 
             </div>
             <p class="logo-name">Eye-Master Clinic</p>

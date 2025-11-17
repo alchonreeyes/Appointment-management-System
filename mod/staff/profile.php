@@ -743,5 +743,12 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+<script>
+    history.replaceState(null, null, location.href);
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+    };
+</script>
 </body>
 </html>

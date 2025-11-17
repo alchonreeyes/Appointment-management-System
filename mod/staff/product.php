@@ -1,6 +1,7 @@
 <?php
 // Start session at the very beginning
 session_start();
+// Tinitiyak na ang database.php ay nasa labas ng 'staff' folder
 require_once __DIR__ . '/../database.php';
 
 // =======================================================
@@ -17,36 +18,41 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
 }
 
 // =======================================================
-// 2. DETERMINE ACTIVE TABLE (ProductS, ServiceS, or Slots)
+// 2. DETERMINE ACTIVE TABLE (Products, ServiceS, or Schedule)
 // =======================================================
 $activeTable = $_GET['table'] ?? 'products'; // Default to 'products'
-if (!in_array($activeTable, ['products', 'services', 'slots'])) {
+// --- FIX: Pinagsama ang 'slots' at 'closures' sa 'schedule' ---
+if (!in_array($activeTable, ['products', 'services', 'schedule'])) {
     $activeTable = 'products';
 }
 
 // =======================================================
-// 3. SERVER-SIDE ACTION HANDLING (Inayos para sa mysqli at tamang tables)
+// 3. SERVER-SIDE ACTION HANDLING
 // =======================================================
 if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
     $table = $_POST['table'] ?? 'products';
 
-    if (!in_array($table, ['products', 'services', 'slots'])) {
+    if (!in_array($table, ['products', 'services', 'schedule'])) {
         echo json_encode(['success' => false, 'message' => 'Invalid table.']);
         exit;
     }
 
     $idColumn = 'product_id';
     $nameColumn = 'product_name';
+    $dbTable = 'products'; 
+
     switch ($table) {
         case 'services':
             $idColumn = 'service_id';
             $nameColumn = 'service_name';
+            $dbTable = 'services';
             break;
-        case 'slots':
-            $idColumn = 'slot_id';
-            $nameColumn = 'slot_date';
+        case 'schedule': // --- FIX: Pinagsamang logic ---
+            $idColumn = 'id';
+            $nameColumn = 'schedule_date';
+            $dbTable = 'schedule_settings'; // BAGONG TABLE
             break;
     }
 
@@ -58,7 +64,6 @@ if (isset($_POST['action'])) {
             exit;
         }
         try {
-            $dbTable = ($table === 'slots') ? 'daily_slot' : $table;
             $stmt = $conn->prepare("SELECT * FROM $dbTable WHERE $idColumn = ?");
             $stmt->bind_param("i", $id);
             $stmt->execute();
@@ -85,8 +90,8 @@ if (isset($_POST['action'])) {
                 mkdir($uploadDir, 0777, true);
             }
             $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
-            $targetPath = '../photo/' . $fileName;
-            $fullTargetPath = $uploadDir . $fileName;
+            $targetPath = '../photo/' . $fileName; // Path to store in DB
+            $fullTargetPath = $uploadDir . $fileName; // Path to move file
 
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
             $fileType = mime_content_type($_FILES['image']['tmp_name']);
@@ -139,69 +144,66 @@ if (isset($_POST['action'])) {
                 error_log("AddProduct error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during add.']);
             }
-        } elseif ($table === 'slots') {
-            $slot_date = trim($_POST['slot_date'] ?? '');
-            $time_from = trim($_POST['time_from'] ?? '');
-            $time_to = trim($_POST['time_to'] ?? '');
 
-            if (!$slot_date || !$time_from || !$time_to) {
-                echo json_encode(['success' => false, 'message' => 'Server validation failed: Date, Time From, and Time To are required.']);
-                exit;
-            }
+        // --- START: MODIFIED 'addItem' FOR 'schedule' ---
+        } elseif ($table === 'schedule') {
             
-            // BAGO: Mas mahigpit na server-side check
-            try {
-                // Check 1: Bawal kung closure
-                $stmt_check_closure = $conn->prepare("SELECT id FROM store_closures WHERE closure_date = ?");
-                $stmt_check_closure->bind_param("s", $slot_date);
-                $stmt_check_closure->execute();
-                if ($stmt_check_closure->get_result()->num_rows > 0) {
-                    echo json_encode(['success' => false, 'message' => 'Cannot add slot: This date is a store closure.']);
-                    exit;
-                }
+            $slot_type = $_POST['slot_type'] ?? 'open'; // 'open' or 'closure'
+            $schedule_date = trim($_POST['schedule_date'] ?? '');
 
-                // BAGO: Check 2: Bawal kung may existing slots na (dahil 'add' ito)
-                $stmt_check_existing = $conn->prepare("SELECT slot_id FROM daily_slot WHERE slot_date = ?");
-                $stmt_check_existing->bind_param("s", $slot_date);
-                $stmt_check_existing->execute();
-                if ($stmt_check_existing->get_result()->num_rows > 0) {
-                    echo json_encode(['success' => false, 'message' => 'This date already has slots. Please edit existing slots for this day.']);
-                    exit;
-                }
-
-            } catch (Exception $e) {
-                 error_log("CheckClosure/ExistingSlot error: " . $e->getMessage());
-            }
-
-            if (strtotime($time_from) >= strtotime($time_to)) {
-                 echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+            if (!$schedule_date) {
+                echo json_encode(['success' => false, 'message' => 'Server validation failed: Date is required.']);
                 exit;
             }
 
             try {
-                // Check 3: (Redundant na pero harmless) Check for duplicate exact time
-                $stmt_check = $conn->prepare("SELECT slot_id FROM daily_slot WHERE slot_date = ? AND time_from = ? AND time_to = ?");
-                $stmt_check->bind_param("sss", $slot_date, $time_from, $time_to);
-                $stmt_check->execute();
-                if ($stmt_check->get_result()->num_rows > 0) {
-                    echo json_encode(['success' => false, 'message' => 'This exact time slot already exists for this date.']);
-                    exit;
-                }
+                if ($slot_type === 'closure') {
+                    // --- LOGIC TO ADD A CLOSURE ---
+                    $reason = trim($_POST['reason'] ?? 'Store Closure');
+                    
+                    $stmt_insert = $conn->prepare("
+                        INSERT INTO schedule_settings (schedule_date, status, reason, time_from, time_to)
+                        VALUES (?, 'Closed', ?, NULL, NULL)
+                        ON DUPLICATE KEY UPDATE
+                        status = 'Closed', reason = VALUES(reason), time_from = NULL, time_to = NULL
+                    ");
+                    $stmt_insert->bind_param("ss", $schedule_date, $reason);
+                    $stmt_insert->execute();
 
-                $stmt_insert = $conn->prepare("INSERT INTO daily_slot (slot_date, time_from, time_to) VALUES (?, ?, ?)");
-                $stmt_insert->bind_param("sss", $slot_date, $time_from, $time_to);
-                $stmt_insert->execute();
-
-                echo json_encode(['success' => true, 'message' => 'Slot added successfully']);
-            } catch (Exception $e) {
-                error_log("AddSlot error: " . $e->getMessage());
-                if ($conn->errno == 1062) {
-                     echo json_encode(['success' => false, 'message' => 'This exact time slot already exists for this date.']);
+                    echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
+                
                 } else {
-                     echo json_encode(['success' => false, 'message' => 'Database error during add.']);
-                }
-            }
+                    // --- LOGIC TO ADD AN OPEN SLOT ---
+                    $time_from = trim($_POST['time_from'] ?? '');
+                    $time_to = trim($_POST['time_to'] ?? '');
 
+                    if (!$time_from || !$time_to) {
+                        echo json_encode(['success' => false, 'message' => 'Server validation failed: Time From and Time To are required.']);
+                        exit;
+                    }
+
+                    if (strtotime($time_from) >= strtotime($time_to)) {
+                         echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+                        exit;
+                    }
+
+                    $stmt_insert = $conn->prepare("
+                        INSERT INTO schedule_settings (schedule_date, status, time_from, time_to, reason)
+                        VALUES (?, 'Open', ?, ?, NULL)
+                        ON DUPLICATE KEY UPDATE
+                        status = 'Open', time_from = VALUES(time_from), time_to = VALUES(time_to), reason = NULL
+                    ");
+                    $stmt_insert->bind_param("sss", $schedule_date, $time_from, $time_to);
+                    $stmt_insert->execute();
+
+                    echo json_encode(['success' => true, 'message' => 'Slot added successfully.']);
+                }
+            } catch (Exception $e) {
+                error_log("AddSlot/Closure error: " . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Database error during add.']);
+            }
+        // --- END: MODIFIED 'addItem' ---
+        
         } else {
             // ... (Service logic - walang pagbabago) ...
             $name = trim($_POST['service_name'] ?? '');
@@ -269,77 +271,76 @@ if (isset($_POST['action'])) {
                 error_log("EditProduct error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during update.']);
             }
-        } elseif ($table === 'slots') {
-            $id = $_POST['slot_id'] ?? '';
-            $slot_date = trim($_POST['slot_date'] ?? '');
-            $time_from = trim($_POST['time_from'] ?? '');
-            $time_to = trim($_POST['time_to'] ?? '');
+        
+        // --- START: MODIFIED 'editItem' FOR 'schedule' ---
+        } elseif ($table === 'schedule') {
+            $id = $_POST['id'] ?? '';
+            $slot_type = $_POST['slot_type'] ?? 'open'; // 'open' or 'closure'
+            $schedule_date = trim($_POST['schedule_date'] ?? '');
 
-            if (!$id || !$slot_date || !$time_from || !$time_to) {
-                echo json_encode(['success' => false, 'message' => 'Server validation failed: All fields are required.']);
+            if (!$id || !$schedule_date) {
+                echo json_encode(['success' => false, 'message' => 'Server validation failed: ID and Date are required.']);
                 exit;
             }
-
-            // BAGO: Mas mahigpit na server-side check para sa 'edit'
+            
             try {
-                // Kunin ang original date
-                $stmt_get_orig = $conn->prepare("SELECT slot_date FROM daily_slot WHERE slot_id = ?");
-                $stmt_get_orig->bind_param("i", $id);
-                $stmt_get_orig->execute();
-                $original_date = $stmt_get_orig->get_result()->fetch_assoc()['slot_date'];
-
-                // Kung binago ang petsa...
-                if ($original_date !== $slot_date) {
-                    // Check 1: Bawal ilipat sa date na closure
-                    $stmt_check_closure = $conn->prepare("SELECT id FROM store_closures WHERE closure_date = ?");
-                    $stmt_check_closure->bind_param("s", $slot_date);
-                    $stmt_check_closure->execute();
-                    if ($stmt_check_closure->get_result()->num_rows > 0) {
-                        echo json_encode(['success' => false, 'message' => 'Cannot move slot: The new date is a store closure.']);
-                        exit;
-                    }
-
-                    // Check 2: Bawal ilipat sa date na may existing slots na
-                    $stmt_check_existing = $conn->prepare("SELECT slot_id FROM daily_slot WHERE slot_date = ?");
-                    $stmt_check_existing->bind_param("s", $slot_date);
-                    $stmt_check_existing->execute();
-                    if ($stmt_check_existing->get_result()->num_rows > 0) {
-                        echo json_encode(['success' => false, 'message' => 'Cannot move slot: The new date already has other slots.']);
-                        exit;
-                    }
-                }
-            } catch (Exception $e) {
-                 error_log("CheckClosure/ExistingSlot (Edit) error: " . $e->getMessage());
-            }
-
-            if (strtotime($time_from) >= strtotime($time_to)) {
-                 echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
-                exit;
-            }
-
-            try {
-                // Check 3: Check for duplicate time (importante kung in-edit lang ang oras)
-                $stmt_check = $conn->prepare("SELECT slot_id FROM daily_slot WHERE slot_date = ? AND time_from = ? AND time_to = ? AND slot_id != ?");
-                $stmt_check->bind_param("sssi", $slot_date, $time_from, $time_to, $id);
+                // Check kung ang BAGONG date ay conflict (maliban sa sarili niya)
+                $stmt_check = $conn->prepare("SELECT id FROM schedule_settings WHERE schedule_date = ? AND id != ?");
+                $stmt_check->bind_param("si", $schedule_date, $id);
                 $stmt_check->execute();
                 if ($stmt_check->get_result()->num_rows > 0) {
-                    echo json_encode(['success' => false, 'message' => 'Another slot already exists with this exact date and time.']);
+                    echo json_encode(['success' => false, 'message' => 'Cannot move schedule: The new date already has a setting.']);
                     exit;
                 }
 
-                $stmt_update = $conn->prepare("UPDATE daily_slot SET slot_date=?, time_from=?, time_to=? WHERE slot_id=?");
-                $stmt_update->bind_param("sssi", $slot_date, $time_from, $time_to, $id);
-                $stmt_update->execute();
+                if ($slot_type === 'closure') {
+                    // --- LOGIC TO UPDATE TO A CLOSURE ---
+                    $reason = trim($_POST['reason'] ?? 'Store Closure');
+                    
+                    $stmt_update = $conn->prepare("
+                        UPDATE schedule_settings
+                        SET schedule_date = ?, status = 'Closed', reason = ?, time_from = NULL, time_to = NULL
+                        WHERE id = ?
+                    ");
+                    $stmt_update->bind_param("ssi", $schedule_date, $reason, $id);
+                    $stmt_update->execute();
 
-                echo json_encode(['success' => true, 'message' => 'Slot updated successfully']);
+                    echo json_encode(['success' => true, 'message' => 'Schedule updated to Store Closure.']);
+                
+                } else {
+                    // --- LOGIC TO UPDATE TO AN OPEN SLOT ---
+                    $time_from = trim($_POST['time_from'] ?? '');
+                    $time_to = trim($_POST['time_to'] ?? '');
+
+                    if (!$time_from || !$time_to) {
+                        echo json_encode(['success' => false, 'message' => 'Server validation failed: Time From and Time To are required.']);
+                        exit;
+                    }
+
+                    if (strtotime($time_from) >= strtotime($time_to)) {
+                         echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+                        exit;
+                    }
+
+                    $stmt_update = $conn->prepare("
+                        UPDATE schedule_settings
+                        SET schedule_date = ?, status = 'Open', time_from = ?, time_to = ?, reason = NULL
+                        WHERE id = ?
+                    ");
+                    $stmt_update->bind_param("ssssi", $schedule_date, $time_from, $time_to, $id);
+                    $stmt_update->execute();
+
+                    echo json_encode(['success' => true, 'message' => 'Schedule updated to Open Slot.']);
+                }
             } catch (Exception $e) {
-                error_log("EditSlot error: " . $e->getMessage());
-                 if ($conn->errno == 1062) {
-                     echo json_encode(['success' => false, 'message' => 'Another slot already exists with this exact date and time.']);
+                error_log("EditSlot/Closure error: " . $e->getMessage());
+                if ($conn->errno == 1062) { // Duplicate entry
+                      echo json_encode(['success' => false, 'message' => 'Cannot move schedule: The new date already has a setting.']);
                  } else {
                     echo json_encode(['success' => false, 'message' => 'Database error during update.']);
                  }
             }
+        // --- END: MODIFIED 'editItem' FOR 'schedule' ---
 
         } else {
             // ... (Service logic - walang pagbabago) ...
@@ -371,7 +372,6 @@ if (isset($_POST['action'])) {
     }
 
     if ($action === 'removeItem') {
-        // ... (Remove logic - walang pagbabago) ...
         $id = $_POST['id'] ?? '';
         if (!$id) {
             echo json_encode(['success' => false, 'message' => 'Missing ID']);
@@ -389,10 +389,12 @@ if (isset($_POST['action'])) {
                 if ($stmt_del->affected_rows > 0 && $imagePath && $imagePath !== 'default.jpg' && file_exists($imagePath)) {
                     @unlink($imagePath);
                 }
-            } elseif ($table === 'slots') {
-                $stmt_del = $conn->prepare("DELETE FROM daily_slot WHERE slot_id = ?");
+            // --- FIX: Simplified remove logic ---
+            } elseif ($table === 'schedule') { // Pinagsama na
+                $stmt_del = $conn->prepare("DELETE FROM schedule_settings WHERE id = ?");
                 $stmt_del->bind_param("i", $id);
                 $stmt_del->execute();
+            // --- END FIX ---
             } else {
                 $stmt_del = $conn->prepare("DELETE FROM services WHERE service_id = ?");
                 $stmt_del->bind_param("i", $id);
@@ -410,12 +412,12 @@ if (isset($_POST['action'])) {
 // =======================================================
 // 4. FILTERS, STATS, and PAGE DATA
 // =======================================================
-// ... (Walang pagbabago sa buong section na ito) ...
 $brandFilter = $_GET['brand'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
 $params = [];
 $paramTypes = "";
 if ($activeTable === 'products') {
+    // ... (Product query - walang pagbabago) ...
     $query = "SELECT * FROM products WHERE 1=1";
     if ($brandFilter !== 'All') {
         $query .= " AND brand = ?";
@@ -430,17 +432,21 @@ if ($activeTable === 'products') {
         $paramTypes .= "ss";
     }
     $query .= " ORDER BY product_name ASC";
-} elseif ($activeTable === 'slots') {
-    $query = "SELECT * FROM daily_slot WHERE 1=1";
+
+} elseif ($activeTable === 'schedule') {
+    // --- FIX: Query from new table, combined ---
+    $query = "SELECT * FROM schedule_settings WHERE 1=1";
      if ($search !== '') {
-        $query .= " AND (slot_date LIKE ? OR status LIKE ?)";
+        $query .= " AND (schedule_date LIKE ? OR reason LIKE ?)";
         $searchTerm = "%{$search}%";
         $params[] = $searchTerm;
         $params[] = $searchTerm;
         $paramTypes .= "ss";
     }
-    $query .= " ORDER BY slot_date DESC, time_from ASC";
+    $query .= " ORDER BY schedule_date DESC, status ASC";
+
 } else {
+    // ... (Services query - walang pagbabago) ...
     $query = "SELECT * FROM services WHERE 1=1";
     if ($search !== '') {
         $query .= " AND (service_name LIKE ? OR service_id LIKE ?)";
@@ -461,8 +467,12 @@ try {
 } catch (Exception $e) {
     error_log("Fetch Items error: " . $e->getMessage());
     $items = [];
+    $pageError = "Error loading items: " . $e->getMessage();
 }
+
+// --- STATS COUNT ---
 if ($activeTable === 'products') {
+    // ... (Product stats - walang pagbabago) ...
     $countSql = "SELECT
         COALESCE(COUNT(DISTINCT brand), 0) AS total_brands,
         COALESCE(COUNT(*), 0) AS total
@@ -481,24 +491,25 @@ if ($activeTable === 'products') {
         $countParams[] = $q;
         $countParamTypes .= "ss";
     }
-} elseif ($activeTable === 'slots') {
+} elseif ($activeTable === 'schedule') {
+    // --- FIX: Stats from new table ---
     $countSql = "SELECT
         COALESCE(COUNT(*), 0) AS total,
-        COALESCE(COUNT(CASE WHEN status = 'Available' THEN 1 END), 0) AS total_available
-        FROM daily_slot WHERE 1=1";
+        COALESCE(COUNT(CASE WHEN status = 'Open' THEN 1 END), 0) AS total_open,
+        COALESCE(COUNT(CASE WHEN status = 'Closed' THEN 1 END), 0) AS total_closed
+        FROM schedule_settings WHERE 1=1";
     $countParams = [];
     $countParamTypes = "";
     if ($search !== '') {
-        $countSql .= " AND (slot_date LIKE ? OR status LIKE ?)";
+        $countSql .= " AND (schedule_date LIKE ? OR reason LIKE ?)";
         $q = "%{$search}%";
         $countParams[] = $q;
         $countParams[] = $q;
         $countParamTypes .= "ss";
     }
 } else {
-    $countSql = "SELECT
-        COALESCE(COUNT(*), 0) AS total
-        FROM services WHERE 1=1";
+    // ... (Services stats - walang pagbabago) ...
+    $countSql = "SELECT COUNT(*) AS total FROM services WHERE 1=1";
     $countParams = [];
     $countParamTypes = "";
     if ($search !== '') {
@@ -522,6 +533,7 @@ try {
 }
 $brands = [];
 if ($activeTable === 'products') {
+    // ... (Brands fetch - walang pagbabago) ...
     try {
         $catQuery = "SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand";
         $stmt_cat = $conn->prepare($catQuery);
@@ -532,29 +544,25 @@ if ($activeTable === 'products') {
         $brands = [];
     }
 }
+
+// --- FIX: Renamed and combined date fetching ---
 $existingSlotDates = [];
-try {
-    $slotsQuery = "SELECT DISTINCT slot_date FROM daily_slot";
-    $stmt_slots = $conn->prepare($slotsQuery);
-    $stmt_slots->execute();
-    $result = $stmt_slots->get_result();
-    while ($row = $result->fetch_assoc()) {
-        $existingSlotDates[] = $row['slot_date'];
-    }
-} catch (Exception $e) {
-    error_log("Fetch Slot Dates error: " . $e->getMessage());
-}
 $closureDates = [];
 try {
-    $closureQuery = "SELECT DISTINCT closure_date FROM store_closures";
-    $stmt_closures = $conn->prepare($closureQuery);
-    $stmt_closures->execute();
-    $result_closures = $stmt_closures->get_result();
-    while ($row = $result_closures->fetch_assoc()) {
-        $closureDates[] = $row['closure_date'];
+    // Get all schedule dates from the new table
+    $scheduleQuery = "SELECT schedule_date, status FROM schedule_settings";
+    $stmt_schedule = $conn->prepare($scheduleQuery);
+    $stmt_schedule->execute();
+    $result = $stmt_schedule->get_result();
+    while ($row = $result->fetch_assoc()) {
+        if ($row['status'] === 'Open') {
+            $existingSlotDates[] = $row['schedule_date'];
+        } else {
+            $closureDates[] = $row['schedule_date'];
+        }
     }
 } catch (Exception $e) {
-    error_log("Fetch Closure Dates error: " . $e->getMessage());
+    error_log("Fetch Schedule Dates error: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -567,27 +575,24 @@ try {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <style>
-/* ... (Lahat ng CSS - walang pagbabago maliban sa flatpickr styles) ... */
+/* ... (Lahat ng CSS mo - kinopya ko lang) ... */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background:#f8f9fa; color:#223; }
-/* === BAGONG KULAY (BLUE) === */
-.vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#1d4ed8 0%,#1e40af 100%); z-index:1000; }
-.vertical-bar .circle { width:70px; height:70px; background:#2563eb; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #1e3a8a; }
+.vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
+.vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
-/* === BAGONG KULAY (BLUE) === */
-nav a.active { background:#2563eb; color:#fff; }
+nav a.active { background:#dc3545; color:#fff; }
 .container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .table-toggle { display:flex; gap:8px; margin-bottom:16px; flex-wrap: wrap; }
 .toggle-btn { padding:10px 20px; border-radius:8px; border:2px solid #e6e9ee; background:#fff; cursor:pointer; font-weight:700; transition:all .2s; }
-/* === BAGONG KULAY (BLUE) === */
-.toggle-btn.active { background:#2563eb; color:#fff; border-color:#2563eb; }
-.toggle-btn:hover:not(.active) { background:#f8f9fa; border-color:#2563eb; }
+.toggle-btn.active { background:#dc3545; color:#fff; border-color:#dc3545; }
+.toggle-btn:hover:not(.active) { background:#f8f9fa; border-color:#dc3545; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 select, input[type="text"], input[type="date"], input[type="time"] { 
     padding:9px 10px; 
@@ -597,11 +602,27 @@ select, input[type="text"], input[type="date"], input[type="time"] {
     font-size: 14px;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-input#formSlotDate {
+input#formScheduleDate {
     background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%236B7280'%3E%3Cpath d='M14 2H12V1C12 0.447715 11.5523 0 11 0C10.4477 0 10 0.447715 10 1V2H6V1C6 0.447715 5.55228 0 5 0C4.44772 0 4 0.447715 4 1V2H2C0.89543 2 0 2.89543 0 4V14C0 15.1046 0.89543 16 2 16H14C15.1046 16 16 15.1046 16 14V4C16 2.89543 15.1046 2 14 2ZM14 14H2V7H14V14ZM14 5H2V4H14V5Z'/%3E%3C/svg%3E") no-repeat right 10px center;
     background-size: 16px 16px;
     cursor: pointer;
 }
+
+/* --- START: CSS PARA SA SEARCH BAR (NASA KALIWA) --- */
+#searchInput {
+    /* Walang special rule, babalik sa default (kaliwa) */
+}
+.filters .add-btn {
+    /* Ilipat ang margin-left sa "Add" button para itulak SIYA sa kanan */
+    margin-left: auto; 
+    padding-top: 9px;
+    padding-bottom: 9px;
+    font-size: 14px;
+    margin-top: 0; 
+    margin-bottom: 0;
+}
+/* --- END: CSS PARA SA SEARCH BAR --- */
+
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
 .add-btn { background:#28a745; color:#fff; padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
 .add-btn:hover { background:#218838; transform:translateY(-1px); }
@@ -611,7 +632,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .stat-card p { color:#6b7f86; font-size:13px; }
 .action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
-/* === BAGONG KULAY (BLUE) === */
 .view { background:#1d4ed8; }
 .edit { background:#28a745; }
 .remove { background:#dc3545; }
@@ -620,13 +640,13 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge.active { background:#dcfce7; color:#16a34a; border:2px solid #86efac; }
 .badge.inactive { background:#fee; color:#dc2626; border:2px solid #fca5a5; }
 .badge.available { background:#e0f2fe; color:#0284c7; border:2px solid #7dd3fc; }
+.badge.closure { background:#fee2e2; color:#b91c1c; border:2px solid #fca5a5; font-weight: 700; }
 .detail-overlay, .form-overlay, .remove-overlay { display:none; position:fixed; inset:0; background:rgba(2,12,20,0.6); z-index:3000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
 .detail-overlay.show, .form-overlay.show, .remove-overlay.show { display:flex; animation:fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 .detail-card, .form-card { width:700px; max-width:96%; background:#fff; border-radius:16px; padding:0; box-shadow:0 20px 60px rgba(8,15,30,0.25); animation:slideUp .3s ease; }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-/* === BAGONG KULAY (BLUE) === */
-.detail-header { background:linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); padding:24px 28px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; }
+.detail-header { background:linear-gradient(135deg, #991010 0%, #6b1010 100%); padding:24px 28px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; }
 .detail-title { font-weight:800; color:#fff; font-size:22px; display:flex; align-items:center; gap:10px; }
 .detail-title:before { content:'📦'; font-size:24px; }
 .detail-id { background:rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:20px; font-weight:700; font-size:14px; }
@@ -647,8 +667,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .form-group label { display:block; font-weight:700; color:#4a5568; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
 .form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 12px; border:1px solid #dde3ea; border-radius:8px; font-size:14px; transition: border-color 0.2s ease; }
 .form-group textarea { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height:1.5; }
-.form-image-preview { display: flex; gap: 15px; align-items: center; }
-.form-image-preview img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid #e2e8f0; }
+/* --- START: Image Preview Fix --- */
+.form-image-preview { 
+    display: flex; 
+    gap: 15px; 
+    flex-direction: column;
+    align-items: flex-start;
+}
+.form-image-preview img { 
+    width: 80px; 
+    height: 80px; 
+    border-radius: 8px; 
+    object-fit: cover; 
+    border: 2px solid #e2e8f0; 
+    display: none; 
+    margin-top: 10px;
+}
+/* --- END: Image Preview Fix --- */
 .form-image-preview input[type="file"] { width: 100%; padding: 0; border: none; }
 .form-image-preview input[type="file"]::file-selector-button { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; background-color: #f1f5f9; color: #475569; transition: all .2s; }
 .form-image-preview input[type="file"]::file-selector-button:hover { background-color: #e2e8f0; }
@@ -669,9 +704,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .toast.error { border-top: 4px solid #dc2626; }
 .toast.error .toast-icon { background: #dc2626; }
 #loader-overlay { position: fixed; inset: 0; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
-.loader-spinner { width: 50px; height: 50px; border-radius: 50%; border: 5px solid #f3f3f3; 
-/* === BAGONG KULAY (BLUE) === */
-border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
+.loader-spinner { width: 50px; height: 50px; border-radius: 50%; border: 5px solid #f3f3f3; border-top: 5px solid #991010; animation: spin 1s linear infinite; }
 .loader-text { margin-top: 15px; font-size: 16px; font-weight: 600; color: #5a6c7d; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeInContent { from { opacity: 0; } to { opacity: 1; } }
@@ -680,6 +713,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
 .zoom-overlay img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: default; }
 #menu-toggle { display: none; background: #f1f5f9; border: 2px solid #e2e8f0; color: #334155; font-size: 24px; padding: 5px 12px; border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100; }
 
+/* --- START: CSS PARA SA CALENDAR --- */
 .flatpickr-day.flatpickr-closed,
 .flatpickr-day.flatpickr-closed:hover {
     background: #fca5a5 !important;
@@ -694,18 +728,102 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
     color: #0284c7 !important;
     border-color: #7dd3fc !important;
     font-weight: 700;
-    cursor: not-allowed; /* BAGO: Ginawa na ring "not-allowed" */
+    cursor: not-allowed; 
 }
-/* BAGO: Tiyakin na ang exception (original date sa edit) ay mukhang normal/clickable */
-.flatpickr-day.flatpickr-hasslots.flatpickr-disabled:hover {
+.flatpickr-day.flatpickr-hasslots.flatpickr-disabled:hover,
+.flatpickr-day.flatpickr-closed.flatpickr-disabled:hover {
     background: #e0f2fe !important;
     color: #0284c7 !important;
 }
-.flatpickr-day.flatpickr-hasslots:not(.flatpickr-disabled) {
-     background: #bfdbfe !important; /* Mas dark blue para sa "active" edit date */
+.flatpickr-day.flatpickr-hasslots:not(.flatpickr-disabled),
+.flatpickr-day.flatpickr-closed:not(.flatpickr-disabled) {
+     background: #bfdbfe !important; 
      color: #1d4ed8 !important;
      cursor: pointer !important;
 }
+/* --- END: CSS PARA SA CALENDAR --- */
+
+.slot-type-group {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 18px;
+}
+.slot-type-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    flex-grow: 1;
+    transition: all 0.2s ease;
+}
+.slot-type-option input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary-red);
+}
+.slot-type-option label {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin: 0;
+    font-size: 15px;
+    text-transform: none; 
+    letter-spacing: 0; 
+}
+.slot-type-option:hover {
+    background-color: var(--light-bg);
+}
+.slot-type-option.selected {
+    border-color: var(--primary-red);
+    background-color: #fff2f2;
+    box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.2);
+}
+
+/* --- START: CSS PARA SA ACTION LOADER (KINOPYA MULA SA APPOINTMENT.PHP) --- */
+#actionLoader {
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(2, 12, 20, 0.6); 
+    z-index: 9990; 
+    align-items: center; 
+    justify-content: center; 
+    padding: 20px; 
+    backdrop-filter: blur(4px);
+}
+#actionLoader.show { 
+    display: flex; 
+    animation: fadeIn .2s ease; 
+}
+#actionLoader .loader-card {
+    background: #fff; 
+    border-radius: 12px; 
+    padding: 24px; 
+    display: flex; 
+    align-items: center; 
+    gap: 16px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+#actionLoader .loader-spinner {
+    border-top-color: var(--primary-red); 
+    width: 32px; 
+    height: 32px; 
+    border-width: 4px; 
+    flex-shrink: 0;
+    /* Kailangan ulit i-define ang animation dito */
+    border-radius: 50%;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--primary-red);
+    animation: spin 1s linear infinite;
+}
+#actionLoaderText {
+    font-weight: 600; 
+    color: #334155; 
+    font-size: 15px;
+}
+/* --- END: CSS PARA SA ACTION LOADER --- */
 
 
 @media (max-width: 1000px) {
@@ -718,12 +836,12 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
   nav#main-nav.show { opacity: 1; visibility: visible; }
   nav#main-nav a { color: #fff; font-size: 24px; font-weight: 700; padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); }
   nav#main-nav a:hover { background: rgba(255,255,255,0.1); }
-  /* === BAGONG KULAY (BLUE) === */
-  nav#main-nav a.active { background: none; color: #60a5fa; }
+  nav#main-nav a.active { background: none; color: #ff6b6b; }
 }
 @media (max-width: 600px) { 
     .filters { flex-direction: column; align-items: stretch; } 
     .form-grid { grid-template-columns: 1fr; }
+    .slot-type-group { flex-direction: column; gap: 10px; }
 }
 </style>
 </head>
@@ -735,6 +853,12 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
 </div>
 <div id="main-content" style="display: none;">
 
+    <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
+        <div class="loader-card">
+            <div class="loader-spinner"></div>
+            <p id="actionLoaderText">Processing...</p>
+        </div>
+    </div>
     <div class="vertical-bar"><div class="circle"></div></div>
     <header>
       <div class="logo-section">
@@ -759,18 +883,22 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         <button class="toggle-btn <?= $activeTable === 'services' ? 'active' : '' ?>" onclick="window.location.href='product.php?table=services'">
           🛠️ Services
         </button>
-        <button class="toggle-btn <?= $activeTable === 'slots' ? 'active' : '' ?>" onclick="window.location.href='product.php?table=slots'">
-          📅 Slots
+        <button class="toggle-btn <?= $activeTable === 'schedule' ? 'active' : '' ?>" onclick="window.location.href='product.php?table=schedule'">
+          📅 Schedule
         </button>
       </div>
     
       <div class="header-row">
-        <h2><?= ucfirst($activeTable) ?> Management</h2>
-        <button class="add-btn" onclick="openAddModal()">➕ Add New <?= rtrim(ucfirst($activeTable), 's') ?></button>
-      </div>
+        <h2><?= $activeTable === 'schedule' ? 'Schedule' : ucfirst($activeTable) ?> Management</h2>
+        </div>
+      
+      <?php if (isset($pageError)): ?>
+          <div style="background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; padding:15px; border-radius:8px; margin-bottom:15px;">
+              <?= htmlspecialchars($pageError) ?>
+          </div>
+      <?php endif; ?>
     
-      <form id="filtersForm" method="get" class="filters">
-        <input type="hidden" name="table" value="<?= htmlspecialchars($activeTable) ?>">
+      <form id="filtersForm" method="get" class="filters" onsubmit="return false;"> <input type="hidden" name="table" id="filterTable" value="<?= htmlspecialchars($activeTable) ?>">
         <?php if ($activeTable === 'products'): ?>
         <select name="brand" id="brandFilter">
             <option value="All" <?= $brandFilter==='All'?'selected':'' ?>>All Brands</option>
@@ -783,167 +911,171 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         <?php endif; ?>
         
         <input type="text" name="search" id="searchInput" 
-               placeholder="<?= $activeTable === 'slots' ? 'Search date (YYYY-MM-DD)...' : 'Search name or ID...' ?>" 
+               placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
+        
+        <button type="button" class="add-btn" onclick="openAddModal()">➕ Add New <?= $activeTable === 'schedule' ? 'Schedule' : rtrim(ucfirst($activeTable), 's') ?></button>
       </form>
     
-      <div class="stats">
-        <?php if ($activeTable === 'products'): ?>
-            <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Products</p></div>
-            <div class="stat-card"><h3><?= $stats['total_brands'] ?? 0 ?></h3><p>Total Brands</p></div>
-        <?php elseif ($activeTable === 'slots'): ?>
-            <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Slots</p></div>
-            <div class="stat-card"><h3><?= $stats['total_available'] ?? 0 ?></h3><p>Available Slots</p></div>
-        <?php else: // Para sa services ?>
-            <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Services</p></div>
-        <?php endif; ?>
-      </div>
-    
-      <div style="background:#fff;border:1px solid #e6e9ee;border-radius:10px;padding:12px; overflow-x: auto;">
-        <?php if ($activeTable === 'products'): ?>
-        <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 1000px;">
-          <thead>
-            <tr style="text-align:left;color:#34495e;">
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Product</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:140px;">Brand</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Lens Type</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Frame Type</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
-              <tr style="border-bottom:1px solid #f3f6f9;">
-                <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="display:flex;align-items:center;gap:10px;">
-                    <img src="<?= htmlspecialchars($item['image_path'] ?? 'default.jpg') ?>" class="product-img" alt="Product" onerror="this.src='default.jpg';">
-                    <div>
-                      <div style="font-weight:700;color:#223;"><?= htmlspecialchars($item['product_name']) ?></div>
-                    </div>
-                  </div>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
-                    <?= htmlspecialchars($item['product_id']) ?>
-                  </span>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['brand']) ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['lens_type']) ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['frame_type']) ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                    <button class="action-btn view" onclick="viewDetails('<?= $item['product_id'] ?>')">View</button>
-                    <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
-                    <button class="action-btn remove" onclick="openRemoveModal('<?= $item['product_id'] ?>', '<?= htmlspecialchars($item['product_name']) ?>')">Remove</button>
-                  </div>
-                </td>
-              </tr>
-            <?php endforeach; else: ?>
-              <tr><td colspan="7" style="padding:30px;color:#677a82;text-align:center;">No products found.</td></tr>
+      <div id="content-wrapper">
+          <div class="stats">
+            <?php if ($activeTable === 'products'): ?>
+                <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Products</p></div>
+                <div class="stat-card"><h3><?= $stats['total_brands'] ?? 0 ?></h3><p>Total Brands</p></div>
+            <?php elseif ($activeTable === 'schedule'): ?>
+                <div class="stat-card"><h3><?= $stats['total_open'] ?? 0 ?></h3><p>Open Slot Days</p></div>
+                <div class="stat-card"><h3><?= $stats['total_closed'] ?? 0 ?></h3><p>Closure Days</p></div>
+                <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Schedules Set</p></div>
+            <?php else: // Para sa services ?>
+                <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Services</p></div>
             <?php endif; ?>
-          </tbody>
-        </table>
-
-        <?php elseif ($activeTable === 'slots'): ?>
-        <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 700px;">
-          <thead>
-            <tr style="text-align:left;color:#34495e;">
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Date</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Time From</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Time To</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Status</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
-              <tr style="border-bottom:1px solid #f3f6f9;">
-                <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="font-weight:700;color:#223;">
-                    <?= htmlspecialchars(date("F j, Y (l)", strtotime($item['slot_date']))) ?>
-                  </div>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
-                    <?= htmlspecialchars($item['slot_id']) ?>
-                  </span>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <?= htmlspecialchars(date("g:i A", strtotime($item['time_from']))) ?>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <?= htmlspecialchars(date("g:i A", strtotime($item['time_to']))) ?>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                    <?php 
-                        $statusClass = 'inactive';
-                        if ($item['status'] === 'Available') $statusClass = 'available';
-                        if ($item['status'] === 'Booked') $statusClass = 'inactive';
-                    ?>
-                  <span class="badge <?= $statusClass ?>">
-                    <?= htmlspecialchars($item['status']) ?>
-                  </span>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                    <button class="action-btn view" onclick="viewDetails('<?= $item['slot_id'] ?>')">View</button>
-                    <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
-                    <button class="action-btn remove" onclick="openRemoveModal('<?= $item['slot_id'] ?>', 'Slot on <?= htmlspecialchars($item['slot_date']) ?>')">Remove</button>
-                  </div>
-                </td>
-              </tr>
-            <?php endforeach; else: ?>
-              <tr><td colspan="7" style="padding:30px;color:#677a82;text-align:center;">No slots found.</td></tr>
-            <?php endif; ?>
-          </tbody>
-        </table>
+          </div>
         
-        <?php else: // Para sa 'services' ?>
-        <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 700px;">
-          <thead>
-            <tr style="text-align:left;color:#34495e;">
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Service Name</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:200px;">Description</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
-              <tr style="border-bottom:1px solid #f3f6f9;">
-                <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="font-weight:700;color:#223;"><?= htmlspecialchars($item['service_name']) ?></div>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
-                    <?= htmlspecialchars($item['service_id']) ?>
-                  </span>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars(substr($item['description'] ?? 'N/A', 0, 50)) ?><?= strlen($item['description'] ?? '') > 50 ? '...' : '' ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                    <button class="action-btn view" onclick="viewDetails('<?= $item['service_id'] ?>')">View</button>
-                    <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
-                    <button class="action-btn remove" onclick="openRemoveModal('<?= $item['service_id'] ?>', '<?= htmlspecialchars($item['service_name']) ?>')">Remove</button>
-                  </div>
-                </td>
-              </tr>
-            <?php endforeach; else: ?>
-              <tr><td colspan="5" style="padding:30px;color:#677a82;text-align:center;">No services found.</td></tr>
+          <div style="background:#fff;border:1px solid #e6e9ee;border-radius:10px;padding:12px; overflow-x: auto;">
+            <?php if ($activeTable === 'products'): ?>
+            <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 1000px;">
+              <thead>
+                <tr style="text-align:left;color:#34495e;">
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Product</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:140px;">Brand</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Lens Type</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Frame Type</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
+                  <tr style="border-bottom:1px solid #f3f6f9;">
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <img src="<?= htmlspecialchars($item['image_path'] ?? 'default.jpg') ?>" class="product-img" alt="Product" onerror="this.src='default.jpg';">
+                        <div>
+                          <div style="font-weight:700;color:#223;"><?= htmlspecialchars($item['product_name']) ?></div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
+                        <?= htmlspecialchars($item['product_id']) ?>
+                      </span>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['brand']) ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['lens_type']) ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['frame_type']) ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                        <button class="action-btn view" onclick="viewDetails('<?= $item['product_id'] ?>')">View</button>
+                        <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                        <button class="action-btn remove" onclick="openRemoveModal('<?= $item['product_id'] ?>', '<?= htmlspecialchars(addslashes($item['product_name'])) ?>')">Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; else: ?>
+                  <tr><td colspan="7" style="padding:30px;color:#677a82;text-align:center;">No products found.</td></tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+
+            <?php elseif ($activeTable === 'schedule'): ?>
+            <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 700px;">
+              <thead>
+                <tr style="text-align:left;color:#34495e;">
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Date</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Details</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Status</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
+                  <tr style="border-bottom:1px solid #f3f6f9;">
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="font-weight:700;color:#223;">
+                        <?= htmlspecialchars(date("F j, Y (l)", strtotime($item['schedule_date']))) ?>
+                      </div>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
+                        <?= htmlspecialchars($item['id']) ?>
+                      </span>
+                    </td>
+                    
+                    <?php if ($item['status'] === 'Open'): ?>
+                        <td style="padding:12px 8px;vertical-align:middle;">
+                            <?= htmlspecialchars(date("g:i A", strtotime($item['time_from']))) ?> - 
+                            <?= htmlspecialchars(date("g:i A", strtotime($item['time_to']))) ?>
+                        </td>
+                        <td style="padding:12px 8px;vertical-align:middle;">
+                          <span class="badge available">Open</span>
+                        </td>
+                    <?php else: // Closed ?>
+                        <td style="padding:12px 8px;vertical-align:middle;color:#b91c1c;">
+                            <?= htmlspecialchars($item['reason'] ?? 'N/A') ?>
+                        </td>
+                        <td style="padding:12px 8px;vertical-align:middle;">
+                          <span class="badge closure">Closed</span>
+                        </td>
+                    <?php endif; ?>
+                    
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                        <button class="action-btn view" onclick="viewDetails('<?= $item['id'] ?>')">View</button>
+                        <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                        <button class="action-btn remove" onclick="openRemoveModal('<?= $item['id'] ?>', 'Schedule on <?= htmlspecialchars(addslashes($item['schedule_date'])) ?>')">Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; else: ?>
+                  <tr><td colspan="6" style="padding:30px;color:#677a82;text-align:center;">No schedules found.</td></tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
+            <?php else: // Para sa 'services' ?>
+            <table id="itemsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 700px;">
+              <thead>
+                <tr style="text-align:left;color:#34495e;">
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Service Name</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:200px;">Description</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
+                  <tr style="border-bottom:1px solid #f3f6f9;">
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="font-weight:700;color:#223;"><?= htmlspecialchars($item['service_name']) ?></div>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
+                        <?= htmlspecialchars($item['service_id']) ?>
+                      </span>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars(substr($item['description'] ?? 'N/A', 0, 50)) ?><?= strlen($item['description'] ?? '') > 50 ? '...' : '' ?></td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                        <button class="action-btn view" onclick="viewDetails('<?= $item['service_id'] ?>')">View</button>
+                        <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                        <button class="action-btn remove" onclick="openRemoveModal('<?= $item['service_id'] ?>', '<?= htmlspecialchars(addslashes($item['service_name'])) ?>')">Remove</button>
+                      </div>
+                    </td>
+                  </tr>
+                <?php endforeach; else: ?>
+                  <tr><td colspan="5" style="padding:30px;color:#677a82;text-align:center;">No services found.</td></tr>
+                <?php endif; ?>
+              </tbody>
+            </table>
             <?php endif; ?>
-          </tbody>
-        </table>
-        <?php endif; ?>
-      </div>
-    </div>
+          </div>
+      </div> </div>
     
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
       <div class="detail-card" role="dialog" aria-labelledby="detailTitle">
@@ -971,7 +1103,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
             <input type="hidden" id="formTable" value="<?= $activeTable ?>">
             
             <div id="formFields">
-            </div>
+              </div>
           </form>
         </div>
         <div class="form-actions">
@@ -1010,16 +1142,36 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
     
     <script>
     const currentTable = '<?= $activeTable ?>';
+    // --- FIX: Pass both arrays to JS ---
     const existingSlotDates = <?= json_encode($existingSlotDates) ?>;
     const closureDates = <?= json_encode($closureDates) ?>;
     
-    let currentFlatpickrInstance = null; // BAGO: Para i-track ang flatpickr instance
+    let currentFlatpickrInstance = null;
     </script>
     
     <script>
-    // =======================================================
-    // 'showToast' FUNCTION (CENTERED)
-    // =======================================================
+    
+    // --- START: Idinagdag ang Action Loader Functions ---
+    const actionLoader = document.getElementById('actionLoader');
+    const actionLoaderText = document.getElementById('actionLoaderText');
+
+    function showActionLoader(message = 'Processing...') {
+        if (actionLoaderText) actionLoaderText.textContent = message;
+        if (actionLoader) {
+            actionLoader.classList.add('show');
+            actionLoader.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function hideActionLoader() {
+        if (actionLoader) {
+            actionLoader.classList.remove('show');
+            actionLoader.setAttribute('aria-hidden', 'true');
+        }
+    }
+    // --- END: Action Loader Functions ---
+
+    
     function showToast(msg, type = 'success') {
         const overlay = document.createElement('div');
         overlay.className = 'toast-overlay';
@@ -1042,8 +1194,8 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         }, { once: true });
     }
     
-    // ... (viewDetails, closeDetailModal, openAddModal, openEditModal ay pareho pa rin) ...
     function viewDetails(id) {
+      showActionLoader('Fetching details...'); // --- FIX: Show loader ---
       fetch('product.php', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -1051,6 +1203,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
       })
       .then(res => res.json())
       .then(payload => {
+        hideActionLoader(); // --- FIX: Hide loader ---
         if (!payload || !payload.success) {
           showToast(payload?.message || 'Failed to load details', 'error');
           return;
@@ -1058,11 +1211,12 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         const d = payload.data;
         const table = payload.table;
         
-        document.getElementById('detailId').textContent = table === 'products' ? '#' + d.product_id : (table === 'services' ? '#' + d.service_id : '#' + d.slot_id);
+        document.getElementById('detailId').textContent = '#' + (d.id || d.product_id || d.service_id);
         
         let contentHTML = '';
         
         if (table === 'products') {
+          // ... (Product view logic - walang pagbabago) ...
           document.querySelector('#detailTitle').innerHTML = '📦 Product Details';
           contentHTML = `
             <div class="detail-section">
@@ -1101,8 +1255,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
               <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; font-weight: 500;">${d.description || 'N/A'}</div>
             </div>
           `;
-        } else if (table === 'slots') {
-            document.querySelector('#detailTitle').innerHTML = '📅 Slot Details';
+        } else if (table === 'schedule') { 
             const formatTime = (timeStr) => {
                 if (!timeStr) return 'N/A';
                 const [hours, minutes] = timeStr.split(':');
@@ -1113,32 +1266,50 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
             };
             const formatDate = (dateStr) => {
                  if (!dateStr) return 'N/A';
-                 const d = new Date(dateStr + 'T00:00:00');
+                 const d = new Date(dateStr + 'T00:00:00'); // Treat as local time
                  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             };
             
-            contentHTML = `
-            <div class="detail-section" style="grid-column: 1 / -1;">
-              <div class="detail-row">
-                <span class="detail-label">Date</span>
-                <div class="detail-value">${formatDate(d.slot_date)}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Time From</span>
-                <div class="detail-value">${formatTime(d.time_from)}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Time To</span>
-                <div class="detail-value">${formatTime(d.time_to)}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Status</span>
-                <div class="detail-value">${d.status}</div>
-              </div>
-            </div>
-          `;
+            if(d.status === 'Open') {
+                document.querySelector('#detailTitle').innerHTML = '📅 Slot Details';
+                contentHTML = `
+                <div class="detail-section" style="grid-column: 1 / -1;">
+                  <div class="detail-row">
+                    <span class="detail-label">Date</span>
+                    <div class="detail-value">${formatDate(d.schedule_date)}</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Time From</span>
+                    <div class="detail-value">${formatTime(d.time_from)}</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Time To</span>
+                    <div class="detail-value">${formatTime(d.time_to)}</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <div class="detail-value">Open</div>
+                  </div>
+                </div>
+              `;
+            } else { // 'Closed'
+                document.querySelector('#detailTitle').innerHTML = '🚫 Store Closure Details';
+                contentHTML = `
+                <div class="detail-section" style="grid-column: 1 / -1;">
+                  <div class="detail-row">
+                    <span class="detail-label">Closure Date</span>
+                    <div class="detail-value">${formatDate(d.schedule_date)}</div>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Reason</span>
+                    <div class="detail-value" style="white-space: pre-wrap;">${d.reason || 'N/A'}</div>
+                  </div>
+                </div>
+              `;
+            }
         } else { // Para sa services
           document.querySelector('#detailTitle').innerHTML = '🛠️ Service Details';
+          document.getElementById('detailId').textContent = '#' + d.service_id;
           contentHTML = `
             <div class="detail-section" style="grid-column: 1 / -1;">
               <div class="detail-row">
@@ -1160,6 +1331,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         overlay.setAttribute('aria-hidden','false');
       })
       .catch(err => {
+        hideActionLoader(); // --- FIX: Hide loader on error ---
         console.error(err);
         showToast('Network error while fetching details', 'error');
       });
@@ -1172,7 +1344,12 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
     }
     
     function openAddModal() {
-      document.getElementById('formTitle').textContent = `Add ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Slot')}`;
+      let title = 'Add New ';
+      if (currentTable === 'products') title += 'Product';
+      else if (currentTable === 'services') title += 'Service';
+      else if (currentTable === 'schedule') title += 'Schedule (Slot / Closure)';
+      document.getElementById('formTitle').textContent = title;
+      
       document.getElementById('itemForm').reset();
       document.getElementById('formItemId').value = '';
       document.getElementById('formTable').value = currentTable;
@@ -1185,7 +1362,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
     }
     
     function openEditModal(itemData) {
-      document.getElementById('formTitle').textContent = `Edit ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Slot')}`;
+      document.getElementById('formTitle').textContent = `Edit ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Schedule')}`;
       document.getElementById('formTable').value = currentTable;
       
       populateFormFields(itemData);
@@ -1196,13 +1373,16 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
     }
     
     
-    // BAGO: In-update ang populateFormFields para gamitin ang flatpickr
     function populateFormFields(data = null) {
       const formFields = document.getElementById('formFields');
       let fieldsHTML = '';
       
       if (currentTable === 'products') {
-        // ... (Product form logic - walang pagbabago) ...
+        
+        const isEditingProduct = (data && data.image_path);
+        const imgSrc = isEditingProduct ? data.image_path : '';
+        const imgDisplay = isEditingProduct ? 'block' : 'none'; 
+
         fieldsHTML = `
           <div class="form-grid">
             <div class="form-group">
@@ -1249,8 +1429,12 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
             <div class="form-group full-width">
               <label for="formImage">Product Image ${!data ? '*' : '(Leave empty to keep current)'}</label>
               <div class="form-image-preview">
-                <img id="formImagePreview" src="${data && data.image_path ? data.image_path : 'default.jpg'}" alt="Preview" onerror="this.src='default.jpg';">
                 <input type="file" id="formImage" accept="image/png, image/jpeg, image/gif">
+                <img id="formImagePreview" 
+                     src="${imgSrc}" 
+                     alt="Preview" 
+                     style="display: ${imgDisplay};" 
+                     onerror="this.style.display='none';"> 
               </div>
             </div>
           </div>
@@ -1263,75 +1447,62 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
           document.getElementById('formItemId').value = '';
           document.getElementById('formCurrentImage').value = 'default.jpg';
         }
-      } else if (currentTable === 'slots') {
 
+      } else if (currentTable === 'schedule') {
+        
+        const isEditing = (data !== null);
+        const currentStatus = isEditing ? data.status : 'Open'; 
+        
         fieldsHTML = `
           <div class="form-grid">
             <div class="form-group full-width">
-              <label for="formSlotDate">Date *</label>
-              <input type="text" id="formSlotDate" required 
-                     value="${data ? data.slot_date : ''}" 
+                <label>Schedule Type *</label>
+                <div class="slot-type-group">
+                    <div class="slot-type-option ${currentStatus === 'Open' ? 'selected' : ''}" id="slot-type-open-wrapper">
+                        <input type="radio" id="formSlotTypeOpen" name="slot_type" value="open" ${currentStatus === 'Open' ? 'checked' : ''}>
+                        <label for="formSlotTypeOpen">📅 Open Slot</label>
+                    </div>
+                    <div class="slot-type-option ${currentStatus === 'Closed' ? 'selected' : ''}" id="slot-type-closure-wrapper">
+                        <input type="radio" id="formSlotTypeClosure" name="slot_type" value="closure" ${currentStatus === 'Closed' ? 'checked' : ''}>
+                        <label for="formSlotTypeClosure">🚫 Store Closure</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="formScheduleDate">Date *</label>
+              <input type="text" id="formScheduleDate" required 
+                     value="${data ? data.schedule_date : ''}" 
                      placeholder="Pumili ng petsa..."
                      readonly="readonly"> 
               <div id="date-helper-message"></div>
             </div>
-            <div class="form-group">
-              <label for="formTimeFrom">Time From *</label>
-              <input type="time" id="formTimeFrom" required value="${data ? data.time_from : ''}">
+
+            <div id="openSlotFields" class="form-grid full-width" style="display: ${currentStatus === 'Open' ? 'grid' : 'none'};">
+                <div class="form-group">
+                  <label for="formTimeFrom">Time From *</label>
+                  <input type="time" id="formTimeFrom" required value="${data && data.time_from ? data.time_from : ''}">
+                </div>
+                <div class="form-group">
+                  <label for="formTimeTo">Time To *</label>
+                  <input type="time" id="formTimeTo" required value="${data && data.time_to ? data.time_to : ''}">
+                </div>
             </div>
-            <div class="form-group">
-              <label for="formTimeTo">Time To *</label>
-              <input type="time" id="formTimeTo" required value="${data ? data.time_to : ''}">
+            
+            <div id="closureFields" class="form-group full-width" style="display: ${currentStatus === 'Closed' ? 'block' : 'none'};">
+                <label for="formReason">Reason for Closure *</label>
+                <textarea id="formReason" rows="3" placeholder="e.g., Holiday, Maintenance, etc.">${data && data.reason ? data.reason : ''}</textarea>
             </div>
           </div>
         `;
         
         if (data) {
-          document.getElementById('formItemId').value = data.slot_id;
+          document.getElementById('formItemId').value = data.id;
         } else {
           document.getElementById('formItemId').value = '';
         }
-
-        // BAGO: I-initialize ang flatpickr
-        setTimeout(() => {
-            
-            // Kunin ang original date kung nag-e-edit
-            const originalDate = data ? data.slot_date : null;
-            
-            // Pagsamahin ang lahat ng bawal na petsa
-            const datesToDisable = [...closureDates, ...existingSlotDates];
-
-            // I-track ang instance para sa closeFormModal()
-            currentFlatpickrInstance = flatpickr("#formSlotDate", {
-                minDate: "today", 
-                dateFormat: "Y-m-d", 
-                
-                // I-disable ang lahat ng petsa sa pinagsamang array,
-                // PERO payagan ang 'originalDate' kung ito ay nasa listahan (para sa edit)
-                disable: datesToDisable.filter(date => date !== originalDate), 
-                
-                // Function na tumatakbo para sa bawat araw sa kalendaryo
-                onDayCreate: function(d, dateStr, fp, dayElem) {
-                    const date = dayElem.dateObj.toISOString().split('T')[0];
-                    
-                    if (closureDates.includes(date)) {
-                        dayElem.classList.add('flatpickr-closed');
-                        dayElem.title = "Store is closed";
-                    } 
-                    else if (existingSlotDates.includes(date)) {
-                        dayElem.classList.add('flatpickr-hasslots');
-                        if (date === originalDate) {
-                            dayElem.title = "Editing this date's slots";
-                        } else {
-                            dayElem.title = "Date already has slots";
-                        }
-                    }
-                }
-            });
-        }, 100);
-
+        
       } else { // Para sa services
-        // ... (Service form logic - walang pagbabago) ...
         fieldsHTML = `
           <div class="form-group">
             <label for="formServiceName">Service Name *</label>
@@ -1352,39 +1523,103 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
       
       formFields.innerHTML = fieldsHTML;
       
-      if (currentTable === 'products') {
-        setTimeout(() => {
+      setTimeout(() => {
+        let dateInputId = null;
+        let originalDate = null;
+        let disableDates = [];
+
+        if (currentTable === 'schedule') {
+            dateInputId = '#formScheduleDate';
+            originalDate = data ? data.schedule_date : null;
+
+            if (data) {
+                disableDates = [...closureDates, ...existingSlotDates].filter(d => d !== originalDate);
+            } else {
+                disableDates = [...closureDates, ...existingSlotDates];
+            }
+        }
+
+        if (dateInputId) {
+            currentFlatpickrInstance = flatpickr(dateInputId, {
+                minDate: "today", 
+                dateFormat: "Y-m-d",
+                disable: disableDates, 
+                onDayCreate: function(d, dateStr, fp, dayElem) {
+                    const date = dayElem.dateObj.toISOString().split('T')[0];
+                    if (closureDates.includes(date)) {
+                        dayElem.classList.add('flatpickr-closed');
+                        dayElem.title = (date === originalDate) ? "Editing this closure" : "Store is closed";
+                    } else if (existingSlotDates.includes(date)) {
+                        dayElem.classList.add('flatpickr-hasslots');
+                        dayElem.title = (date === originalDate) ? "Editing this slot" : "Date already has slots";
+                    }
+                }
+            });
+        }
+        
+        if (currentTable === 'schedule') {
+            const openRadio = document.getElementById('formSlotTypeOpen');
+            const closureRadio = document.getElementById('formSlotTypeClosure');
+            const openWrapper = document.getElementById('slot-type-open-wrapper');
+            const closureWrapper = document.getElementById('slot-type-closure-wrapper');
+            const openFields = document.getElementById('openSlotFields');
+            const closureFields = document.getElementById('closureFields');
+
+            const toggleSlotFields = () => {
+                if (!openRadio || !closureRadio) return; 
+                if (openRadio.checked) {
+                    openFields.style.display = 'grid';
+                    closureFields.style.display = 'none';
+                    openWrapper.classList.add('selected');
+                    closureWrapper.classList.remove('selected');
+                } else {
+                    openFields.style.display = 'none';
+                    closureFields.style.display = 'block';
+                    openWrapper.classList.remove('selected');
+                    closureWrapper.classList.add('selected');
+                }
+            };
+
+            openRadio?.addEventListener('change', toggleSlotFields);
+            closureRadio?.addEventListener('change', toggleSlotFields);
+            openWrapper?.addEventListener('click', () => { if(openRadio) { openRadio.checked = true; toggleSlotFields(); } });
+            closureWrapper?.addEventListener('click', () => { if(closureRadio) { closureRadio.checked = true; toggleSlotFields(); } });
+            
+            toggleSlotFields(); 
+        }
+        
+        if (currentTable === 'products') {
           const imageInput = document.getElementById('formImage');
-          if (imageInput) {
+          const previewImg = document.getElementById('formImagePreview'); 
+          if (imageInput && previewImg) { 
             imageInput.addEventListener('change', function(event) {
               const file = event.target.files[0];
               if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
-                  document.getElementById('formImagePreview').src = e.target.result;
+                  previewImg.src = e.target.result;
+                  previewImg.style.display = 'block'; 
                 }
                 reader.readAsDataURL(file);
               }
             });
           }
-        }, 100);
-      }
+        }
+      }, 100);
     }
     
     function closeFormModal() {
-      // BAGO: Tiyakin na ang flatpickr ay nasisira (destroy)
       if (currentFlatpickrInstance) {
         currentFlatpickrInstance.destroy();
         currentFlatpickrInstance = null;
       }
-        
+          
       document.getElementById('itemForm').reset();
       const overlay = document.getElementById('formOverlay');
       overlay.classList.remove('show');
       overlay.setAttribute('aria-hidden','true');
     }
     
-    // BAGO: In-update ang server-side check sa saveItem
     function saveItem() {
       const id = document.getElementById('formItemId').value;
       const table = document.getElementById('formTable').value;
@@ -1395,7 +1630,6 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
       formData.append('table', table);
       
       if (table === 'products') {
-        // ... (Product save logic - walang pagbabago) ...
         const name = document.getElementById('formProductName').value.trim();
         const description = document.getElementById('formDescription').value.trim();
         const gender = document.getElementById('formGender').value;
@@ -1431,36 +1665,52 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
         if (imageFile) {
           formData.append('image', imageFile);
         }
-      } else if (table === 'slots') {
-        const slot_date = document.getElementById('formSlotDate').value;
-        const time_from = document.getElementById('formTimeFrom').value;
-        const time_to = document.getElementById('formTimeTo').value;
-
-        let errors = [];
-        if (!slot_date) errors.push('Date');
-        if (!time_from) errors.push('Time From');
-        if (!time_to) errors.push('Time To');
-
-        if (errors.length > 0) {
-            showToast(`Please fill in all fields: ${errors.join(', ')}`, 'error');
+      } else if (table === 'schedule') {
+        const schedule_date = document.getElementById('formScheduleDate').value;
+        const slot_type_radio = document.querySelector('input[name="slot_type"]:checked');
+        
+        if (!slot_type_radio) {
+            showToast('Please select a schedule type (Open or Closed).', 'error');
+            return;
+        }
+        if (!schedule_date) {
+            showToast('Please select a date.', 'error');
             return;
         }
         
-        // (Ang server-side check na sa PHP ang huling mag-de-desisyon kung bawal ang date)
-
-        if (time_from >= time_to) {
-             showToast('Time From must be earlier than Time To.', 'error');
-            return;
+        const slot_type = slot_type_radio.value;
+        formData.append('slot_type', slot_type);
+        
+        if (slot_type === 'open') {
+            const time_from = document.getElementById('formTimeFrom').value;
+            const time_to = document.getElementById('formTimeTo').value;
+            
+            if (!time_from || !time_to) {
+                showToast('Please fill in Time From and Time To.', 'error');
+                return;
+            }
+            if (time_from >= time_to) {
+                showToast('Time From must be earlier than Time To.', 'error');
+                return;
+            }
+            formData.append('schedule_date', schedule_date);
+            formData.append('time_from', time_from);
+            formData.append('time_to', time_to);
+        } else { // 'closure'
+            const reason = document.getElementById('formReason').value.trim();
+            if (!reason) {
+                showToast('Please fill in a Reason for the closure.', 'error');
+                return;
+            }
+            formData.append('schedule_date', schedule_date);
+            formData.append('reason', reason);
         }
-
-        formData.append('slot_date', slot_date);
-        formData.append('time_from', time_from);
-        formData.append('time_to', time_to);
+        
         if (id) {
-          formData.append('slot_id', id);
+            formData.append('id', id);
         }
+        
       } else { // Para sa services
-        // ... (Service save logic - walang pagbabago) ...
         const name = document.getElementById('formServiceName').value.trim();
         const description = document.getElementById('formDescription').value.trim();
         let errors = [];
@@ -1505,7 +1755,7 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
       });
     }
     
-    // ... (remove/zoom/event listeners - walang pagbabago) ...
+    
     function openRemoveModal(id, name) {
       document.getElementById('removeItemId').value = id;
       document.getElementById('removeItemName').textContent = name;
@@ -1588,21 +1838,66 @@ border-top: 5px solid #1d4ed8; animation: spin 1s linear infinite; }
       }
     });
     
+    // --- START: AJAX FILTER LOGIC ---
     (function(){
       const form = document.getElementById('filtersForm');
       const brand = document.getElementById('brandFilter'); 
       const search = document.getElementById('searchInput');
       
-      if (brand) brand.addEventListener('change', ()=> form.submit());
+      let filterTimer = null;
       
-      let timer = null;
+      function updateContent() {
+          showActionLoader('Filtering...');
+          
+          const formData = new FormData(form);
+          const params = new URLSearchParams(formData);
+          
+          // 1. Update URL without reloading
+          history.pushState(null, '', '?' + params.toString());
+          
+          // 2. Fetch new content
+          fetch(`product.php?${params.toString()}`)
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const newContent = doc.getElementById('content-wrapper');
+                const oldContent = document.getElementById('content-wrapper');
+                
+                if (newContent && oldContent) {
+                    oldContent.innerHTML = newContent.innerHTML;
+                } else {
+                    // Fallback
+                    window.location.reload();
+                }
+                
+                hideActionLoader();
+            })
+            .catch(err => {
+                console.error('Filter error:', err);
+                hideActionLoader();
+                showToast('Error updating table.', 'error');
+            });
+      }
+      
+      if (brand) {
+          brand.addEventListener('change', updateContent);
+      }
+      
       if (search) {
         search.addEventListener('input', function(){
-          clearTimeout(timer);
-          timer = setTimeout(()=> form.submit(), 600);
+          clearTimeout(filterTimer);
+          filterTimer = setTimeout(updateContent, 500); // 500ms delay
         });
       }
+      
+      // Prevent original form submission
+      form.addEventListener('submit', (e) => e.preventDefault());
+      
     })();
+    // --- END: AJAX FILTER LOGIC ---
+    
     </script>
 
 </div>
@@ -1624,7 +1919,7 @@ document.addEventListener('DOMContentLoaded', function() {
             content.style.display = 'block';
             content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 1000);
+    }, 1000); // Ginamit ko pa rin ang 1s delay mo
 });
 </script>
 
@@ -1639,7 +1934,7 @@ document.addEventListener('DOMContentLoaded', function() {
       mainNav.classList.toggle('show');
       
       if (mainNav.classList.contains('show')) {
-        this.innerHTML = '✕';
+        this.innerHTML = '✕'; 
         this.setAttribute('aria-label', 'Close navigation');
       } else {
         this.innerHTML = '☰';
@@ -1656,6 +1951,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+</script>
+<script>
+    history.replaceState(null, null, location.href);
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+    };
 </script>
 
 </body>

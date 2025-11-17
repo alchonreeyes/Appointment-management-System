@@ -322,10 +322,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
             <!-- Logout Section -->
             <div class="profile-section logout-section">
-                <a href="../public/logout.php" class="btn btn-danger" onclick="return confirm('Are you sure you want to logout?')">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
-                </a>
+                <form method="POST" action="">
+                    <button type="submit" name="logout" class="btn btn-danger" onclick="return confirm('Are you sure you want to logout?')">
+                        <i class="fa-solid fa-right-from-bracket"></i> Logout
+                    </button>
+                </form>
             </div>
+
+<?php
+// Handle logout
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
+    session_unset();
+    session_destroy();
+    header("Location: ../public/login.php");
+    exit();
+}
+?>
         </div>
     </div>
 

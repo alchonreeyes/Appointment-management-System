@@ -765,171 +765,6 @@ footer {
     font-size: 13px;
 }
 
-/* BAGO: CSS PARA SA 3-STEP CLOSURE FORM */
-.closure-stepper {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-}
-.step-item {
-    font-size: 13px;
-    color: #95a5a6;
-    font-weight: 600;
-    flex: 1;
-    text-align: center;
-    padding: 5px;
-    border-bottom: 3px solid transparent;
-}
-.step-item.active {
-    color: #991010;
-    border-bottom-color: #991010;
-}
-.step-item b {
-    font-size: 16px;
-    display: block;
-}
-.closure-form-container {
-    padding: 0; /* Inalis ang padding dito */
-}
-.form-step {
-    padding: 0; /* Ang step 1 (calendar) ay may sariling padding */
-}
-.form-step[data-step="2"],
-.form-step[data-step="3"] {
-    padding: 15px 5px 5px 5px; /* BAGO: Dinagdag na padding */
-}
-.closure-nav {
-    display: flex;
-    justify-content: space-between;
-    padding: 15px 5px 0 5px; /* BAGO: Dinagdag na padding */
-    border-top: 1px solid #eee;
-}
-/* Inalis ang lumang .closure-calendar-container */
-
-.closure-form-container input[type="time"],
-.closure-form-container input[type="text"] {
-    width: 100%;
-    padding: 8px 10px; /* Inayos ang padding */
-    margin-bottom: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    box-sizing: border-box;
-    font-size: 14px;
-}
-.closure-form-container label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 13px;
-    font-weight: 600;
-}
-.closure-list {
-    max-height: 150px;
-    overflow-y: auto;
-    border-top: 1px solid #eee;
-    padding: 10px 5px 0 5px; /* BAGO: Dinagdag na padding */
-}
-.closure-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px;
-    border-bottom: 1px solid #f0f0f0;
-    font-size: 13px;
-}
-.closure-item-info {
-    flex-grow: 1;
-    text-align: left;
-    margin-right: 10px; /* BAGO: Nagdagdag ng space */
-}
-.closure-item-info b {
-    font-size: 14px;
-}
-/* BAGO: Ginawang btn-small ang buttons */
-.closure-item button {
-    margin-left: 5px;
-    padding: 4px 8px;
-    font-size: 11px;
-}
-.closure-item .btn-edit { background: #f59e0b; color: #fff; border:none; }
-.closure-item .btn-danger { background: #dc3545; color: #fff; border:none; }
-.closure-item .btn-view { background: #1d4ed8; color: #fff; border:none; } /* BAGO: View button style */
-
-
-.closure-calendar {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 10px;
-    text-align: center;
-    background: #fcfcfc;
-}
-.calendar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
-    font-weight: 600;
-    font-size: 15px;
-}
-.calendar-header button {
-    background: none;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-    padding: 5px;
-}
-.calendar-days {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    gap: 5px;
-}
-.calendar-day-header, .calendar-day {
-    font-size: 11px;
-    padding: 6px 0;
-    line-height: 1;
-}
-.calendar-day-header {
-    color: #7f8c8d;
-}
-.calendar-day {
-    cursor: pointer;
-    border-radius: 50%;
-    width: 25px;
-    height: 25px;
-    line-height: 25px;
-    margin: 0 auto;
-    transition: all 0.2s;
-    font-weight: 500;
-}
-.calendar-day:hover:not(.empty):not(.closed) {
-    background: #f0f0f0;
-}
-.calendar-day.today {
-    border: 2px solid #2980b9;
-}
-.calendar-day.selected {
-    background: #dc3545;
-    color: white;
-}
-/* BAGO: Inayos ang style ng disabled dates */
-.calendar-day.closed, .calendar-day.partial-closed {
-    background: #f8d7da;
-    color: #721c24;
-    cursor: not-allowed; 
-    opacity: 0.7;
-    text-decoration: line-through;
-}
-.calendar-day.open {
-    background: #d4edda;
-    color: #155724;
-    pointer-events: none;
-}
-.calendar-day.empty {
-    opacity: 0.3;
-    cursor: default;
-}
-
 .container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
@@ -968,6 +803,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge.accepted { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
 .badge.cancelled { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
+
+/* BAGO: Dinagdag ang CSS para sa 'Missed' at 'Cancel' na badge */
+.badge.missed { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
+.badge.cancel { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
+
+
 .detail-actions, .confirm-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
 .btn-small:hover { transform: translateY(-1px); }
@@ -975,10 +816,28 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .btn-accept { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
 .btn-cancel { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
 .btn-edit { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
-.btn-save { background: #28a745; color: #fff; } /* BAGO: Dinagdag para sa closure save */
-.btn-save:hover { background: #218838; } /* BAGO: Dinagdag para sa closure save */
 .confirm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .confirm-icon { width: 56px; height: 56px; border-radius: 12px; background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; flex: 0 0 56px; }
+/* BAGO: Idinagdag para sa cancel button prompt */
+.confirm-icon.danger { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+#reasonInputWrapper { margin-bottom: 20px; }
+#cancelReasonInput {
+    width: 100%;
+    padding: 10px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 14px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    resize: vertical;
+    min-height: 80px;
+}
+#cancelReasonInput:focus {
+    border-color: #991010;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(153, 16, 16, 0.2);
+}
+
+
 .confirm-title { font-weight: 800; color: #1a202c; font-size: 20px; }
 .confirm-msg { color: #4a5568; font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
 #editModal .detail-title:before { content: '✏️'; }
@@ -1251,6 +1110,70 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 }
 /* --- END QR SCANNER MODAL CSS --- */
 
+/* =================================== */
+/* BAGO: CSS PARA SA FULL DETAIL MODAL */
+/* =================================== */
+.detail-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.detail-row {
+    background: #f8f9fb; padding: 12px 14px;
+    border-radius: 8px; border: 1px solid #e8ecf0;
+}
+.detail-row.full-width { grid-column: 1 / -1; }
+.detail-label {
+    font-size: 11px; font-weight: 700; color: #4a5568;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    display: block; margin-bottom: 6px;
+}
+.detail-value {
+    color: #1a202c; font-weight: 500; font-size: 15px;
+    line-height: 1.4; word-wrap: break-word;
+}
+.detail-value b { font-weight: 600; }
+
+/* ====================================================================== */
+/* **** ITO ANG IDINAGDAG KO (REQUEST #4) **** */
+/* ====================================================================== */
+/* Fine-tuning para sa Maliliit na Screens (e.g., iPhone SE) */
+@media (max-width: 420px) {
+    .welcome-text h1 { 
+        font-size: 22px; /* Liiitan ang "Welcome back" */
+    }
+    .card h2 { 
+        font-size: 28px; /* Liiitan ang numero sa stats (e.g., "2") */
+    }
+    .card p {
+        font-size: 12px;
+    }
+    .dashboard, .container, footer {
+        padding: 15px; /* Bawasan pa ang padding */
+    }
+    .filter-group {
+        flex-direction: column; /* I-stack ang filter buttons */
+        align-items: stretch; /* I-full-width sila */
+    }
+    .filter-group > div {
+        width: 100%;
+    }
+    .filter-btn {
+        width: 100%;
+        text-align: center;
+    }
+    .top-controls {
+        width: 100%;
+    }
+    .right-section, .bottom-section, .charts-grid {
+        gap: 10px; /* Bawasan ang gap */
+    }
+    .card, .chart-box, .recent, .qr-section, .weekly-box {
+        padding: 15px; /* Bawasan ang padding sa loob ng cards */
+    }
+    .qr-code-display {
+        width: 120px;
+        height: 120px;
+    }
+}
 </style>
 </head>
 <body>
@@ -1300,7 +1223,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <p>Here's what's happening at your clinic today</p>
         </div>
         <div class="top-controls">
-<button class="close-btn" onclick="openClosureModal()">🗓️ Set Closure Schedule</button>
             
             <div class="filter-group">
                 <div style="position: relative;">
@@ -1407,7 +1329,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EYEMASTER_CLINIC_<?= time() ?>" alt="QR Code">
                 </div>
                 <button class="scan-btn" onclick="startScan()">Click to Scan</button>
-                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -1421,103 +1343,44 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 </div>
 
+<!-- ====================================================================== -->
+<!-- (Request #2 & #3) IN-UPDATE ANG MODAL NA ITO -->
+<!-- ====================================================================== -->
 <div class="detail-overlay" id="appointmentDetailModal">
     <div class="detail-card">
         
         <div class="detail-header">
-            <div class="detail-title">
+            <!-- REQUEST #3: Idinagdag ang ID na "detail-title" -->
+            <div class="detail-title" id="detail-title">
                 Appointment Details
-                <span class="detail-id" id="detail-id">#0</span>
             </div>
+            <span class="detail-id" id="detail-id">#0</span>
         </div>
 
-        <div class="detail-content">
-            
-            <div class="detail-section">
-                <div class="detail-row">
-                    <span class="detail-label">Patient Name</span>
-                    <span class="detail-value" id="detail-patient-name">---</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Service Type</span>
-                    <span class="detail-value" id="detail-service-type">---</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <span class="detail-value">
-                        <span class="badge" id="detail-status">---</span>
-                    </span>
-                </div>
-            </div>
-
-            <div class="detail-section">
-                <div class="detail-row">
-                    <span class="detail-label">Appointment Date</span>
-                    <span class="detail-value" id="detail-date">---</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Appointment Time</span>
-                    <span class="detail-value" id="detail-time">---</span>
-                </div>
-            </div>
-
-            <div class="detail-notes" id="detail-notes-container">
-                <span class="detail-label">Additional Notes</span>
-                <span id="detail-notes" style="font-weight: 500;">---</span>
-            </div>
-
+        <!-- REQUEST #2: Pinalitan ang laman para maging dynamic -->
+        <div id="detailModalBody" style="padding: 24px 28px; max-height: 70vh; overflow-y: auto; font-size: 15px;">
+            <!-- Dito ilalagay ng JavaScript ang lahat ng data -->
         </div>
 
-  <div class="detail-actions">
-    <input type="hidden" id="modal_appointment_id" value="">
-
-    <button class="btn-small btn-close" onclick="closeAppointmentDetailModal()">Back</button>
-    
-    <button class="btn-small btn-cancel" style="background: #dc2626; color: white;" 
-            onclick="updateScannedStatus('Cancelled')">
-        Cancel
-    </button>
-    
-    <button class="btn-small btn-accept" style="background: #16a34a; color: white;" 
-            onclick="updateScannedStatus('Completed')">
-        Complete
-    </button>
-</div>
-
-    </div>
-</div>
-
-<div class="detail-overlay" id="closureDetailModal">
-    <div class="detail-card" style="width: 500px; max-width: 96%;">
-        <div class="detail-header">
-            <div class="detail-title" id="closureDetailTitle">Closure Details</div>
-        </div>
-        <div id="closureDetailToastContainer" style="display: none; padding: 20px 28px 0 28px;"></div>
-        <div class="detail-content" style="display: block; padding: 28px;">
-            <input type="hidden" id="closureDetailId">
-            
-            <div class="detail-row" style="margin-bottom: 15px;">
-                <span class="detail-label">Date</span>
-                <input type="text" id="closureDetailDate" readonly disabled style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600; background: #eee;">
-            </div>
-            <div class="detail-row" style="margin-bottom: 15px;">
-                <span class="detail-label">Start Time</span>
-                <input type="time" id="closureDetailStartTime" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
-            </div>
-            <div class="detail-row" style="margin-bottom: 15px;">
-                <span class="detail-label">End Time</span>
-                <input type="time" id="closureDetailEndTime" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
-            </div>
-            <div class="detail-row">
-                <span class="detail-label">Reason</span>
-                <input type="text" id="closureDetailReason" readonly style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; font-weight: 600;">
-            </div>
-        </div>
         <div class="detail-actions">
-            <button id="closureDetailDeleteBtn" class="btn-small btn-danger" onclick="deleteClosureFromDetail()">Remove</button>
-            <button id="closureDetailSaveBtn" class="btn-small btn-save" onclick="saveClosureFromDetail()">Save Changes</button>
-            <button class="btn-small btn-close" onclick="closeClosureDetailModal()">Close</button>
+            <input type="hidden" id="modal_appointment_id" value="">
+            <button class="btn-small btn-close" onclick="closeAppointmentDetailModal()">Back</button>
+            
+            <!-- ====================================================================== -->
+            <!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
+            <!-- Pinalitan ang `updateScannedStatus('Cancel')` -->
+            <!-- ====================================================================== -->
+            <button class="btn-small btn-cancel" style="background: #dc2626; color: white;" 
+                    onclick="promptScannedCancel()">
+                Cancel
+            </button>
+            
+            <button class="btn-small btn-accept" style="background: #16a34a; color: white;" 
+                    onclick="updateScannedStatus('Completed')">
+                Complete
+            </button>
         </div>
+
     </div>
 </div>
 
@@ -1531,6 +1394,31 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         </div>
     </div>
 </div>
+
+<!-- ====================================================================== -->
+<!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
+<!-- Idinagdag ang HTML para sa Reason Modal (kinopya mula sa appointment.php) -->
+<!-- ====================================================================== -->
+<div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3001;">
+    <div class="confirm-card" role="dialog" aria-modal="true">
+        <div class="confirm-header">
+            <div class="confirm-icon danger">!</div>
+            <div class="confirm-title">Reason for Cancellation</div>
+        </div>
+        <div class="confirm-msg" id="confirmMsg">
+         Please provide a reason for cancelling this appointment. This will be included in the email to the client.
+        </div>
+        <div id="reasonInputWrapper">
+            <textarea id="cancelReasonInput" rows="4" placeholder="Type reason here..."></textarea>
+        </div>
+        <div class="confirm-actions">
+            <button id="reasonBack" class="btn-small btn-close">Back</button>
+            <button id="reasonSubmit" class="btn-small btn-cancel">Submit Cancellation</button>
+        </div>
+    </div>
+</div>
+
+
 <footer>
     © 2025 EyeMaster. All rights reserved.
 </footer>
@@ -1574,498 +1462,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-// --- BAGO: CLOSURE SCHEDULING LOGIC (3-STEP) ---
-const closureData = []; // To store fetched closures
-let currentClosureStep = 1;
-
-function formatTime(time24) {
-    if (!time24) return 'N/A';
-    const [hours, minutes] = time24.split(':');
-    const date = new Date();
-    date.setHours(parseInt(hours), parseInt(minutes));
-    return date.toLocaleString('en-US', { hour: 'numeric', minute: 'numeric', hour12: true });
-}
-
-// BAGO: Function to control steps
-function showClosureStep(step) {
-    currentClosureStep = step;
-    
-    // Hide all steps
-    document.querySelectorAll('.form-step').forEach(el => el.style.display = 'none');
-    // Show current step
-    const currentStepEl = document.querySelector(`.form-step[data-step="${step}"]`);
-    if(currentStepEl) currentStepEl.style.display = 'block';
-
-    // Update stepper UI
-    document.querySelectorAll('.step-item').forEach(el => {
-        if (parseInt(el.dataset.step) === step) {
-            el.classList.add('active');
-        } else {
-            el.classList.remove('active');
-        }
-    });
-
-    // Update navigation buttons
-    const backBtn = document.getElementById('closureBackBtn');
-    const nextBtn = document.getElementById('closureNextBtn');
-    const saveBtn = document.getElementById('closureSaveBtn');
-
-    if (backBtn) backBtn.style.display = (step > 1) ? 'inline-flex' : 'none';
-    if (nextBtn) nextBtn.style.display = (step < 3) ? 'inline-flex' : 'none';
-    if (saveBtn) saveBtn.style.display = (step === 3) ? 'inline-flex' : 'none';
-
-    // BAGO: I-disable ang Next button sa Step 1 kung walang date
-    if (step === 1 && nextBtn) {
-        nextBtn.disabled = !document.getElementById('closureDate').value;
-    }
-}
-
-// BAGO: Navigation function
-function navigateClosureStep(direction) {
-    // Basic validation before going next
-    if (direction > 0) {
-        if (currentClosureStep === 1) {
-            if (!document.getElementById('closureDate').value) {
-                // Gagamitin na natin ang bagong toast
-                showToastInPopup('Please select a date from the calendar first.', 'error');
-                return;
-            }
-        }
-        if (currentClosureStep === 2) {
-             const startTime = document.getElementById('startTime').value;
-             const endTime = document.getElementById('endTime').value;
-             const timeErrorEl = document.getElementById('timeError');
-             if (timeErrorEl) timeErrorEl.style.display = 'none';
-
-             if (!startTime || !endTime) {
-                 showToastInPopup('Please set a Start Time and End Time.', 'error');
-                 return;
-             }
-             if (startTime >= endTime) {
-                 if(timeErrorEl) {
-                     timeErrorEl.textContent = 'End Time must be after Start Time.';
-                     timeErrorEl.style.display = 'block';
-                 }
-                 return;
-             }
-        }
-    }
-    showClosureStep(currentClosureStep + direction);
-}
-
-
-function openClosureModal(id = null, date = null) {
-    
-    // BAGO: Itago ang modal ng scanner kung nakabukas
-    const qrModal = document.getElementById('qrScannerModal');
-    if (qrModal && qrModal.style.display !== 'none') {
-        stopScan(); // Gamitin ang stopScan para maayos na maisara
-    }
-
-    // BAGO: 3-step HTML structure
-    openPopup(
-        id ? 'Edit Closure Schedule' : 'Set Closure Schedule',
-        `
-        <div id="closureToastContainer" style="display: none; margin-bottom: 15px;"></div>
-
-        <div class="closure-stepper">
-            <div class="step-item active" data-step="1"><b>1.</b> Select Date</div>
-            <div class="step-item" data-step="2"><b>2.</b> Set Time</div>
-            <div class="step-item" data-step="3"><b>3.</b> Add Reason</div>
-        </div>
-
-        <div class="closure-form-container">
-            <div class="form-step" data-step="1">
-                <div id="closureCalendar" class="closure-calendar"></div>
-                <input type="hidden" id="closureDate"> </div>
-            
-            <div class="form-step" data-step="2" style="display: none;">
-                <label for="startTime">Start Time (e.g., 08:00):</label>
-                <input type="time" id="startTime" required>
-                
-                <label for="endTime">End Time (e.g., 17:00):</label>
-                <input type="time" id="endTime" required>
-
-                <p id="timeError" style="color: #e74c3c; font-size: 12px; margin-top: 5px; display: none;"></p>
-            </div>
-
-            <div class="form-step" data-step="3" style="display: none;">
-                <label for="reason">Reason:</label>
-                <input type="text" id="reason" placeholder="e.g., Staff Training" required>
-            </div>
-        </div>
-
-        <div class="closure-nav">
-            <button id="closureBackBtn" class="btn-small btn-close" onclick="navigateClosureStep(-1)" style="display: none;">Back</button>
-            <button id="closureNextBtn" class="btn-small btn-accept" onclick="navigateClosureStep(1)" style="display: none;" disabled>Next</button>
-            <button id="closureSaveBtn" class="btn-small btn-save" onclick="saveClosure()" style="display: none;">Save Schedule</button>
-        </div>
-        
-        <input type="hidden" id="closureId" value="${id || ''}">
-        
-        <h4 style="margin-top: 15px; font-size: 14px; color: #2c3e50;">Current Closures:</h4>
-        <div class="closure-list" id="currentClosuresList">Loading...</div>
-        `,
-        false 
-    );
-
-    const today = new Date();
-    const initialYear = today.getFullYear();
-    const initialMonth = today.getMonth() + 1;
-    
-    // BAGO: Ginamit ang .then() para siguradong loaded na ang data
-    fetchAndDisplayClosures().then(() => {
-        renderCalendar(initialYear, initialMonth); // I-render ulit ang calendar na may data
-        
-        if (id) {
-            // --- Simula ng Add Logic (walang ID) ---
-            currentClosureStep = 1;
-            showClosureStep(1);
-            
-            const todayDateStr = today.toISOString().slice(0, 10);
-            const todayElement = document.querySelector(`.calendar-day[data-date="${todayDateStr}"]`);
-            
-            // Check kung 'yung araw ngayon ay available
-            if (todayElement && !todayElement.classList.contains('empty') && !todayElement.classList.contains('closed') && !todayElement.classList.contains('partial-closed')) {
-                // Pre-select today kung available
-                todayElement.classList.add('selected');
-                document.getElementById('closureDate').value = todayDateStr;
-                document.getElementById('closureNextBtn').disabled = false; // Enable ang next button
-            }
-            // --- Katapusan ng Add Logic ---
-            
-        } else {
-             // Set default state for adding
-            currentClosureStep = 1;
-            showClosureStep(1);
-            
-            const todayDateStr = today.toISOString().slice(0, 10);
-            const todayElement = document.querySelector(`.calendar-day[data-date="${todayDateStr}"]`);
-            
-            // Check kung 'yung araw ngayon ay available
-            if (todayElement && !todayElement.classList.contains('empty') && !todayElement.classList.contains('closed') && !todayElement.classList.contains('partial-closed')) {
-                // Pre-select today kung available
-                todayElement.classList.add('selected');
-                document.getElementById('closureDate').value = todayDateStr;
-                document.getElementById('closureNextBtn').disabled = false; // Enable ang next button
-            }
-        }
-    });
-}
-
-
-// Global state for calendar month/year
-let currentCalYear = parseInt('<?= $filterYear ?>');
-let currentCalMonth = parseInt('<?= $monthNum ?>'); // Month number (1-12)
-
-function changeMonth(delta) {
-    currentCalMonth += delta;
-    if (currentCalMonth > 12) {
-        currentCalMonth = 1;
-        currentCalYear++;
-    } else if (currentCalMonth < 1) {
-        currentCalMonth = 12;
-        currentCalYear--;
-    }
-    // BAGO: I-re-render na lang sa loob ng fetchAndDisplayClosures
-    fetchAndDisplayClosures(); // Fetch new data for the new month
-}
-
-function renderCalendar(year, month) {
-    const calendarEl = document.getElementById('closureCalendar');
-    if (!calendarEl) return;
-
-    const date = new Date(year, month - 1, 1);
-    const monthName = date.toLocaleString('en-US', { month: 'long' });
-    const daysInMonth = new Date(year, month, 0).getDate();
-    const firstDayOfWeek = date.getDay();
-    
-    const todayDate = new Date().toISOString().slice(0, 10);
-
-    let html = `<div class="calendar-header">
-        <button onclick="changeMonth(-1)">&lt;</button>
-        <span>${monthName} ${year}</span>
-        <button onclick="changeMonth(1)">&gt;</button>
-    </div>
-    <div class="calendar-days">
-        <div class="calendar-day-header">Sun</div>
-        <div class="calendar-day-header">Mon</div>
-        <div class="calendar-day-header">Tue</div>
-        <div class="calendar-day-header">Wed</div>
-        <div class="calendar-day-header">Thu</div>
-        <div class="calendar-day-header">Fri</div>
-        <div class="calendar-day-header">Sat</div>`;
-
-    let startDay = firstDayOfWeek;
-    for (let i = 0; i < startDay; i++) {
-        html += '<div class="calendar-day empty"></div>';
-    }
-
-    for (let d = 1; d <= daysInMonth; d++) {
-        const dayPadded = String(d).padStart(2, '0');
-        const monthPadded = String(month).padStart(2, '0');
-        const fullDate = `${year}-${monthPadded}-${dayPadded}`;
-        
-        let classList = 'calendar-day';
-        let clickHandler = `onclick="selectDate(this, ${d})"`; 
-
-        const closuresForDay = closureData.filter(c => c.closure_date === fullDate);
-        
-        if (fullDate < todayDate) {
-            classList += ' empty'; // BAGO: pinalitan ng +=
-            clickHandler = '';
-        } else {
-            if (fullDate === todayDate) classList += ' today';
-            
-            // BAGO: Inayos ang logic para sa pag-disable ng click
-            if (closuresForDay.length > 0) {
-                const isFullDay = closuresForDay.some(c => c.start_time === '00:00:00' && c.end_time === '23:59:00');
-                if (isFullDay) {
-                    classList += ' closed';
-                } else {
-                    classList += ' partial-closed';
-                }
-                // Bawal na i-click kapag may closure na
-                clickHandler = ''; 
-            }
-        }
-
-        html += `<div class="${classList}" data-date="${fullDate}" ${clickHandler}>${d}</div>`;
-    }
-
-    calendarEl.innerHTML = html + '</div>';
-    
-    currentCalYear = year;
-    currentCalMonth = month;
-}
-
-// BAGO: Inayos ang selectDate para mag-check ng class at mag-enable ng button
-function selectDate(element, day) {
-    // Bawal piliin kung 'empty' or may 'closed' or 'partial-closed' class
-    if (element.classList.contains('empty') || element.classList.contains('closed') || element.classList.contains('partial-closed')) {
-        return;
-    }
-    
-    document.querySelectorAll('.calendar-day').forEach(d => d.classList.remove('selected'));
-    element.classList.add('selected');
-    
-    const fullDate = element.getAttribute('data-date');
-    document.getElementById('closureDate').value = fullDate;
-
-    // I-enable ang Next button
-    document.getElementById('closureNextBtn').disabled = false;
-
-    // Awtomatikong pumunta sa Step 2
-    navigateClosureStep(1);
-}
-
-function fetchAndDisplayClosures() {
-    const listEl = document.getElementById('currentClosuresList');
-    if (!listEl) return;
-    listEl.innerHTML = 'Fetching closures...';
-
-    showLoader('Fetching closures...');
-
-    // BAGO: Nag-return ng Promise para malaman kung kailan tapos
-    return fetch(`store_closure_handler.php?action=fetch_closures&year=${currentCalYear}&month_num=${String(currentCalMonth).padStart(2, '0')}`)
-        .then(res => res.json())
-        .then(data => {
-            hideLoader(); 
-            if (data.success) {
-                closureData.length = 0; 
-                closureData.push(...data.closures);
-                renderCalendar(currentCalYear, currentCalMonth); 
-                
-                if (data.closures.length === 0) {
-                    listEl.innerHTML = '<div class="empty-state">No closures scheduled for this month.</div>';
-                    return;
-                }
-                
-                // BAGO: Logika para sa View/Edit/Remove buttons
-                const today = new Date().toISOString().slice(0, 10);
-                
-                listEl.innerHTML = data.closures.map(c => {
-                    let buttonsHTML = '';
-                    
-                    if (c.closure_date < today) {
-                        // Nakalipas na: View button lang
-                        buttonsHTML = `<button class="btn-small view btn-view" onclick='openClosureDetailModal(${c.id}, true)'>View</button>`;
-                    } else {
-                        // Ngayon o sa future: Edit at Remove buttons
-                        buttonsHTML = `
-                            <button class="btn-small btn-edit" style="background: #f59e0b;" onclick="openClosureDetailModal(${c.id}, false)">Edit</button>
-                            <button class="btn-small btn-danger" onclick="deleteClosureConfirm(${c.id}, '${c.closure_date}')">Remove</button>
-                        `;
-                    }
-
-                    return `
-                        <div class="closure-item">
-                            <div class="closure-item-info">
-                                <b>${c.closure_date}</b> (${formatTime(c.start_time)} - ${formatTime(c.end_time)})
-                                <br>${c.reason}
-                            </div>
-                            <div style="display: flex; gap: 5px;">
-                                ${buttonsHTML}
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            } else {
-                listEl.innerHTML = '<div class="empty-state" style="color: #e74c3c;">Failed to load closures.</div>';
-            }
-        })
-        .catch(err => {
-            hideLoader();
-            console.error('Fetch error:', err);
-            listEl.innerHTML = '<div class="empty-state" style="color: #e74c3c;">Network error fetching closures.</div>';
-        });
-}
-
-// BAGO: Pinalitan ang function na 'to. Gagamitin na ang openClosureDetailModal
-function editClosure(id) {
-    openClosureDetailModal(id, false); // false = not read-only
-}
-
-function deleteClosureConfirm(id, date) {
-    openPopup(
-        'Confirm Deletion',
-        `<p style="font-size: 14px;">Are you sure you want to remove the closure scheduled for <b>${date}</b>?</p>`,
-        true,
-        () => deleteClosure(id)
-    );
-}
-
-function deleteClosure(id) {
-    showLoader('Deleting schedule...');
-    fetch('store_closure_handler.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_closure', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideLoader(); 
-        if (data.success) {
-            // BAGO: Gagamitin ang global toast
-            showGlobalToast(data.message, 'success'); 
-            
-            // I-refresh ang listahan sa *kabilang* modal (Add/Set modal)
-            if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
-                fetchAndDisplayClosures(); 
-            }
-            // Isara ang 'Edit' modal kung nakabukas
-            if (document.getElementById('closureDetailModal').classList.contains('show')) {
-                closeClosureDetailModal();
-            }
-        } else {
-            showGlobalToast(data.message, 'error'); 
-        }
-    })
-    .catch(err => {
-        hideLoader(); 
-        console.error('Fetch error:', err);
-        showGlobalToast('Network error while deleting closure.', 'error'); 
-    });
-}
-
-// BAGO: Inayos para kunin ang data mula sa lahat ng steps
-function saveClosure() {
-    const id = document.getElementById('closureId').value;
-    const date = document.getElementById('closureDate').value;
-    const startTime = document.getElementById('startTime').value;
-    const endTime = document.getElementById('endTime').value;
-    const reason = document.getElementById('reason').value;
-    const timeErrorEl = document.getElementById('timeError'); // Ang error message ay nasa step 2 na
-
-    if(timeErrorEl) timeErrorEl.style.display = 'none';
-
-    if (!date || !startTime || !endTime || !reason) {
-        showToastInPopup('All fields (Date, Start Time, End Time, Reason) are required.', 'error'); 
-        
-        // Bumalik sa step kung saan may kulang
-        if (!date) showClosureStep(1);
-        else if (!startTime || !endTime) showClosureStep(2);
-        
-        return;
-    }
-    
-    const startHour = parseInt(startTime.split(':')[0]);
-    const endHour = parseInt(endTime.split(':')[0]);
-    const startPeriod = startHour < 12 ? 'AM' : 'PM';
-    const endPeriod = endHour < 12 ? 'AM' : 'PM';
-    
-    // BAGO: Inayos ang logic para sa AM/PM span
-    if (startPeriod === endPeriod && (startHour < 12 && endHour < 12) ) { // Parehong AM
-        showClosureStep(2);
-        if(timeErrorEl) {
-            timeErrorEl.textContent = 'Closure must span across morning and afternoon (e.g., AM to PM).';
-            timeErrorEl.style.display = 'block';
-        }
-        return;
-    }
-     if (startPeriod === endPeriod && (startHour > 12 && endHour > 12) ) { // Parehong PM
-        showClosureStep(2);
-        if(timeErrorEl) {
-            timeErrorEl.textContent = 'Closure must span across morning and afternoon (e.g., AM to PM).';
-            timeErrorEl.style.display = 'block';
-        }
-        return;
-    }
-    
-    if (startTime >= endTime) {
-        showClosureStep(2);
-        if(timeErrorEl) {
-            timeErrorEl.textContent = 'End Time must be strictly after Start Time.';
-            timeErrorEl.style.display = 'block';
-        }
-        return;
-    }
-
-    showLoader('Saving schedule...');
-
-    fetch('store_closure_handler.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'save_closure',
-            id: id,
-            date: date,
-            start_time: startTime + ':00',
-            end_time: endTime + ':00', 
-            reason: reason
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideLoader(); 
-        if (data.success) {
-            // BAGO: Hindi na mag-ko-close ang popup
-            showToastInPopup(data.message, 'success');
-            
-            // I-reset ang form fields
-            document.getElementById('closureId').value = '';
-            document.getElementById('startTime').value = '';
-            document.getElementById('endTime').value = '';
-            document.getElementById('reason').value = '';
-            document.getElementById('closureDate').value = ''; // I-clear din ang date
-            document.getElementById('closureNextBtn').disabled = true;
-            
-            // I-refresh ang calendar at list
-            fetchAndDisplayClosures().then(() => {
-                // Bumalik sa step 1
-                showClosureStep(1);
-            });
-            
-        } else {
-            showToastInPopup(data.message, 'error'); 
-        }
-    })
-    .catch(err => {
-        hideLoader(); 
-        console.error('Fetch error:', err);
-        showToastInPopup('Network error while saving closure.', 'error'); 
-    });
-}
 // Real data from PHP
 const dailyData = <?php echo json_encode($dailyData); ?>;
 const statusData = <?php echo json_encode($statusData); ?>;
@@ -2232,51 +1628,6 @@ function showGlobalToast(msg, type = 'success') {
     }, { once: true });
 }
 
-// BAGO: Ito yung lilitaw sa loob MISMO ng closure modal
-function showToastInPopup(msg, type = 'success') {
-    const container = document.getElementById('closureToastContainer');
-    if (!container) {
-        // Fallback kung sakaling wala yung container
-        showGlobalToast(msg, type);
-        return;
-    }
-
-    // Gagawa ng toast-like message sa loob ng container
-    container.innerHTML = `
-        <div class_name="toast-message" style="
-            padding: 10px 15px; 
-            border-radius: 8px; 
-            background: ${type === 'success' ? '#d4edda' : '#f8d7da'}; 
-            color: ${type === 'success' ? '#155724' : '#721c24'}; 
-            border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
-            font-weight: 600;
-            font-size: 14px;
-        ">
-            ${type === 'success' ? '✓' : '✕'} ${msg}
-        </div>
-    `;
-    container.style.display = 'block';
-    
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-        if(container) container.style.display = 'none';
-    }, 3000);
-}
-
-
-// Ito ang gagamitin ng lahat ng function na HINDI related sa closure modal
-function showToast(msg, type = 'success') {
-    // Check kung ang closure modal ay nakabukas
-    if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
-        // Kung nakabukas, gamitin ang special toast sa loob ng modal
-        showToastInPopup(msg, type);
-    } else {
-        // BAGO: Gamitin na rin ang global toast para consistent
-        showGlobalToast(msg, type);
-    }
-}
-
-
 // Popup Functions
 function openPopup(header, content, isConfirmation = false, callback = null) {
     popupHeader.innerHTML = `<h3>${header}</h3>`;
@@ -2301,8 +1652,6 @@ function closePopup() {
     popup.classList.remove('active');
     popupOverlay.classList.remove('active');
     
-    // BAGO: Isinama ang pag-stop ng scanner dito
-    // para kung i-click man ang overlay, hihinto rin ang scanner
     const qrModal = document.getElementById('qrScannerModal');
     if (qrModal && qrModal.style.display !== 'none') {
          stopScan();
@@ -2369,7 +1718,7 @@ function closeStore() {
     .then(data => {
         hideLoader(); 
         if (data.success) {
-            showGlobalToast('Store closed successfully. You will be logged out now.', 'success'); 
+            showGlobalToast('Store closed successfully. You will be logged out now.', 'success');
             setTimeout(() => { window.location.href = 'logout.php'; }, 1500);
         } else {
             showGlobalToast(data.message || 'Unknown error', 'error'); 
@@ -2382,9 +1731,6 @@ function closeStore() {
     });
 }
 
-// ===================================
-// <-- BAGO: Function para isara ang QR Modal
-// ===================================
 function stopScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (qrModal) {
@@ -2392,140 +1738,178 @@ function stopScan() {
     }
 
     if (html5QrCode) {
-        html5QrCode.stop().then(() => {
-            console.log("QR Scanner stopped.");
-            // Linisin ang laman ng qr-reader para sa susunod na scan
+        try {
+             html5QrCode.stop().then(() => {
+                console.log("QR Scanner stopped.");
+                const qrReader = document.getElementById('qr-reader');
+                if(qrReader) qrReader.innerHTML = '';
+             }).catch(err => {
+                console.warn('QR scanner stop failed, likely already stopped.', err);
+                const qrReader = document.getElementById('qr-reader');
+                if(qrReader) qrReader.innerHTML = '';
+             });
+        } catch (e) {
+            console.warn('Error trying to stop QR scanner:', e);
             const qrReader = document.getElementById('qr-reader');
             if(qrReader) qrReader.innerHTML = '';
-        }).catch(err => {
-            console.error('Error stopping scanner:', err);
-            // Kahit nag-error, linisin pa rin
-            const qrReader = document.getElementById('qr-reader');
-            if(qrReader) qrReader.innerHTML = '';
-        });
+        }
     }
 }
 
-// ===================================
-// <-- PALITAN: Inayos ang startScan() para gumamit ng Modal
-// ===================================
+
+function processScannedData(qrCodeMessage) {
+    stopScan(); 
+    showLoader('Verifying QR Code...');
+    
+    fetch('verify_qr.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qr_code: qrCodeMessage })
+    })
+    .then(response => response.json())
+    .then(data => {
+        hideLoader();
+        if (data.success && data.data) {
+            openAppointmentDetailModal(data); 
+        } else {
+            showGlobalToast(data.message || 'Patient or appointment not found', 'error');
+        }
+    })
+    .catch(error => {
+        hideLoader();
+        console.error('Fetch Error:', error);
+        showGlobalToast('Error verifying QR code.', 'error');
+    });
+}
+
+
 function startScan() {
-    // 1. Ipakita ang bagong modal
     const qrModal = document.getElementById('qrScannerModal');
     if (!qrModal) {
         console.error('QR Scanner Modal not found!');
         return;
     }
-    qrModal.style.display = 'flex'; // Ipakita ang overlay
+    qrModal.style.display = 'flex'; 
 
-    // 2. Ito 'yung ID ng div sa loob ng modal
     const qrReaderId = "qr-reader";
-    
-    // 3. Siguraduhin na huminto ang dating instance kung meron man
-    if (html5QrCode) {
-        html5QrCode.stop().catch(err => console.error('Error stopping previous scanner:', err));
-    }
-    
-    // 4. Gumawa ng bagong instance
     html5QrCode = new Html5Qrcode(qrReaderId);
 
-    // 5. Simulan ang scanner
     html5QrCode.start(
-        { facingMode: "environment" }, // Mas prefer ang rear camera
-        { fps: 10, qrbox: { width: 250, height: 250 } }, // 'qrbox' ay para sa area, hindi sa actual video size
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: { width: 250, height: 250 } }, 
         
-        // --- onSuccess ---
         qrCodeMessage => {
-            // 6. Natagpuan ang QR! Itigil ang scanner at isara ang modal
-            stopScan(); 
-            
-            // 7. Ipagpatuloy ang dating logic (verification)
-            showLoader('Verifying QR Code...');
-            fetch('verify_qr.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ qr_code: qrCodeMessage })
-            })
-            .then(response => response.json())
-            .then(data => {
-                hideLoader();
-                if (data.success && data.id) {
-                    openAppointmentDetailModal(data);
-                } else {
-                    showGlobalToast(data.message || 'Patient or appointment not found', 'error');
-                }
-            })
-            .catch(error => {
-                hideLoader();
-                console.error('Fetch Error:', error);
-                showGlobalToast('Error verifying QR code.', 'error');
-            });
+            processScannedData(qrCodeMessage);
         },
-        
-        // --- onScanFailure ---
         errorMessage => {
-            // Huwag mag-log ng error, para tahimik lang habang naghahanap
+            // silent
         }
     ).catch(err => {
-        // 8. Nag-fail simulan (e.g., walang camera, walang permission)
         console.error('Unable to start scanner:', err);
-        stopScan(); // Isara ang modal kahit nag-fail
-        showGlobalToast('Unable to access camera. Please check permissions.', 'error');
+        stopScan(); 
+        showGlobalToast('Unable to access camera. Please check permissions or select the correct one.', 'error');
     });
 }
 
 
 // ======================================================================
-// <-- START: QR CODE FIX 
-//     I have removed the duplicate 'openAppointmentDetailModal' 
-//     and created one single, correct function.
+// (Request #2 & #3) IN-UPDATE ANG FUNCTION NA ITO
 // ======================================================================
+function openAppointmentDetailModal(payload) {
+    console.log("Opening detail modal for:", payload);
+    
+    const d = payload.data; 
+    const preformatted = payload; 
+
+    // --- 1. Set the hidden ID para sa "Complete" / "Cancel" buttons ---
+    document.getElementById('modal_appointment_id').value = d.appointment_id; 
+
+    // --- 2. Fill in header ---
+    // REQUEST #3: I-set ang title
+    document.getElementById('detail-title').textContent = d.service_name || 'Appointment Details';
+    document.getElementById('detail-id').textContent = '#' + d.appointment_id;
+    
+    // --- 3. Build HTML Body ---
+    const modalBody = document.getElementById('detailModalBody');
+    modalBody.innerHTML = ''; // Linisin muna
+
+    // Ito 'yung listahan ng lahat ng posibleng data
+    const labels = {
+        'full_name': 'Patient Name', 'status_name': 'Status', 'service_name': 'Service',
+        'staff_name': 'Staff Assigned', 'appointment_date': 'Date', 'appointment_time': 'Time',
+        'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
+        'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
+        'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
+        'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
+        'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
+        'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
+        'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason',
+        'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)',
+    };
+    
+    // Ito ang order kung paano sila lalabas
+    const displayOrder = [
+        'full_name', 'status_name', 'service_name', 'staff_name',
+        'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
+        'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
+        'certificate_purpose', 'certificate_other', 'ishihara_test_type',
+        'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
+        'consent_info', 'consent_reminders', 'consent_terms'
+    ];
+    
+    let contentHtml = '<div class="detail-grid">';
+    
+    for (const key of displayOrder) {
+        // Ipakita lang kung may laman ang data
+        if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
+            let value = d[key];
+            const label = labels[key] || key;
+            let rowClass = 'detail-row';
+            
+            // Gawing full-width ang mahahabang text
+            if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) {
+                rowClass += ' full-width';
+            }
+            
+            // I-format ang itsura ng data
+            if (key === 'appointment_date') {
+                value = preformatted.date; // Gamitin ang pre-formatted galing sa verify_qr
+            } else if (key === 'appointment_time') {
+                value = preformatted.time; // Gamitin ang pre-formatted galing sa verify_qr
+            } else if (key === 'consent_info' || key === 'consent_reminders' || key === 'consent_terms') {
+                value = value == 1 ? 'Yes' : 'No';
+            } else if (key === 'status_name') {
+                value = `<span class="badge ${value.toLowerCase()}">${value}</span>`;
+            } else {
+                value = `<b>${value}</b>`;
+            }
+            
+            // Idagdag sa HTML
+            contentHtml += `
+                <div class="${rowClass}">
+                    <span class="detail-label">${label}</span>
+                    <div class="detail-value">${value}</div>
+                </div>
+            `;
+        }
+    }
+    contentHtml += '</div>';
+    
+    modalBody.innerHTML = contentHtml;
+    
+    // --- 4. Show the modal ---
+    document.getElementById('appointmentDetailModal').classList.add('show');
+}
+
 
 function closeAppointmentDetailModal() {
     document.getElementById('appointmentDetailModal').classList.remove('show');
 }
 
-// This is the one, correct function that handles opening the modal.
-function openAppointmentDetailModal(data) {
-    console.log("Opening detail modal for:", data);
-
-    // --- 1. Set the hidden ID for the "Complete" / "Cancel" buttons ---
-    document.getElementById('modal_appointment_id').value = data.id; 
-
-    // --- 2. Fill in all the visible modal details ---
-    document.getElementById('detail-id').textContent = '#' + data.id;
-    document.getElementById('detail-patient-name').textContent = data.patient_name;
-    document.getElementById('detail-service-type').textContent = data.service_type;
-    document.getElementById('detail-date').textContent = data.date;
-    document.getElementById('detail-time').textContent = data.time;
-    
-    // Set the status badge
-    const statusBadge = document.getElementById('detail-status');
-    statusBadge.textContent = data.status;
-    // Clear old status classes (like 'pending', 'completed') and add the new one
-    statusBadge.className = 'badge ' + data.status.toLowerCase(); 
-
-    // Handle the notes
-    const notesContainer = document.getElementById('detail-notes-container');
-    const notesEl = document.getElementById('detail-notes');
-    if (data.notes && data.notes.trim() !== '') {
-        notesEl.textContent = data.notes;
-        notesContainer.style.display = 'block';
-    } else {
-        // Hide the notes section if there are no notes
-        notesEl.textContent = '---';
-        notesContainer.style.display = 'none';
-    }
-    
-    // --- 3. Show the modal ---
-    document.getElementById('appointmentDetailModal').classList.add('show');
-}
-
-
-// --- THIS IS THE NEW FUNCTION FOR THE BUTTONS ---
-function updateScannedStatus(newStatus) {
+// ======================================================================
+// (Request #1 & #2) IN-UPDATE ANG FUNCTION NA ITO
+// ======================================================================
+function updateScannedStatus(newStatus, reason = null) { // BAGO: Tumatanggap na ng 'reason'
     const appointmentId = document.getElementById('modal_appointment_id').value;
     
     if (!appointmentId) {
@@ -2533,28 +1917,43 @@ function updateScannedStatus(newStatus) {
         return;
     }
 
-    showLoader(`Setting status to ${newStatus}...`);
+    showLoader(`Update Status to ${newStatus}...`);
 
-    // We send this to appointment.php because that file already handles status updates
+    const bodyParams = {
+        action: 'updateStatus',
+        id: appointmentId,
+        status_name: newStatus 
+    };
+
+    // ======================================================================
+    // **** REQUEST #1 (CANCEL BUTTON) FIX ****
+    // Gagamitin ang 'reason' galing sa prompt, o ang default
+    // ======================================================================
+    if (newStatus === 'Cancel') { 
+        bodyParams.reason = reason || 'Cancelled by Admin via QR Scan.';
+    }
+
     fetch('appointment.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
         },
-        body: new URLSearchParams({
-            action: 'updateStatus', // Assumes your appointment.php has this action
-            id: appointmentId,
-            status_name: newStatus 
-        })
+        body: new URLSearchParams(bodyParams)
     })
     .then(res => res.json())
     .then(data => {
         hideLoader();
         if (data.success) {
-            showGlobalToast(`Appointment marked as ${newStatus}.`, 'success');
             closeAppointmentDetailModal();
-            // You might want to reload the dashboard data here
-            // location.reload(); 
+            
+            // ======================================================================
+            // **** REQUEST #2 (AUTO-UPDATE) FIX ****
+            // ======================================================================
+            showGlobalToast(`Appointment marked as ${newStatus}. Dashboard will refresh.`, 'success');
+            setTimeout(() => {
+                location.reload(); 
+            }, 2000); // 2 second delay para mabasa ang toast
+
         } else {
             showGlobalToast(data.message || 'Failed to update status.', 'error');
         }
@@ -2565,201 +1964,102 @@ function updateScannedStatus(newStatus) {
         showGlobalToast('Network error. Could not update status.', 'error');
     });
 }
-// ======================================================================
-// <-- END: QR CODE FIX
-// ======================================================================
 
-// BAGO: Functions para sa View/Edit Closure Modal
-function closeClosureDetailModal() {
-    document.getElementById('closureDetailModal').classList.remove('show');
+// ======================================================================
+// **** REQUEST #1 (CANCEL BUTTON) FIX ****
+// Idinagdag ang function na ito para tawagin ang reason modal
+// ======================================================================
+function promptScannedCancel() {
+    const modal = document.getElementById('reasonModal');
+    const reasonInput = document.getElementById('cancelReasonInput');
+    const submitBtn = document.getElementById('reasonSubmit');
+    const backBtn = document.getElementById('reasonBack');
+    const appointmentId = document.getElementById('modal_appointment_id').value;
+
+    if (!appointmentId) {
+        showGlobalToast('Error: No Appointment ID found.', 'error');
+        return;
+    }
+
+    reasonInput.value = ''; 
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+
+    // TANGGALIN ang lumang listeners para iwas double-click
+    // Gagamit tayo ng .onclick para sigurado
+    let onKey; 
+
+    function cleanUp() {
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden', 'true');
+        document.removeEventListener('keydown', onKey);
+    }
+
+    submitBtn.onclick = () => {
+        const reason = reasonInput.value.trim();
+        if (reason === '') {
+            showGlobalToast('A reason is required to cancel.', 'error');
+            return;
+        }
+        cleanUp();
+        // Tawagin ang ating main update function, na may kasamang reason
+        updateScannedStatus('Cancel', reason); 
+    };
+
+    backBtn.onclick = () => cleanUp();
+    
+    onKey = (e) => { 
+        if (e.key === 'Escape') {
+            cleanUp();
+            // Tanggalin ang listener
+            document.removeEventListener('keydown', onKey);
+        }
+    };
+    // Magdagdag ng bagong listener
+    document.addEventListener('keydown', onKey);
 }
 
-function openClosureDetailModal(id, isReadOnly = false) {
-    showLoader('Loading details...');
-    fetch('store_closure_handler.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'fetch_closure_details', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideLoader();
-        if (data.success) {
-            const c = data.closure;
-            
-            // Populate data
-            document.getElementById('closureDetailId').value = c.id;
-            document.getElementById('closureDetailDate').value = c.closure_date;
-            document.getElementById('closureDetailStartTime').value = c.start_time.substring(0, 5);
-            document.getElementById('closureDetailEndTime').value = c.end_time.substring(0, 5);
-            document.getElementById('closureDetailReason').value = c.reason;
 
-            // Get elements
-            const startTimeInput = document.getElementById('closureDetailStartTime');
-            const endTimeInput = document.getElementById('closureDetailEndTime');
-            const reasonInput = document.getElementById('closureDetailReason');
-            const saveBtn = document.getElementById('closureDetailSaveBtn');
-            const deleteBtn = document.getElementById('closureDetailDeleteBtn');
-            const title = document.getElementById('closureDetailTitle');
-            const toastContainer = document.getElementById('closureDetailToastContainer');
+// ======================================================================
+// (Keyboard Scanner Listener)
+// ======================================================================
+(function() {
+    let qrCodeChars = [];
+    let lastKeystrokeTime = new Date();
 
-            toastContainer.style.display = 'none'; // Itago ang toast
-            
-            if (isReadOnly) {
-                // --- VIEW MODE (PAST) ---
-                title.textContent = 'View Past Closure';
-                startTimeInput.readOnly = true;
-                endTimeInput.readOnly = true;
-                reasonInput.readOnly = true;
+    document.addEventListener('keydown', function(e) {
+        
+        const activeEl = document.activeElement;
+        // BAGO: I-check din ang reason input
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.id === 'cancelReasonInput')) {
+            return; 
+        }
+        
+        const now = new Date();
+        if (now - lastKeystrokeTime > 100) {
+            qrCodeChars = []; 
+        }
+        lastKeystrokeTime = now;
+
+        if (e.key === 'Enter' || e.keyCode === 13) {
+            if (qrCodeChars.length > 0) { 
+                e.preventDefault(); 
+                const qrString = qrCodeChars.join('');
                 
-                // I-disable ang fields
-                startTimeInput.style.background = '#eee';
-                endTimeInput.style.background = '#eee';
-                reasonInput.style.background = '#eee';
-
-                // Itago ang buttons
-                saveBtn.style.display = 'none';
-                deleteBtn.style.display = 'none';
-            } else {
-                // --- EDIT MODE (FUTURE) ---
-                title.textContent = 'Edit Closure Schedule';
-                startTimeInput.readOnly = false;
-                endTimeInput.readOnly = false;
-                reasonInput.readOnly = false;
-
-                // I-enable ang fields
-                startTimeInput.style.background = '#fff';
-                endTimeInput.style.background = '#fff';
-                reasonInput.style.background = '#fff';
-
-                // Ipakita ang buttons
-                saveBtn.style.display = 'inline-flex';
-                deleteBtn.style.display = 'inline-flex';
+                console.log('Handheld Scanner Data:', qrString);
+                
+                processScannedData(qrString); 
             }
-            
-            document.getElementById('closureDetailModal').classList.add('show');
+            qrCodeChars = []; 
         } else {
-            showGlobalToast(data.message || 'Failed to load details.', 'error');
-        }
-    })
-    .catch(err => {
-        hideLoader();
-        console.error('Fetch error:', err);
-        showGlobalToast('Network error. Could not load details.', 'error');
-    });
-}
-
-// BAGO: Function para mag-save galing sa detail modal
-function saveClosureFromDetail() {
-    const id = document.getElementById('closureDetailId').value;
-    const date = document.getElementById('closureDetailDate').value; // Ito ay readonly
-    const startTime = document.getElementById('closureDetailStartTime').value;
-    const endTime = document.getElementById('closureDetailEndTime').value;
-    const reason = document.getElementById('closureDetailReason').value;
-
-    // 1. Check for empty fields
-    if (!startTime || !endTime || !reason) {
-        showToastInDetailModal('All fields are required.', 'error');
-        return;
-    }
-
-    // 2. Check if End Time is after Start Time
-    if (startTime >= endTime) {
-        showToastInDetailModal('End Time must be after Start Time.', 'error');
-        return;
-    }
-    
-    // 3. Check for AM/PM span
-    const startHour = parseInt(startTime.split(':')[0]);
-    const endHour = parseInt(endTime.split(':')[0]);
-    const startPeriod = startHour < 12 ? 'AM' : 'PM';
-    const endPeriod = endHour < 12 ? 'AM' : 'PM';
-    
-    if (startPeriod === endPeriod && (startHour < 12 && endHour < 12) ) { // Parehong AM
-         showToastInDetailModal('Closure must span across morning and afternoon (e.g., AM to PM).', 'error');
-         return;
-    }
-    if (startPeriod === endPeriod && (startHour > 12 && endHour > 12) ) { // Parehong PM (13:00 to 23:00)
-        showToastInDetailModal('Closure must span across morning and afternoon (e.g., AM to PM).', 'error');
-        return;
-    }
-    
-    showLoader('Saving changes...');
-    
-    fetch('store_closure_handler.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'save_closure', // Same action, different source
-            id: id,
-            date: date,
-            start_time: startTime + ':00',
-            end_time: endTime + ':00',
-            reason: reason
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        hideLoader();
-        if (data.success) {
-            showToastInDetailModal(data.message, 'success');
-            // I-refresh ang listahan sa *kabilang* modal (Add/Set modal)
-            if (popup.classList.contains('active') && document.getElementById('closureCalendar')) {
-                fetchAndDisplayClosures();
+            if (e.key && e.key.length === 1) {
+                qrCodeChars.push(e.key);
             }
-        } else {
-            showToastInDetailModal(data.message, 'error');
         }
-    })
-    .catch(err => {
-        hideLoader();
-        console.error('Fetch error:', err);
-        showToastInDetailModal('Network error while saving.', 'error');
     });
-}
-
-// BAGO: Function para mag-delete galing sa detail modal
-function deleteClosureFromDetail() {
-    const id = document.getElementById('closureDetailId').value;
-    const date = document.getElementById('closureDetailDate').value;
     
-    // Isara muna ang detail modal
-    closeClosureDetailModal();
-    
-    // Buksan ang confirmation modal
-    openPopup(
-        'Confirm Deletion',
-        `<p style="font-size: 14px;">Are you sure you want to remove the closure scheduled for <b>${date}</b>?</p>`,
-        true,
-        () => deleteClosure(id) // Ang deleteClosure() ay mag-h-handle ng global toast at refresh
-    );
-}
-
-// BAGO: Function para sa toast sa loob ng edit/view modal
-function showToastInDetailModal(msg, type = 'success') {
-    const container = document.getElementById('closureDetailToastContainer');
-    if (!container) return;
-
-    container.innerHTML = `
-        <div class_name="toast-message" style="
-            padding: 10px 15px; 
-            border-radius: 8px; 
-            background: ${type === 'success' ? '#d4edda' : '#f8d7da'}; 
-            color: ${type === 'success' ? '#155724' : '#721c24'}; 
-            border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
-            font-weight: 600;
-            font-size: 14px;
-        ">
-            ${type === 'success' ? '✓' : '✕'} ${msg}
-        </div>
-    `;
-    container.style.display = 'block';
-    
-    setTimeout(() => {
-        if(container) container.style.display = 'none';
-    }, 3000);
-}
-
+    console.log('Handheld QR scanner listener is active.');
+})();
 
 </script>
 
@@ -2772,17 +2072,15 @@ document.addEventListener('DOMContentLoaded', function() {
     menuToggle.addEventListener('click', function() {
       mainNav.classList.toggle('show');
       
-      // Palitan ang icon ng button
       if (mainNav.classList.contains('show')) {
-        this.innerHTML = '✕'; // Close icon
+        this.innerHTML = '✕'; 
         this.setAttribute('aria-label', 'Close navigation');
       } else {
-        this.innerHTML = '☰'; // Hamburger icon
+        this.innerHTML = '☰';
         this.setAttribute('aria-label', 'Open navigation');
       }
     });
 
-    // Isara ang menu kapag pinindot ang isang link
     mainNav.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', function() {
         mainNav.classList.remove('show');
@@ -2793,6 +2091,14 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+<script>
+    history.replaceState(null, null, location.href);
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+    };
+</script>
+
 
 </body>
 </html>

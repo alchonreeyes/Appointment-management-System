@@ -124,6 +124,8 @@ $result = $conn->query($sql);
     
     <!-- Main Content -->
     <main class="main-content">
+      <!-- Show Filters Button (appears when filters are hidden) -->
+<button class="show-filters-btn" onclick="showFilters()">≡ Show Filters</button>
       <div class="content-header">
         <h2>Top-Rated Glasses</h2>
         <p>Find your favorites from our most popular glasses styles, including top-rated sunglasses.</p>
@@ -135,6 +137,38 @@ $result = $conn->query($sql);
       
       <!-- Product Grid -->
       <div class="product-grid" id="productGrid">
+         <!-- Product Card 1 - With Image -->
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="https://via.placeholder.com/280x180/3498db/ffffff?text=Eyeglasses+1" alt="Classic Aviator">
+                </div>
+                <div class="product-info">
+                    <h3>Classic Aviator</h3>
+                    <p>Ray-Ban - Full Rim</p>
+                    <p class="price">₱1,299.00</p>
+                    <div class="color-options">
+                        <div class="color-circle tortoise"></div>
+                        <div class="color-circle black"></div>
+                    </div>
+                    <button class="see-more-btn" onclick="alert('Product ID: 1')">See more</button>
+                </div>
+            </div>
+             <!-- Product Card 1 - With Image -->
+            <div class="product-card">
+                <div class="product-image">
+                    <img src="" alt="Classic Aviator">
+                </div>
+                <div class="product-info">
+                    <h3>Classic Aviator</h3>
+                    <p>Ray-Ban - Full Rim</p>
+                    <p class="price">₱1,299.00</p>
+                    <div class="color-options">
+                        <div class="color-circle tortoise"></div>
+                        <div class="color-circle black"></div>
+                    </div>
+                    <button class="see-more-btn" onclick="alert('Product ID: 1')">See more</button>
+                </div>
+            </div>
         <?php
         if ($result->num_rows > 0) {
             while($row = $result->fetch_assoc()) {
@@ -155,7 +189,6 @@ $result = $conn->query($sql);
                 echo '<div class="product-info">';
                 echo '<h3>' . htmlspecialchars($row['product_name']) . '</h3>';
                 echo '<p>' . htmlspecialchars($row['brand']) . ' - ' . htmlspecialchars($row['frame_type']) . '</p>';
-                echo '<p style="font-weight:600;color:#000;margin-bottom:8px;">₱' . number_format($row['price'], 2) . '</p>';
                 echo '<div class="color-options">';
                 echo '<div class="color-circle tortoise"></div>';
                 echo '<div class="color-circle black"></div>';
@@ -212,9 +245,35 @@ let activeFilters = {
     frame: []
 };
 
+let filtersVisible = true;
+
 function toggleFilters() {
     const sidebar = document.querySelector('.sidebar');
-    sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+    const showBtn = document.querySelector('.show-filters-btn');
+    const mainContent = document.querySelector('.main-content');
+    
+    filtersVisible = !filtersVisible;
+    
+    if (filtersVisible) {
+        sidebar.classList.remove('hidden');
+        if (showBtn) showBtn.classList.remove('visible');
+        mainContent.classList.remove('expanded');
+    } else {
+        sidebar.classList.add('hidden');
+        if (showBtn) showBtn.classList.add('visible');
+        mainContent.classList.add('expanded');
+    }
+}
+
+function showFilters() {
+    const sidebar = document.querySelector('.sidebar');
+    const showBtn = document.querySelector('.show-filters-btn');
+    const mainContent = document.querySelector('.main-content');
+    
+    filtersVisible = true;
+    sidebar.classList.remove('hidden');
+    if (showBtn) showBtn.classList.remove('visible');
+    mainContent.classList.remove('expanded');
 }
 
 function clearAllFilters() {
@@ -329,21 +388,23 @@ function updateProductGrid(products) {
 }
 
 // Add event listeners to all filter checkboxes
-document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
-    checkbox.addEventListener('change', function() {
-        const filterType = this.dataset.filter;
-        const value = this.value;
-        
-        if (this.checked) {
-            if (!activeFilters[filterType].includes(value)) {
-                activeFilters[filterType].push(value);
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const filterType = this.dataset.filter;
+            const value = this.value;
+            
+            if (this.checked) {
+                if (!activeFilters[filterType].includes(value)) {
+                    activeFilters[filterType].push(value);
+                }
+            } else {
+                activeFilters[filterType] = activeFilters[filterType].filter(v => v !== value);
             }
-        } else {
-            activeFilters[filterType] = activeFilters[filterType].filter(v => v !== value);
-        }
-        
-        updateActiveFiltersDisplay();
-        applyFilters();
+            
+            updateActiveFiltersDisplay();
+            applyFilters();
+        });
     });
 });
 

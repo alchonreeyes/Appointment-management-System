@@ -1,6 +1,7 @@
 <?php
 // Start session at the very beginning
 session_start();
+// Tinitiyak na ang database.php ay nasa labas ng 'staff' folder
 require_once __DIR__ . '/../database.php';
 
 // =======================================================
@@ -49,11 +50,37 @@ if (isset($_POST['action'])) {
                 exit;
             }
             
-            // Ipadala ang BUONG $appt object pabalik sa JavaScript
-            echo json_encode(['success' => true, 'data' => $appt]);
+            // =======================================================
+            // BAGO: Kunin ang past appointment history (kasama ang appointment_id)
+            // =======================================================
+            $history = [];
+            if (!empty($appt['client_id'])) {
+                $client_id = $appt['client_id'];
+                $current_appt_id = $appt['appointment_id'];
+
+                // *** FIX: Idinagdag ang a.appointment_id sa SELECT ***
+                $stmt_history = $conn->prepare("
+                    SELECT a.appointment_id, a.appointment_date, ser.service_name, s.status_name
+                    FROM appointments a
+                    LEFT JOIN services ser ON a.service_id = ser.service_id
+                    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+                    WHERE a.client_id = ? AND a.appointment_id != ?
+                    ORDER BY a.appointment_date DESC
+                ");
+                $stmt_history->bind_param("ii", $client_id, $current_appt_id);
+                $stmt_history->execute();
+                $history_result = $stmt_history->get_result();
+                while ($row = $history_result->fetch_assoc()) {
+                    $history[] = $row;
+                }
+            }
+            // =======================================================
+            
+            // BAGO: Ipadala ang BUONG $appt object AT $history pabalik
+            echo json_encode(['success' => true, 'data' => $appt, 'history' => $history]);
 
         } catch (Exception $e) {
-            error_log("ViewDetails error (appointment.php): " . $e->getMessage());
+            error_log("ViewDetails error (patient_record.php): " . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
         }
         exit;
@@ -61,7 +88,7 @@ if (isset($_POST['action'])) {
 }
 
 // =======================================================
-// 3. FILTERS, STATS, at PAGE DATA (Mula sa dati)
+// 3. FILTERS, STATS, at PAGE DATA
 // =======================================================
 
 // --- Kunin ang lahat ng filters ---
@@ -71,8 +98,9 @@ $search = trim($_GET['search'] ?? '');
 $viewFilter = $_GET['view'] ?? 'all';
 
 // --- Base Query ---
+// *** FIX: Idinagdag ang a.client_id ***
 $selectClauses = [
-    "a.appointment_id", "a.full_name", "a.appointment_date", "a.appointment_time",
+    "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", "a.appointment_time",
     "s.status_name", "ser.service_name"
 ];
 $whereClauses = ["1=1"];
@@ -118,8 +146,9 @@ if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $paramTypes .= "s";
 }
 
+// *** FIX: Pinalitan ang a.appointment_id ng a.client_id sa search ***
 if ($search !== '') {
-    $whereClauses[] = "(a.full_name LIKE ? OR a.appointment_id LIKE ?)";
+    $whereClauses[] = "(a.full_name LIKE ? OR a.client_id LIKE ?)";
     $searchTerm = "%{$search}%";
     $params[] = $searchTerm;
     $params[] = $searchTerm;
@@ -142,7 +171,7 @@ try {
     $stmt->execute();
     $appointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
-     error_log("Fetch Appointments error (appointment.php): " . $e->getMessage());
+     error_log("Fetch Appointments error (patient_record.php): " . $e->getMessage());
      $appointments = [];
      $pageError = "Error loading appointments: " . $e->getMessage();
 }
@@ -176,8 +205,9 @@ if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $countParams[] = $dateFilter;
     $countParamTypes .= "s";
 }
+// *** FIX: Pinalitan ang a.appointment_id ng a.client_id sa search (para sa stats) ***
 if ($search !== '') {
-    $countSql .= " AND (a.full_name LIKE ? OR a.appointment_id LIKE ?)";
+    $countSql .= " AND (a.full_name LIKE ? OR a.client_id LIKE ?)";
     $q = "%{$search}%";
     $countParams[] = $q;
     $countParams[] = $q;
@@ -192,7 +222,7 @@ try {
     $stmt_stats->execute();
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
-    error_log("Fetch Stats error (appointment.php): " . $e->getMessage());
+    error_log("Fetch Stats error (patient_record.php): " . $e->getMessage());
     $stats = ['completed'=>0, 'cancelled'=>0];
 }
 
@@ -236,23 +266,20 @@ $js_highlight_dates = json_encode($highlight_dates);
 /* --- Keep all your existing styles --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background:#f8f9fa; color:#223; }
-/* === BAGONG KULAY (BLUE) === */
-.vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#1d4ed8 0%,#1e40af 100%); z-index:1000; }
-.vertical-bar .circle { width:70px; height:70px; background:#2563eb; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #1e3a8a; }
+.vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
+.vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
-/* === BAGONG KULAY (BLUE) === */
-nav a.active { background:#2563eb; color:#fff; }
+nav a.active { background:#dc3545; color:#fff; }
 .container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; }
 
-/* BAGO: I-style ang bagong flatpickr input */
 input.flatpickr-input {
     padding: 9px 10px;
     border: 1px solid #dde3ea;
@@ -262,18 +289,15 @@ input.flatpickr-input {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     width: auto; /* Para 'di sakupin ang buong space */
 }
-
-/* === BAGONG KULAY (BLUE) === */
 .flatpickr-day.has-appointments {
-    background: #e0e7ff; /* Light blue */
-    border-color: #1d4ed8;
-    color: #1e40af;
+    background: #f8d7da; /* Light red */
+    border-color: #dc3545;
+    color: #721c24;
     font-weight: bold;
 }
 .flatpickr-day.has-appointments:hover {
-    background: #c7d2fe;
+    background: #f5c6cb;
 }
-
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
 .btn-filter {
     padding: 9px 15px;
@@ -289,11 +313,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .btn-filter:hover {
     border-color: #b0b9c4;
 }
-/* === BAGONG KULAY (BLUE) === */
 .btn-filter.active {
-    background: #1d4ed8;
+    background: #991010;
     color: #fff;
-    border-color: #1d4ed8;
+    border-color: #991010;
 }
 .stats { 
     display:grid; 
@@ -308,7 +331,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
 .accept { background:#16a34a; }
 .cancel { background:#dc2626; }
-/* === BAGONG KULAY (BLUE) === */
 .view { background:#1d4ed8; }
 .edit { background:#f59e0b; }
 .detail-overlay, .confirm-modal { display: none; position: fixed; inset: 0; background: rgba(2, 12, 20, 0.6); z-index: 3000; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
@@ -318,8 +340,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .detail-card { width: 700px; }
 .confirm-card { width: 440px; padding: 24px; }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-/* === BAGONG KULAY (BLUE) === */
-.detail-header { background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
+.detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
 .detail-title { font-weight: 800; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 10px; }
 .detail-id { background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; }
 .detail-title:before { content: '📋'; font-size: 24px; }
@@ -328,7 +349,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
 .badge.missed { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
-.badge.cancel { background: #f1f5f9; color: #64748b; border: 2px solid #cbd5e1; }
+.badge.cancel { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
 .detail-actions, .confirm-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
 .btn-small:hover { transform: translateY(-1px); }
@@ -346,12 +367,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 #editModal .detail-row { margin-bottom: 20px; }
 #editModal select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; font-weight: 600; margin-top: 10px; }
 
-@media (max-width: 900px) { .detail-content { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } } /* INAYOS ANG MEDIA QUERY */
 @media (max-width: 600px) { .filters { flex-direction: column; align-items: stretch; } }
 .detail-content {
     padding: 0;
 }
-#detailModalBody {
+#detailModalBody, #historyDetailModalBody { /* BAGO: Idinagdag ang #historyDetailModalBody */
     padding: 24px 28px;
     max-height: 70vh;
     overflow-y: auto;
@@ -393,6 +414,70 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .detail-notes {
     display: none;
 }
+
+/* =================================== */
+/* BAGO: CSS PARA SA HISTORY SECTION */
+/* =================================== */
+.history-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 2px solid #e8ecf0;
+}
+.history-section h3 {
+    font-size: 16px;
+    color: #1a202c;
+    margin-bottom: 12px;
+}
+.history-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 150px; /* Para hindi masyadong mahaba */
+    overflow-y: auto;
+    border: 1px solid #e8ecf0;
+    border-radius: 8px;
+    background: #fdfdfd;
+}
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f3f6f9;
+    font-size: 14px;
+}
+.history-item:last-child {
+    border-bottom: none;
+}
+.history-item-info {
+    font-weight: 600;
+    color: #334155;
+}
+.history-item-info span {
+    display: block;
+    font-weight: 500;
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 2px;
+}
+/* BAGO: CSS para sa view button sa history */
+.btn-view-history {
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #1d4ed8;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0; /* BAGO: Para hindi lumiit ang button */
+}
+.btn-view-history:hover {
+    background: #1e40af;
+}
+/* =================================== */
+
 
 .toast-overlay {
     position: fixed;
@@ -451,31 +536,50 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     background: #dc2626;
 }
 
+/* ======================================================= */
+/* BAGO: Ibinalik ang CSS para sa loader-overlay */
+/* ======================================================= */
 #loader-overlay {
-    position: fixed;
-    inset: 0;
-    background: #ffffff;
+    position: fixed; 
+    inset: 0; 
+    background: #ffffff; 
     z-index: 99999;
-    display: flex;
-    flex-direction: column;
+    display: flex; 
+    flex-direction: column; 
     align-items: center;
-    justify-content: center;
+    justify-content: center; 
     transition: opacity 0.5s ease;
+}
+.loader-text {
+    margin-top: 15px; 
+    font-size: 16px;
+    font-weight: 600; 
+    color: #5a6c7d;
+}
+/* ======================================================= */
+
+
+/* BAGO: Idinagdag ang Action Loader para sa View Details */
+#actionLoader {
+    display: none; 
+    position: fixed; 
+    inset: 0; 
+    background: rgba(2, 12, 20, 0.6); 
+    z-index: 9990; 
+    align-items: center; 
+    justify-content: center;
+    backdrop-filter: blur(4px);
+}
+#actionLoader.show {
+    display: flex;
 }
 .loader-spinner {
     width: 50px;
     height: 50px;
     border-radius: 50%;
     border: 5px solid #f3f3f3;
-    /* === BAGONG KULAY (BLUE) === */
-    border-top: 5px solid #1d4ed8; /* Theme color */
+    border-top: 5px solid #991010; /* Theme color */
     animation: spin 1s linear infinite;
-}
-.loader-text {
-    margin-top: 15px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #5a6c7d;
 }
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -485,6 +589,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     from { opacity: 0; }
     to { opacity: 1; }
 }
+/* --- END --- */
+
 
 #menu-toggle {
   display: none; 
@@ -555,11 +661,29 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       background: rgba(255,255,255,0.1);
   }
   
-  /* === BAGONG KULAY (BLUE) === */
   nav#main-nav a.active {
     background: none; 
-    color: #60a5fa; /* Light Blue */
+    color: #ff6b6b; 
   }
+}
+.filters { 
+    display:flex; 
+    gap:10px; 
+    align-items:center; 
+    margin-bottom:16px; 
+    flex-wrap:wrap; 
+}
+
+#searchInput {
+    margin-left: auto;
+}
+
+select, input[type="date"], input[type="text"] { 
+    padding:9px 10px; 
+    border:1px solid #dde3ea; 
+    border-radius:8px; 
+    background:#fff; 
+    font-size: 14px; 
 }
 
 </style>
@@ -568,10 +692,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 <div id="loader-overlay">
     <div class="loader-spinner"></div>
-    <p class="loader-text">Loading Patient Records...</p>
+    <p class="loader-text">Loading Records...</p>
 </div>
-<div id="main-content" style="display: none;">
 
+<div id="main-content" style="display: none;"> 
     <div class="vertical-bar"><div class="circle"></div></div>
     
     <header>
@@ -600,8 +724,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       <?php endif; ?>
     
       <form id="filtersForm" method="get" class="filters">
-        
-        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
 
         <div>
             <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
@@ -622,10 +744,11 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
           </select>
           <input type="date" id="dateVisible" title="Select date"
-                   placeholder="Pick a date..."
-                   value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
+               placeholder="Pick a date..."
+               value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
           <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
         </div>
+        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
     
       </form>
     
@@ -640,7 +763,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <tr style="text-align:left;color:#34495e;">
               <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
               <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Patient</th>
-              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">Appt. ID</th>
+              
+              <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">Patient I.D.</th>
+              
               <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:140px;">Service</th>
               <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Date</th>
               <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:90px;">Time</th>
@@ -661,7 +786,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
                 <td style="padding:12px 8px;vertical-align:middle;">
                   <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#1d4ed8;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0;">
+                    <div style="width:40px;height:40px;border-radius:50%;background:#991010;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0;">
                       <?= htmlspecialchars($initials) ?>
                     </div>
                     <div>
@@ -669,7 +794,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     </div>
                   </div>
                 </td>
-                <td style="padding:12px 8px;vertical-align:middle;"><span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;"><?= $appt['appointment_id'] ?></span></td>
+                
+                <td style="padding:12px 8px;vertical-align:middle;"><span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;"><?= htmlspecialchars($appt['client_id'] ?? 'N/A') ?></span></td>
+                
                 <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($appt['service_name'] ?? 'N/A') ?></td>
                 <td style="padding:12px 8px;vertical-align:middle;"><?= date('M d, Y', strtotime($appt['appointment_date'])) ?></td>
                 <td style="padding:12px 8px;vertical-align:middle;"><?= date('h:i A', strtotime($appt['appointment_time'])) ?></td>
@@ -685,7 +812,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
                 <td style="padding:12px 8px;vertical-align:middle;">
                   <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
-                          <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                   </div>
                 </td>
               </tr>
@@ -711,12 +838,52 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <div id="historyDetailOverlay" class="detail-overlay" aria-hidden="true" style="z-index: 3001;"> <div class="detail-card" role="dialog" aria-labelledby="historyDetailTitle">
+        <div class="detail-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);">
+          <div class="detail-title" id="historyDetailTitle">Past Appointment Detail</div>
+          <div class="detail-id" id="historyDetailId">#</div>
+        </div>
+        <div id="historyDetailModalBody">
+            </div>
+        <div class="detail-actions">
+          <button class="btn-small btn-close" onclick="closeHistoryDetailModal()">Close</button>
+        </div>
+      </div>
+    </div>
+    
+    <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
+        <div class="loader-card" style="background: #fff; border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div class="loader-spinner" style="border-top-color: #991010; width: 32px; height: 32px; border-width: 4px; flex-shrink: 0;"></div>
+            <p id="actionLoaderText" style="font-weight: 600; color: #334155; font-size: 15px;">Processing...</p>
+        </div>
+    </div>
+
+</div> 
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script>
     
     // BAGO: Ilagay ang PHP dates sa JavaScript
     const datesWithAppointments = <?= $js_highlight_dates ?? '[]' ?>;
+
+    // BAGO: Idinagdag ang Action Loader Functions
+    const actionLoader = document.getElementById('actionLoader');
+    const actionLoaderText = document.getElementById('actionLoaderText');
+
+    function showActionLoader(message = 'Processing...') {
+        if (actionLoaderText) actionLoaderText.textContent = message;
+        if (actionLoader) {
+            actionLoader.classList.add('show');
+            actionLoader.setAttribute('aria-hidden', 'false');
+        }
+    }
+
+    function hideActionLoader() {
+        if (actionLoader) {
+            actionLoader.classList.remove('show');
+            actionLoader.setAttribute('aria-hidden', 'true');
+        }
+    }
 
     function showToast(msg, type = 'success') {
         const overlay = document.createElement('div');
@@ -744,7 +911,111 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }, { once: true });
     }
     
+    // Lahat ng Labels at Display Order para sa dalawang function
+    const detailLabels = {
+        'full_name': 'Patient Name', 'status_name': 'Status', 'service_name': 'Service',
+        'staff_name': 'Staff Assigned', 'appointment_date': 'Date', 'appointment_time': 'Time',
+        'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
+        'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
+        'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
+        'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
+        'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
+        'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
+        'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason',
+        'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)',
+    };
+    const detailDisplayOrder = [
+        'full_name', 'status_name', 'service_name', 'staff_name',
+        'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
+        'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
+        'certificate_purpose', 'certificate_other', 'ishihara_test_type',
+        'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
+        'consent_info', 'consent_reminders', 'consent_terms'
+    ];
+
+    // =======================================================
+    // BAGO: Function para sa History Modal
+    // =======================================================
+    function viewHistoryDetails(id) {
+        showActionLoader('Fetching past detail...');
+        fetch('patient_record.php', { 
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({action:'viewDetails', id:id})
+        })
+        .then(res => res.json())
+        .then(payload => {
+            hideActionLoader();
+            if (!payload || !payload.success) {
+                showToast(payload?.message || 'Failed to load details', 'error');
+                return;
+            }
+            
+            const d = payload.data;
+            // *** TARGET ANG MGA ID NG HISTORY MODAL ***
+            document.getElementById('historyDetailId').textContent = '#' + d.appointment_id;
+            const modalBody = document.getElementById('historyDetailModalBody');
+            modalBody.innerHTML = ''; 
+            
+            let contentHtml = '<div class="detail-grid">';
+            
+            for (const key of detailDisplayOrder) {
+                if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
+                    let value = d[key];
+                    const label = detailLabels[key] || key;
+                    let rowClass = 'detail-row';
+                    if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) {
+                        rowClass += ' full-width';
+                    }
+                    if (key === 'appointment_date') {
+                        value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                    } else if (key === 'appointment_time') {
+                        value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    } else if (key === 'consent_info' || key === 'consent_reminders' || key === 'consent_terms') {
+                        value = value == 1 ? 'Yes' : 'No';
+                    } else if (key === 'status_name') {
+                        value = `<span class="badge ${value.toLowerCase()}">${value}</span>`;
+                    } else {
+                        value = `<b>${value}</b>`;
+                    }
+                    contentHtml += `
+                        <div class="${rowClass}">
+                            <span class="detail-label">${label}</span>
+                            <div class="detail-value">${value}</div>
+                        </div>
+                    `;
+                }
+            }
+            contentHtml += '</div>';
+            
+            modalBody.innerHTML = contentHtml;
+            
+            // *** IPAPAKITA ANG HISTORY MODAL ***
+            document.getElementById('historyDetailOverlay').classList.add('show');
+            document.getElementById('historyDetailOverlay').setAttribute('aria-hidden','false');
+        })
+        .catch(err => { 
+            hideActionLoader();
+            console.error(err); 
+            showToast('Network error.', 'error'); 
+        });
+    }
+
+    function closeHistoryDetailModal() {
+      const overlay = document.getElementById('historyDetailOverlay');
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden','true');
+    }
+    // =======================================================
+    // END NG BAGONG FUNCTIONS
+    // =======================================================
+
+
+    // =======================================================
+    // IN-UPDATE NA viewDetails Function (para sa MAIN modal)
+    // =======================================================
     function viewDetails(id) {
+      showActionLoader('Fetching details...'); 
       fetch('patient_record.php', { 
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -752,66 +1023,28 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       })
       .then(res => res.json())
       .then(payload => {
+        hideActionLoader(); 
         if (!payload || !payload.success) {
             showToast(payload?.message || 'Failed to load details', 'error');
             return;
         }
         
         const d = payload.data;
+        // *** TARGET ANG MGA ID NG MAIN MODAL ***
         document.getElementById('detailId').textContent = '#' + d.appointment_id;
         const modalBody = document.getElementById('detailModalBody');
-        modalBody.innerHTML = '';
+        modalBody.innerHTML = ''; 
         
-        const labels = {
-            'full_name': 'Patient Name',
-            'status_name': 'Status',
-            'service_name': 'Service',
-            'staff_name': 'Staff Assigned',
-            'appointment_date': 'Date',
-            'appointment_time': 'Time',
-            'age': 'Age',
-            'gender': 'Gender',
-            'phone_number': 'Phone Number',
-            'occupation': 'Occupation',
-            'suffix': 'Suffix',
-            'symptoms': 'Symptoms',
-            'concern': 'Concern',
-            'wear_glasses': 'Wears Glasses',
-            'notes': 'Notes',
-            'certificate_purpose': 'Certificate Purpose',
-            'certificate_other': 'Other Certificate',
-            'ishihara_test_type': 'Ishihara Test Type',
-            'ishihara_purpose': 'Ishihara Purpose',
-            'color_issues': 'Color Issues',
-            'previous_color_issues': 'Previous Color Issues',
-            'ishihara_notes': 'Ishihara Notes',
-            'ishihara_reason': 'Ishihara Reason',
-            'consent_info': 'Consent (Info)',
-            'consent_reminders': 'Consent (Reminders)',
-            'consent_terms': 'Consent (Terms)',
-        };
-    
-        const displayOrder = [
-            'full_name', 'status_name', 'service_name', 'staff_name',
-            'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
-            'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
-            'certificate_purpose', 'certificate_other', 'ishihara_test_type',
-            'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
-            'consent_info', 'consent_reminders', 'consent_terms'
-        ];
-    
         let contentHtml = '<div class="detail-grid">';
-    
-        for (const key of displayOrder) {
+        
+        for (const key of detailDisplayOrder) {
             if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
                 let value = d[key];
-                const label = labels[key] || key;
-                
+                const label = detailLabels[key] || key;
                 let rowClass = 'detail-row';
                 if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) {
                     rowClass += ' full-width';
                 }
-                
                 if (key === 'appointment_date') {
                     value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
                 } else if (key === 'appointment_time') {
@@ -823,7 +1056,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 } else {
                     value = `<b>${value}</b>`;
                 }
-    
                 contentHtml += `
                     <div class="${rowClass}">
                         <span class="detail-label">${label}</span>
@@ -832,14 +1064,50 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 `;
             }
         }
-        
         contentHtml += '</div>';
+
+        // *** DITO ANG PAGBABAGO SA TAWAG SA FUNCTION ***
+        if (payload.history && payload.history.length > 0) {
+            contentHtml += `<div class="history-section">
+                <h3>Past Appointment History (Total: ${payload.history.length})</h3>
+                <ul class="history-list">`;
+            
+            payload.history.forEach(hist => {
+                const pastDate = new Date(hist.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                // *** FIX: Ito ay tumatawag na sa viewHistoryDetails ***
+                contentHtml += `
+                    <li class="history-item">
+                        <div class="history-item-info">
+                            ${hist.service_name || 'Unknown Service'}
+                            <span>${pastDate}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap: 8px;">
+                            <span class="badge ${(hist.status_name || 'unknown').toLowerCase()}">${hist.status_name || 'N/A'}</span>
+                            <button class="btn-view-history" onclick="viewHistoryDetails(${hist.appointment_id})">View</button>
+                        </div>
+                    </li>
+                `;
+            });
+            
+            contentHtml += `</ul></div>`;
+        } else if (d.client_id) {
+             contentHtml += `<div class="history-section">
+                <h3>Past Appointment History</h3>
+                <p style="font-size:14px; color:#64748b; text-align:center; padding:10px 0;">No other past appointments found for this client.</p>
+             </div>`;
+        }
+        
         modalBody.innerHTML = contentHtml;
         
+        // *** IPAPAKITA ANG ORIGINAL/MAIN MODAL ***
         document.getElementById('detailOverlay').classList.add('show');
         document.getElementById('detailOverlay').setAttribute('aria-hidden','false');
       })
-      .catch(err => { console.error(err); showToast('Network error.', 'error'); });
+      .catch(err => { 
+          hideActionLoader();
+          console.error(err); 
+          showToast('Network error.', 'error'); 
+      });
     }
     
     function closeDetailModal() {
@@ -848,22 +1116,32 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       overlay.setAttribute('aria-hidden','true');
     }
     
-    // Isara ang modals
+    // =======================================================
+    // BAGO: In-update ang Event Listeners para sa dalawang modal
+    // =======================================================
     document.addEventListener('click', function(e){
       const detailOverlay = document.getElementById('detailOverlay');
+      const historyOverlay = document.getElementById('historyDetailOverlay'); // BAGO
+    
       if (detailOverlay?.classList.contains('show') && e.target === detailOverlay) closeDetailModal();
+      if (historyOverlay?.classList.contains('show') && e.target === historyOverlay) closeHistoryDetailModal(); // BAGO
     });
     
     document.addEventListener('keydown', function(e){
       if (e.key === 'Escape') {
-           const detailModal = document.getElementById('detailOverlay');
-           if (detailModal?.classList.contains('show')){
-               closeDetailModal();
-           }
+          const detailModal = document.getElementById('detailOverlay');
+          const historyModal = document.getElementById('historyDetailOverlay'); // BAGO
+
+          // BAGO: Unahing isara ang history modal kung bukas
+          if (historyModal?.classList.contains('show')){
+              closeHistoryDetailModal();
+          } else if (detailModal?.classList.contains('show')){
+              closeDetailModal();
+          }
       }
     });
     
-    // BAGO: Pinalitan ang buong filter logic para gamitin ang flatpickr
+    // Auto-submit filters logic
     (function(){
       const form = document.getElementById('filtersForm');
       const status = document.getElementById('statusFilter');
@@ -876,22 +1154,22 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
       // BAGO: Initialize flatpickr
       const fpInstance = flatpickr(dateVisible, {
-           dateFormat: "Y-m-d", // Format na kailangan ng database
-           onDayCreate: function(dObj, dStr, fp, dayElem){
-               // i-format ang date ng cell na "YYYY-MM-DD"
-               const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
-               // Check kung ang date na ito ay kasama sa listahan galing sa PHP
-               if (datesWithAppointments.includes(dateStr)) {
-                   dayElem.classList.add('has-appointments'); // Lagyan ng custom class
-                   dayElem.setAttribute('title', 'May records sa araw na ito');
-               }
-           },
-           onChange: function(selectedDates, dateStr, instance) {
-               // Kapag pumili ng date, ito ang mag-trigger
-               if (dateHidden) dateHidden.value = dateStr;
-               if (dateMode) dateMode.value = 'pick'; // Siguraduhin na 'pick' ang mode
-               form.submit(); // I-submit ang form
-           }
+          dateFormat: "Y-m-d", // Format na kailangan ng database
+          onDayCreate: function(dObj, dStr, fp, dayElem){
+              // i-format ang date ng cell na "YYYY-MM-DD"
+              const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
+              // Check kung ang date na ito ay kasama sa listahan galing sa PHP
+              if (datesWithAppointments.includes(dateStr)) {
+                  dayElem.classList.add('has-appointments'); // Lagyan ng custom class
+                  dayElem.setAttribute('title', 'May records sa araw na ito');
+              }
+          },
+          onChange: function(selectedDates, dateStr, instance) {
+              // Kapag pumili ng date, ito ang mag-trigger
+              if (dateHidden) dateHidden.value = dateStr;
+              if (dateMode) dateMode.value = 'pick'; // Siguraduhin na 'pick' ang mode
+              form.submit(); // I-submit ang form
+          }
       });
 
       // BAGO: Kunin ang bagong ginawang input field ng flatpickr
@@ -900,21 +1178,21 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       
       // BAGO: I-control ang visibility ng flatpickr input batay sa default value
       if (dateMode.value === 'all') {
-           flatpickrInput.style.display = 'none';
+          flatpickrInput.style.display = 'none';
       } else {
-           flatpickrInput.style.display = 'inline-block';
+          flatpickrInput.style.display = 'inline-block';
       }
 
       // BAGO: Baguhin ang event listener ng dateMode
       dateMode?.addEventListener('change', function(){
-           if (this.value === 'all') {
-               flatpickrInput.style.display = 'none'; // Itago ang flatpickr
-               if (dateHidden) dateHidden.value = 'All';
-               form.submit();
-           } else {
-               flatpickrInput.style.display = 'inline-block'; // Ipakita ang flatpickr
-               fpInstance.open(); // Awtomatikong buksan ang calendar
-           }
+          if (this.value === 'all') {
+              flatpickrInput.style.display = 'none'; // Itago ang flatpickr
+              if (dateHidden) dateHidden.value = 'All';
+              form.submit();
+          } else {
+              flatpickrInput.style.display = 'inline-block'; // Ipakita ang flatpickr
+              fpInstance.open(); // Awtomatikong buksan ang calendar
+          }
       });
       
       // Ipagpatuloy ang iba pang listeners
@@ -923,7 +1201,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       let timer = null;
       search?.addEventListener('input', function(){
         clearTimeout(timer);
-        timer = setTimeout(()=> form.submit(), 600);
+        timer = setTimeout(()=> form.submit(), 600); // 600ms delay para hindi mag-submit sa bawat type
       });
     
       viewButtons.forEach(button => {
@@ -936,28 +1214,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
     })();
     </script>
-
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        const loader = document.getElementById('loader-overlay');
-        const content = document.getElementById('main-content');
-        
-        if (loader) {
-            loader.style.opacity = '0';
-            loader.addEventListener('transitionend', () => {
-                loader.style.display = 'none';
-            }, { once: true });
-        }
-        
-        if (content) {
-            content.style.display = 'block';
-            content.style.animation = 'fadeInContent 0.5s ease';
-        }
-    }, 1000); 
-});
-</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -987,6 +1243,46 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loader = document.getElementById('loader-overlay');
+    const content = document.getElementById('main-content');
+    
+    // Tinitingnan kung ang URL ay may filter (e.g., ?search=... or ?status=...)
+    const isFiltered = window.location.search.length > 1; 
+
+    // Function para ipakita ang content at itago ang loader
+    function showContent() {
+        if (loader) {
+            loader.style.opacity = '0';
+            loader.addEventListener('transitionend', () => {
+                loader.style.display = 'none';
+            }, { once: true });
+        }
+        if (content) {
+            content.style.display = 'block';
+            content.style.animation = 'fadeInContent 0.5s ease';
+        }
+    }
+
+    if (isFiltered) {
+        // Kung ito ay filter/search reload, ipakita agad ang content (WALANG DELAY)
+        showContent();
+    } else {
+        // Kung ito ay fresh page load, maghintay ng 1 second
+        setTimeout(showContent, 1000); 
+    }
+});
+</script>
+<script>
+    history.replaceState(null, null, location.href);
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+    };
+</script>
+
 
 </body>
 </html>
