@@ -110,7 +110,7 @@ $result = $conn->query($sql);
                 echo '<div class="product-info">';
                 echo '<h3>' . htmlspecialchars($row['product_name']) . '</h3>';
                 echo '<p>' . htmlspecialchars($row['brand']) . ' - ' . htmlspecialchars($row['frame_type']) . '</p>';
-                echo '<p class="price">₱' . number_format($row['price'], 2) . '</p>';
+
                 echo '<div class="color-options">
                         <div class="color-circle tortoise"></div>
                         <div class="color-circle black"></div>
@@ -141,11 +141,7 @@ $result = $conn->query($sql);
       <p class="modal-price" id="modalPrice">₱0.00</p>
       <button class="add-to-cart-btn">Want Prescriptions?</button>
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
-      <ul class="product-features">
-        <li>Premium quality frames</li>
-        <li>UV400 protection</li>
-        <li>Frame casing included</li>
-      </ul>
+      <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
     </div>
   </div>
 </div>
@@ -247,7 +243,11 @@ function openModal(productId) {
             
             document.getElementById('modalTitle').textContent = data.product_name;
             document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
+            document.getElementById('modalTitle').textContent = data.product_name;
+            document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
             
+            // ADD THIS LINE BELOW:
+            document.getElementById('modalDescription').textContent = data.description || "No description available.";
             const mainImage = document.getElementById('modalMainImage');
             if (data.image_path) {
                 // Fix path for Modal Image as well

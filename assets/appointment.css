@@ -1,407 +1,290 @@
-*{
-    margin: 0;
-    padding: 0;
-}
-body{
-     font-family: Arial, sans-serif;
-}
-
-.nav-links ul li a{
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+/* =========================================
+   1. Global Settings & Container
+   ========================================= */
+/* Scoped Reset to avoid breaking other pages if possible, 
+   but basic reset is usually fine */
+* {
+    box-sizing: border-box;
 }
 
-/* General Body and Container Styles */
-.appointment-container {
-    max-width: 800px;
-    margin: 2rem auto;
-    padding: 2rem;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa; /* Light gray background for contrast */
 }
 
-p{
-    font-size: 15px;
-    color: black;
-}
+/* Wrapper for the whole page content */
 .form-container {
-    position: relative;
-    padding: 0 1rem; /* Add horizontal padding for smaller screens */
-}
-.date-strip, .time-slots {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 15px 0;
-}
-
-.date-strip button, .time-slots button {
-  padding: 10px 18px;
-  border: 2px solid #444;
-  border-radius: 20px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-.date-strip button:hover, .time-slots button:hover {
-  background: #f0f0f0;
-}   
-.date-strip button.active, .time-slots button.active {
-  background: #1a2ac9;
-  color: white;
-  border-color: #1a2ac9;
-}
-
-.next-available {
-  margin-top: 15px;
-  padding: 12px;
-  background: #1a2ac9;
-  color: white;
-  text-align: center;
-  border-radius: 10px;
-  font-weight: bold;
-}
-
-/* Step 2 Styling */
-.date-row input[type="date"] {
     width: 100%;
-    padding: 12px;
-    border-radius: 25px;
-    border: 1px solid #ccc;
-    font-size: 1rem;
-    margin-bottom: 1rem;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* Centers the content horizontally */
 }
 
-/* Date Strip */
-.date-strip {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 1rem 0;
-}
-.date-strip .day {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    background: #f9f9f9;
-    cursor: pointer;
-    font-size: 0.9rem;
-}
-.date-strip .day.active {
-    background: #003399;
-    color: white;
-    font-weight: bold;
-}
-
-/* Time Slots */
-.time-slots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin: 1rem 0;
-}
-.time-slot {
-    flex: 1 1 calc(33% - 10px);
-    padding: 12px;
-    border-radius: 25px;
-    border: 2px solid #003399;
-    background: white;
-    color: #003399;
-    cursor: pointer;
-    text-align: center;
-    transition: 0.2s;
-}
-.time-slot:hover, .time-slot.selected {
-    background: #003399;
-    color: white;
-}
-.nativeDate{
+/* The White Box Form Card */
+.appointment-container {
     width: 100%;
-    
+    max-width: 800px; /* Stops it from expanding to edge */
+    background: #fff;
+    margin: 20px auto; /* Center horizontally */
+    padding: 40px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-
-.date-strip {
-    display: flex;
-    gap: 10px;
-    margin: 20px 0;
-}
-.date-box{
-    border: solid black 3px;
-}
-
-.date-box {
-    padding: 10px 15px;
-    border-radius: 8px;
-    background: #f4f4f4;
-    cursor: pointer;
-    font-size: 14px;
-    text-align: center;
-    flex: 1;
-}
-
-.date-box.today {
-    border: 2px solid blue;
-}
-
-.date-box.weekend {
-    opacity: 0.5;
-}
-
-.date-box.selected {
-    background: #007bff;
-    color: #fff;
-}
-
-/* Next Available Bar */
-.next-available {
-    text-align: center;
-    padding: 12px;
-    margin-top: 1rem;
-    background: #003399;
-    color: white;
-    border-radius: 25px;
-    font-weight: bold;
-}
-
-
-/* Header Styles */
+/* =========================================
+   2. Header & Typography
+   ========================================= */
 .header {
-    display: flex;
-    margin-top: 50px;
-    gap: 1rem; /* Reduced gap for flexibility */
-    justify-content: center;
     text-align: center;
-    flex-wrap: wrap; /* Allow wrapping on small screens */
+    margin-bottom: 20px;
+    margin-top: 20px;
 }
 
 .header h4 {
+    display: inline-block;
     text-transform: uppercase;
-    color: black;
-    font-size: 25px;
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    text-decoration: none;
-    letter-spacing: -1px;
-    margin: 0.5rem; /* Add some margin */
+    font-size: 24px;
+    margin: 0 10px;
+    color: #333;
+    font-weight: 700;
 }
 
 .header h4:nth-child(2) {
-    color: gray;
+    color: #888; /* Gray for second part */
 }
 
 .gray-line {
-    width: 60%;
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
+    width: 100%;
+    max-width: 600px;
     height: 2px;
-    background-color: lightgray;
-    margin-top: 10px;
+    background-color: #e0e0e0;
+    margin: 10px auto 30px auto;
+}
+
+h2 {
+    color: #004aad; /* Brand Blue */
+    margin-bottom: 10px;
+    font-size: 1.8rem;
+}
+
+p {
+    color: #666;
+    line-height: 1.5;
     margin-bottom: 20px;
 }
 
-/* Form Styles */
-form {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-step {
-    display: none;
-    flex-direction: column;
-    gap: 1.5rem; /* Increased gap for better spacing */
-}
-
-.form-step.active {
-    display: flex;
-}
-
-/* Form Row Layouts */
-.form-row {
-    display: flex;
-    flex-direction: column; /* Default to column */
-    gap: 1rem;
-}
-h2{
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    word-spacing: -5px;
-    color: blue;
-    font-size: 1.5rem;
-    margin-bottom: 8px;
-}
-.gray-line:nth-child(2){
-    width: 50%;
-    height: 1px;
-    background-color: lightgray;
-    margin-top: 10px;
-    margin-bottom: 20px;
-    margin-bottom: 20px;
-}
-
+/* =========================================
+   3. Progress Bar (Steps)
+   ========================================= */
 .progress-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 30px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 40px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .progress-step {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: lightgray;
-  color: white;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #e0e0e0;
+    color: #fff;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    position: relative;
+    z-index: 1;
 }
 
 .progress-step.active {
-    background: #ff0008; /* Blue for current step */
+    background: #ff0000; /* Active Red */
+    box-shadow: 0 0 0 5px rgba(255, 0, 0, 0.2);
 }
 
 .progress-step.completed {
-    background: rgb(255, 0, 0); /* Completed steps */
+    background: #004aad; /* Completed Blue */
 }
 
 .progress-line {
     flex: 1;
-    height: 4px;
-    background: lightgray;
-    margin: 0 10px;
+    height: 3px;
+    background: #e0e0e0;
+    margin: 0 -5px; /* Overlap slightly */
+    z-index: 0;
 }
 
 .progress-line.completed {
-    background: rgb(255, 0, 4);
-}
-.date-time-row {
-  display: flex;
-  gap: 10px;
-}
-.date-time-row input, .date-time-row select {
-  width: 50%;
+    background: #004aad;
 }
 
+/* =========================================
+   4. Form Inputs & Layout (SCOPED)
+   ========================================= */
+.form-step {
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    gap: 20px;
+    animation: fadeIn 0.5s;
+}
 
-/* On larger screens, use flex row */
+.form-step.active {
+    display: flex; /* Show active step */
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Row Layout */
+.form-row {
+    display: flex;
+    gap: 15px;
+    flex-direction: column; /* Mobile Default */
+}
+
+/* Desktop Row: Items side-by-side */
 @media (min-width: 768px) {
-        .form-row {
-                flex-direction: row;
-                gap: 10px;
-        }
+    .form-row {
+        flex-direction: row;
+    }
+    
+    /* Helper classes for sizing */
+    .form-row > * {
+        flex: 1;
+    }
+    
+    /* Name Row Specifics */
+    .name-row input { flex: 3; }
+    .name-row select { flex: 1; }
 }
 
-.form-row.name-row input {
-    flex: 3;
-}
+/* --- CRITICAL FIX: Scoped Input Styling --- */
+/* We use .appointment-container to ensure we DON'T break the navbar */
 
-
-.form-row.name-row select {
-    flex: 1;
-    max-width: 100%; /* Let it be flexible on mobile */
-}
-
-@media (min-width: 768px) {
-        .form-row.name-row select {
-                max-width: 120px; /* Cap width on larger screens */
-        }
-}
-
-.form-row.three-cols select,
-.form-row.three-cols input {
-    flex: 1;
-}
-
-.form-row.single input {
+.appointment-container input:not([type="checkbox"]):not([type="radio"]), 
+.appointment-container select {
     width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    height: 50px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background: #fff;
 }
 
-/* Input, Select, and Button Styles */
-input, select {
-        width: 10%; /* Ensure they take full width of their container */
-        padding: 12px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        height: 50px;
-        box-sizing: border-box; /* Important for consistent sizing */
-        font-size: 1rem;
+.appointment-container input:focus, 
+.appointment-container select:focus {
+    border-color: #004aad;
+    box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.1);
 }
 
-/* Specific styles for checkboxes and radios */
+/* Checkboxes & Radios */
 .form-step label {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    font-weight: 500;
+    color: #444;
 }
 
-.form-step input[type="checkbox"],
-.form-step input[type="radio"] {
-        width: auto; /* Override full width for these inputs */
-        height: auto;
-        flex-shrink: 0;
+.appointment-container input[type="checkbox"],
+.appointment-container input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #004aad;
+    cursor: pointer;
 }
 
-button {
-        padding: 12px 20px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        margin-top: 1rem;
-        font-size: 1rem;
-        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-        width: 100%; /* Full width for easier tapping on mobile */
+/* =========================================
+   5. Date & Time Slots
+   ========================================= */
+.appointment-row {
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 10px;
+    background: #fafafa;
+    transition: border-color 0.3s;
 }
 
-@media (min-width: 768px) {
-        button {
-                width: auto; /* Auto width on larger screens */
-        }
-        .next-btn {
-                min-width: 150px; /* Give it a minimum width */
-        }
+.appointment-row:hover {
+    border-color: #004aad;
+}
+
+.slot-badge {
+    background: #e0e0e0;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    color: #555;
+}
+
+/* =========================================
+   6. Buttons
+   ========================================= */
+.appointment-container button {
+    padding: 14px 25px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    width: 100%; /* Mobile: Full width */
 }
 
 .next-btn, button[type="submit"] {
-        background: #007bff;
-        color: white;
+    background-color: #004aad; /* Brand Blue */
+    color: white;
+    box-shadow: 0 4px 15px rgba(0, 74, 173, 0.3);
+}
+
+.next-btn:hover, button[type="submit"]:hover {
+    background-color: #003080;
+    transform: translateY(-2px);
 }
 
 .prev-btn {
-        background: #6c757d;
-        color: white;
+    background-color: #e0e0e0;
+    color: #555;
 }
 
-/* Media Query for smaller screens */
-@media (max-width: 767px) {
-        .appointment-container {
-                margin: 1rem auto;
-                padding: 1.5rem;
-        }
+.prev-btn:hover {
+    background-color: #d0d0d0;
+}
 
-        .header {
-                flex-direction: column;
-                gap: 0.5rem;
-                margin-top: 20px;
-        }
+@media (min-width: 768px) {
+    .appointment-container button {
+        width: auto; /* Desktop: Auto width */
+        min-width: 140px;
+    }
+    
+    /* Align buttons to ends if needed, or keep left */
+    .form-step button {
+        display: inline-block;
+        margin-right: 10px;
+    }
+}
 
-        .header h4 {
-                font-size: 20px;
-        }
-
-        .gray-line {
-                width: 80%;
-        }
-
-        .progress-step {
-                width: 30px;
-                height: 30px;
-                font-size: 0.9rem;
-        }
-
-        .progress-line {
-                margin: 0 5px;
-        }
+/* =========================================
+   7. Summary Box
+   ========================================= */
+#appointmentSummary {
+    background-color: #f0f9ff;
+    border-left: 4px solid #004aad;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px;
 }

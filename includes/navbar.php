@@ -1,6 +1,8 @@
 <?php
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+
 }
 ?>
 
@@ -96,9 +98,23 @@ if (session_status() === PHP_SESSION_NONE) {
                     <li><a href="../public/home.php">Home</a></li>
                     <li><a href="../public/browse.php">Browse</a></li>
                 </ul>
-                <div class="search">
-                    <input type="text" id="browse" placeholder="I'm looking for.....">
-                </div>
+                <form class="search-group" id="globalSearchForm" onsubmit="handleSearch(event)">
+    <div class="search-select-wrapper">
+        <select id="searchCategory" class="search-select">
+            <option value="all">All</option>
+            <option value="frames">Frames</option>
+            <option value="lenses">Lenses</option>
+            <option value="appointment">Appointment</option>
+        </select>
+        <i class="fas fa-chevron-down select-arrow"></i>
+    </div>
+    
+    <input type="text" id="searchQuery" placeholder="I'm looking for..." required>
+    
+    <button type="submit" class="search-btn">
+        <i class="fas fa-search"></i>
+    </button>
+</form>
             </div>
 
             <!-- Desktop User Config -->
@@ -201,6 +217,31 @@ if (session_status() === PHP_SESSION_NONE) {
         hamburger.addEventListener('click', openMobileNav);
         closeMobileNav.addEventListener('click', closeMobileNavFunc);
         mobileNavOverlay.addEventListener('click', closeMobileNavFunc);
+
+        function handleSearch(e) {
+    e.preventDefault(); // Stop standard form submission
+
+    const category = document.getElementById('searchCategory').value;
+    const query = document.getElementById('searchQuery').value.trim();
+
+    // Route based on category
+    if (category === 'appointment') {
+        // If they want an appointment, send them to booking
+        // You can pass the query as a 'reason' or 'note' if your booking form supports it
+        window.location.href = `../public/book_appointment.php?note=${encodeURIComponent(query)}`;
+    } 
+    else if (category === 'frames') {
+        // Filter specifically for frames in browse
+        window.location.href = `../public/browse.php?search=${encodeURIComponent(query)}&filter=frames`;
+    }
+    else if (category === 'lenses') {
+        window.location.href = `../public/browse.php?search=${encodeURIComponent(query)}&filter=lenses`;
+    }
+    else {
+        // Default 'All' search
+        window.location.href = `../public/browse.php?search=${encodeURIComponent(query)}`;
+    }
+}
     </script>
 </body>
 </html>

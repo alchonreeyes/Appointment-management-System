@@ -107,14 +107,91 @@ nav {
     color: #007aff;
 }
 
-/* Search box */
-.search input {
-    width: 250px;
-    height: 32px;
-    border-radius: 20px;
-    border: 1px solid #aaa;
-    padding: 0 12px;
+/* Remove the old .search input styles and use this */
+
+.search-group {
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 25px; /* Pill shape */
+    padding: 2px 5px;
+    width: 380px; /* Wider to fit the dropdown */
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.search-group:focus-within {
+    border-color: #004aad;
+    box-shadow: 0 0 5px rgba(0, 74, 173, 0.2);
+}
+
+/* The Dropdown Area */
+.search-select-wrapper {
+    position: relative;
+    border-right: 1px solid #eee;
+    display: flex;
+    align-items: center;
+}
+
+.search-select {
+    appearance: none; /* Remove default arrow */
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    padding: 8px 25px 8px 15px;
     font-size: 13px;
+    color: #555;
+    font-weight: 600;
+    cursor: pointer;
+    outline: none;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 8px;
+    font-size: 10px;
+    color: #888;
+    pointer-events: none;
+}
+
+/* The Text Input */
+.search-group input {
+    border: none;
+    outline: none;
+    padding: 8px 12px;
+    flex: 1; /* Takes remaining space */
+    font-size: 13px;
+    background: transparent;
+}
+
+/* The Search Button */
+.search-btn {
+    background: #004aad; /* Your brand color */
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.search-btn:hover {
+    background: #003080;
+}
+
+/* Responsive tweaks for Tablet */
+@media (max-width: 1200px) {
+    .search-group {
+        width: 280px;
+    }
+    .search-select {
+        padding-right: 20px;
+        padding-left: 10px;
+    }
 }
 
 /* Right section (user + book button) */
