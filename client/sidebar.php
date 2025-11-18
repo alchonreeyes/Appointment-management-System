@@ -33,7 +33,7 @@
         <p>Client Dashboard</p>
     </div>
     
-    <nav class="sidebar-nav">
+    <nav class="sidebar-nav sidebar-wrapper">
         <a href="../public/home.php">
             <i class="fa-solid fa-house"></i>
             <span>Home</span>

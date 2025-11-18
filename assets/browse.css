@@ -306,7 +306,7 @@ body {
 
 .see-more-btn {
     width: 100%;
-    background-color: #000;
+    background-color: #004aad;
     color: white;
     border: none;
     padding: 12px;
@@ -503,7 +503,7 @@ body {
 
 .add-to-cart-btn {
     width: 100%;
-    background-color: #ff9966;
+    background-color: #f61b1b;
     color: white;
     border: none;
     padding: 16px;
@@ -515,9 +515,6 @@ body {
     transition: background-color 0.2s;
 }
 
-.add-to-cart-btn:hover {
-    background-color: #ff8552;
-}
 
 .prescription-link {
     color: #000;

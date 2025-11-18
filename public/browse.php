@@ -112,8 +112,7 @@ $result = $conn->query($sql);
                 echo '<p>' . htmlspecialchars($row['brand']) . ' - ' . htmlspecialchars($row['frame_type']) . '</p>';
 
                 echo '<div class="color-options">
-                        <div class="color-circle tortoise"></div>
-                        <div class="color-circle black"></div>
+                        
                       </div>';
                 // Fixed button to open modal instead of alert
                 echo '<button class="see-more-btn" onclick="openModal(' . $row['product_id'] . ')">See more</button>';
@@ -139,7 +138,7 @@ $result = $conn->query($sql);
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
       <p class="modal-price" id="modalPrice">₱0.00</p>
-      <button class="add-to-cart-btn">Want Prescriptions?</button>
+      <a href="../public/appointment.php"><button class="add-to-cart-btn">Want Prescriptions?</button></a>
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
     </div>
