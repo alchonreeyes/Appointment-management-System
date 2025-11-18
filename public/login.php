@@ -1,5 +1,15 @@
-
-<?php include '../actions/login-action.php'; ?>
+<?php 
+session_start();
+// Check if in cooldown
+$in_cooldown = false;
+$cooldown_remaining = 0;
+if (isset($_SESSION['login_cooldown_until'])) {
+    $cooldown_remaining = $_SESSION['login_cooldown_until'] - time();
+    if ($cooldown_remaining > 0) {
+        $in_cooldown = true;
+    }
+}
+?>
 
 <!DOCTYPE html>
 <html lang="en">
@@ -72,6 +82,53 @@
         margin-bottom: 10px;
     }
 
+    /* Error/Success Messages */
+    .alert {
+        padding: 12px 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+        animation: slideDown 0.3s ease;
+    }
+
+    .alert-error {
+        background: #fee;
+        border-left: 4px solid #dc3545;
+        color: #721c24;
+    }
+
+    .alert-warning {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        color: #856404;
+    }
+
+    .alert-cooldown {
+        background: #f8d7da;
+        border-left: 4px solid #dc3545;
+        color: #721c24;
+        font-weight: 600;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .cooldown-timer {
+        font-size: 24px;
+        font-weight: bold;
+        color: #dc3545;
+        text-align: center;
+        margin: 10px 0;
+    }
+
     .input-group {
         margin-bottom: 25px;
     }
@@ -96,6 +153,11 @@
         border-color: #ff416c;
         outline: none;
         box-shadow: 0 0 0 3px rgba(255, 65, 108, 0.1);
+    }
+
+    .input-group input:disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
     }
 
     .remember-forgot {
@@ -133,8 +195,14 @@
         transition: transform 0.3s;
     }
 
-    .login-button:hover {
+    .login-button:hover:not(:disabled) {
         transform: translateY(-2px);
+    }
+
+    .login-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
     }
 
     .register-link {
@@ -174,26 +242,44 @@
                 <p>Please enter your credentials</p>
             </div>
 
-            <form action="../actions/login-action.php" method="POST">
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert <?= $in_cooldown ? 'alert-cooldown' : 'alert-error' ?>">
+                    <?= htmlspecialchars($_SESSION['error']) ?>
+                    <?php if ($in_cooldown): ?>
+                        <div class="cooldown-timer" id="cooldownTimer">⏱️ <?= $cooldown_remaining ?>s</div>
+                    <?php endif; ?>
+                </div>
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
+
+            <?php if (isset($_GET['error'])): ?>
+                <div class="alert alert-error">
+                    Invalid email or password. Please try again.
+                </div>
+            <?php endif; ?>
+
+            <form action="../actions/login-action.php" method="POST" id="loginForm">
                 <div class="input-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" required>
+                    <input type="email" id="email" name="email" required <?= $in_cooldown ? 'disabled' : '' ?>>
                 </div>
 
                 <div class="input-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
+                    <input type="password" id="password" name="password" required <?= $in_cooldown ? 'disabled' : '' ?>>
                 </div>
 
                 <div class="remember-forgot">
                     <label class="remember-me">
-                        <input type="checkbox" name="remember">
+                        <input type="checkbox" name="remember" <?= $in_cooldown ? 'disabled' : '' ?>>
                         Remember me
                     </label>
                     <a href="forgot_password.php" class="forgot-password">Forgot Password?</a>
                 </div>
 
-                <button type="submit" name="login" class="login-button">Log In</button>
+                <button type="submit" name="login" class="login-button" id="loginBtn" <?= $in_cooldown ? 'disabled' : '' ?>>
+                    <?= $in_cooldown ? 'Please Wait...' : 'Log In' ?>
+                </button>
 
                 <div class="register-link">
                     Don't have an account? <a href="register.php">Register here</a>
@@ -201,6 +287,34 @@
             </form>
         </div>
     </div>
+
+    <?php if ($in_cooldown): ?>
+    <script>
+        let remaining = <?= $cooldown_remaining ?>;
+        const timerEl = document.getElementById('cooldownTimer');
+        const loginBtn = document.getElementById('loginBtn');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        
+        const countdown = setInterval(() => {
+            remaining--;
+            
+            if (remaining <= 0) {
+                clearInterval(countdown);
+                // Enable form
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Log In';
+                emailInput.disabled = false;
+                passwordInput.disabled = false;
+                
+                // Reload page to clear cooldown
+                window.location.reload();
+            } else {
+                timerEl.textContent = `⏱️ ${remaining}s`;
+            }
+        }, 1000);
+    </script>
+    <?php endif; ?>
 
     <?php include '../includes/footer.php' ?>
 </body>

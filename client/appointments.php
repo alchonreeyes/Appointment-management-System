@@ -118,8 +118,8 @@ if (isset($_POST['cancel_appointment'])) {
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';
                 $mail->SMTPAuth   = true;
-                $mail->Username   = 'rogerjuancito0621@gmail.com';
-                $mail->Password   = 'your-app-password';
+                $mail->Username   = 'alchonreyez@gmail.com';
+                $mail->Password   = 'hkygklbzitjmitml';
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                 $mail->Port       = 587;
                 
