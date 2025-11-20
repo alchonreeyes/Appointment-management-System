@@ -48,7 +48,7 @@ $update->execute();
             <!-- Vision7 Card -->
             <div class="appointment-wrapper vision7">
                 <div class="card-header">
-                    <h1 class="brand-name">Appointment <br> <span class="highlight">Schedule</span></h1>
+                    <h1 class="brand-name">Eye-Examination<br> <span class="highlight">Appointment</span></h1>
                     <h2 class="service-title">State-of-the-Art Eye Exam</h2>
                     <p class="service-description">Our state-of-the-art eye examination can provide a visual health checks to a different extent based on your age, lifestyle and specific needs</p>
                 </div>
@@ -115,7 +115,7 @@ $update->execute();
                     </div>
                 </div>
                 
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/appointment.php">TRY IT NOW</a>
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/appointment.php">Book An Appointment</a>
             </div>
             <div class="appointment-wrapper vision7">
                 <div class="card-header">
@@ -162,7 +162,7 @@ $update->execute();
                     
                 </div>
                 
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/medical.php">TRY IT NOW</a>
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/medical.php">Book AN APPOINTMENT</a>
             </div>
             
             <!-- VisionPlus Card -->
@@ -223,7 +223,7 @@ $update->execute();
                     </div>
                 </div>
                 
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/ishihara.php">TRY IT NOW</a>
+                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/ishihara.php">BOOK AN APPOINTMENT</a>
             </div>
         </div>
     </div>

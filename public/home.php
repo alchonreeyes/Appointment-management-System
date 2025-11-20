@@ -78,7 +78,7 @@ $update->execute();
       </div>
 
       <div class="bottom-description">
-        <h1 style="text-align: center; font-size:50px;">We've Got your eyes covered</h1>
+        <h1 style="text-align: center; font-size:50px; font-family:'Times New Roman', Times, serif ;">We've Got your eyes covered</h1>
         <p style="text-align: center;">when you browse glasses online, it should be safe. With over 12 years of experience.</p>
       </div>
       
@@ -127,7 +127,7 @@ $update->execute();
       </div>
       
       <div class="feature-highlight">
-  <h1>EYEWEAR FOR EVERYONE®</h1>
+  <h1 style="font-family: 'Times New Roman', Times, serif;">EYEWEAR FOR EVERYONE®</h1>
   <h2>STYLE & CLARITY MADE FOR YOU</h2>
 </div>
 

@@ -3,42 +3,7 @@
   'use strict';
 
   document.addEventListener('DOMContentLoaded', function () {
-    const ageInput = document.querySelector('input[name="age"]');
-          const phoneInput = document.querySelector('input[name="contact_number"]');
-          const ageWarning = document.getElementById('ageWarning');
-          const phoneWarning = document.getElementById('phoneWarning');
-
-          ageInput.addEventListener('blur', function() {
-            const age = parseInt(this.value);
-            if (isNaN(age) || age < 18 || age > 120) {
-              ageWarning.style.display = 'block';
-              this.value = '';
-            } else {
-              ageWarning.style.display = 'none';
-            }
-          });
-
-          phoneInput.addEventListener('input', function() {
-            let value = this.value.replace(/\s/g, '');
-            if (value.length > 11) {
-              value = value.slice(0, 11);
-            }
-            if (value.length > 0) {
-              value = value.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
-            }
-            this.value = value;
-          });
-
-          phoneInput.addEventListener('blur', function() {
-            const phone = this.value.replace(/\s/g, '');
-            const phoneRegex = /^09\d{9}$/;
-            if (!phoneRegex.test(phone)) {
-              phoneWarning.style.display = 'block';
-              this.value = '';
-            } else {
-              phoneWarning.style.display = 'none';
-            }
-          });
+    
 
     /* =========================================
        1. INITIALIZATION & VARIABLES
@@ -76,6 +41,230 @@
       progressLines.forEach((line, i) => {
         line.classList.toggle('completed', i < stepIndex);
       });
+    }
+    /* =========================================
+       GENERATE SUMMARY FUNCTION
+       ========================================= */
+    /* =========================================
+       GENERATE SUMMARY FUNCTION (ROBUST VERSION)
+       ========================================= */
+    function updateSummaryView() {
+        console.log("Generating Summary..."); // Check your browser console for this!
+        
+        const summaryBox = document.getElementById('finalSummary');
+        if (!summaryBox) {
+            console.error("Summary Box not found!");
+            return;
+        }
+        
+        // 1. Get Personal Info (Use 'Value' or fallback to empty string)
+        const name = document.querySelector('input[name="full_name"]')?.value || "N/A";
+        const age = document.querySelector('input[name="age"]')?.value || "N/A";
+        const gender = document.querySelector('select[name="gender"]')?.value || "N/A";
+        const phone = document.querySelector('input[name="contact_number"]')?.value || "N/A";
+        
+        // 2. Get Appointments
+        // We filter the 'appointments' array directly
+        const bookedSlots = appointments
+            .filter(a => a.date && a.time)
+            .map(a => `<div>📅 <strong>${a.date}</strong> at ⏰ <strong>${a.time}</strong></div>`)
+            .join('');
+
+        // 3. Get Preferences (Brands)
+        // Note: checkboxes might be hidden, so we query them by name
+        const brandChecks = Array.from(document.querySelectorAll('input[name="brands[]"]:checked'));
+        const brands = brandChecks.length > 0 ? brandChecks.map(cb => cb.value).join(', ') : "None";
+            
+        // 4. Get Preferences (Shapes)
+        const shapeChecks = Array.from(document.querySelectorAll('input[name="frame_shape[]"]:checked'));
+        const shapes = shapeChecks.length > 0 ? shapeChecks.map(cb => cb.value).join(', ') : "None";
+
+        // 5. Get Eye History
+        const glassesEl = document.querySelector('input[name="wear_glasses"]:checked');
+        const glasses = glassesEl ? glassesEl.value : "No";
+
+        const contactsEl = document.querySelector('input[name="wear_contact_lenses"]:checked');
+        const contacts = contactsEl ? contactsEl.value : "No";
+
+        // Inject HTML
+        summaryBox.innerHTML = `
+        <style>
+          .ams-review-summary {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+            color: #0f172a;
+            max-width: 820px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e6edf3;
+            box-shadow: 0 6px 18px rgba(12, 31, 53, 0.06);
+            border-radius: 12px;
+            overflow: hidden;
+          }
+          .ams-review-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 22px;
+            background: linear-gradient(90deg,#f8fafc 0%, #f1f5f9 100%);
+            border-bottom: 1px solid #eef2f7;
+          }
+          .ams-review-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #0b1220;
+          }
+          .ams-review-sub {
+            font-size: 13px;
+            color: #475569;
+          }
+          .ams-summary-body {
+            padding: 18px 22px;
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+          }
+          .ams-summary-section {
+            background: #fbfdff;
+            border: 1px solid #eef6fa;
+            padding: 12px 14px;
+            border-radius: 10px;
+          }
+          .ams-summary-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0b3a4a;
+            margin-bottom: 8px;
+          }
+          .ams-summary-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-top: 1px dashed transparent;
+          }
+          .ams-summary-row + .ams-summary-row { border-top-color: #eef3f6; }
+          .ams-summary-label {
+            font-size: 13px;
+            color: #334155;
+            flex: 0 0 44%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 600;
+          }
+          .ams-summary-value {
+            font-size: 13px;
+            color: #0f172a;
+            flex: 1 1 auto;
+            text-align: right;
+            word-break: break-word;
+          }
+          .ams-summary-value small {
+            color: #64748b;
+            font-weight: 500;
+          }
+          .ams-slots-list {
+            text-align: left;
+            line-height: 1.5;
+            color: #0f172a;
+            font-size: 13px;
+            margin: 0;
+            padding-left: 18px;
+          }
+          .ams-slot-item {
+            margin: 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .ams-slot-bullet {
+            display:inline-flex;
+            width:10px;
+            height:10px;
+            border-radius:50%;
+            background:#06b6d4;
+            flex: 0 0 10px;
+          }
+          .ams-summary-footer {
+            padding: 12px 22px;
+            background: #ffffff;
+            border-top: 1px solid #eef2f7;
+            text-align: right;
+          }
+          .ams-muted { color:#64748b; font-size:12px; }
+          @media (min-width:700px) {
+            .ams-summary-body { grid-template-columns: 1fr 1fr; }
+            .ams-summary-section { min-height: 64px; }
+            .ams-summary-section--wide { grid-column: 1 / -1; }
+          }
+        </style>
+
+        <div class="ams-review-summary" role="region" aria-label="Appointment summary">
+          <div class="ams-review-header">
+            <div>
+              <div class="ams-review-title">Review & Confirm</div>
+              <div class="ams-review-sub">Please verify your details and selected appointment slots</div>
+            </div>
+            <div class="ams-muted">Check before submitting</div>
+          </div>
+
+          <div class="ams-summary-body">
+            <div class="ams-summary-section ams-summary-section--wide">
+              <div class="ams-summary-title">Patient Details</div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Name</div>
+          <div class="ams-summary-value">${name}</div>
+              </div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Age / Gender</div>
+          <div class="ams-summary-value">${age} / ${gender}</div>
+              </div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Phone</div>
+          <div class="ams-summary-value">${phone}</div>
+              </div>
+            </div>
+
+            <div class="ams-summary-section">
+              <div class="ams-summary-title">Appointment Slots</div>
+              <div class="ams-summary-value" style="text-align:left;">
+          ${bookedSlots
+            ? `<div class="ams-slots-list">${bookedSlots.split('</div>').filter(Boolean).map(s => `<div class="ams-slot-item"><span class="ams-slot-bullet" aria-hidden="true"></span>${s}</div>`).join('')}</div>`
+            : '<div class="ams-muted">No slots selected</div>'}
+              </div>
+            </div>
+
+            <div class="ams-summary-section">
+              <div class="ams-summary-title">Eye History</div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Wears Glasses?</div>
+          <div class="ams-summary-value">${glasses}</div>
+              </div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Wears Contacts?</div>
+          <div class="ams-summary-value">${contacts}</div>
+              </div>
+            </div>
+
+            <div class="ams-summary-section">
+              <div class="ams-summary-title">Preferences</div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Interested Brands</div>
+          <div class="ams-summary-value">${brands}</div>
+              </div>
+              <div class="ams-summary-row">
+          <div class="ams-summary-label">Frame Shapes</div>
+          <div class="ams-summary-value">${shapes}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ams-summary-footer">
+            <span class="ams-muted">Make sure all information is correct.</span>
+          </div>
+        </div>
+        `;
     }
 
     function showStep(index) {
@@ -139,7 +328,7 @@
         return isValid;
     }
 
-    // BUTTON LISTENERS
+   // BUTTON LISTENERS
     nextBtns.forEach(btn => btn.addEventListener('click', () => {
       const currentStepElement = steps[formStepIndex];
       
@@ -147,6 +336,13 @@
         if (formStepIndex < steps.length - 1) {
           formStepIndex++;
           showStep(formStepIndex);
+
+          // --- CRITICAL CHECK ---
+          // Ensure 'steps.length - 1' actually matches the index of your Summary Page.
+          // If you have 5 steps (Index 0, 1, 2, 3, 4), then this must be 4.
+          if (formStepIndex === steps.length - 1) {
+              updateSummaryView(); 
+          }
         }
       }
     }));

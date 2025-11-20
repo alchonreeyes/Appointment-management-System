@@ -40,6 +40,8 @@ if (!isset($_SESSION['user_id'])) {
   <div class="progress-step">3</div>
   <div class="progress-line"></div>
   <div class="progress-step">4</div>
+    <div class="progress-line"></div>
+  <div class="progress-step">5</div>
 </div>
 
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
@@ -218,34 +220,87 @@ if (!isset($_SESSION['user_id'])) {
             <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
             <label><input type="checkbox" name="symptoms[]" value="Other" id="otherSymptom"> Other</label>
             <input type="text" name="concern" id="concernInput" placeholder="Write a concern..." style="display: none;">
-
             <button type="button" class="prev-btn">Back</button>
             <button type="button" class="next-btn">Next</button>
+        
         </div>
 
-        <script>
-            document.getElementById('otherSymptom').addEventListener('change', function() {
-          const concernInput = document.getElementById('concernInput');
-          if (this.checked) {
-              concernInput.style.display = 'block';
-              concernInput.setAttribute('required', 'required');
-          } else {
-              concernInput.style.display = 'none';
-              concernInput.removeAttribute('required');
-          }
-            });
-        </script>
-
-        <!-- Step 4: Consent -->
         <div class="form-step">
-            <h3>Consent & Confirmation</h3>
-            <label><input type="checkbox" name="consent_info" value="1" required> I certify that the above information is correct.</label>
-            <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
-            <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
+    <h2>Frame & Style Preferences</h2>
+    <p style="color: black;">Help us personalize your visit. Select the brands or styles you are interested in trying on (Optional).</p>
 
-            <button type="button" class="prev-btn">Back</button>
-            <button type="submit" name="submit">Make an Appointment</button>
+    <h4 style="color: #004aad; margin-bottom: 15px;">Preferred Brands</h4>
+    <div class="preference-grid">
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Ray-Ban">
+            <span class="preference-label">Ray-Ban</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Oakley">
+            <span class="preference-label">Oakley</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Gucci">
+            <span class="preference-label">Gucci</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Prada">
+            <span class="preference-label">Prada</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Coach">
+            <span class="preference-label">Coach</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="brands[]" value="Others">
+            <span class="preference-label">Others</span>
+        </label>
+    </div>
+
+    <h4 style="color: #004aad; margin-bottom: 15px; margin-top: 20px;">Frame Shape</h4>
+    <div class="preference-grid">
+        <label class="preference-option">
+            <input type="checkbox" name="frame_shape[]" value="Round">
+            <span class="preference-label">Round</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="frame_shape[]" value="Square">
+            <span class="preference-label">Square</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="frame_shape[]" value="Aviator">
+            <span class="preference-label">Aviator</span>
+        </label>
+        <label class="preference-option">
+            <input type="checkbox" name="frame_shape[]" value="Cat Eye">
+            <span class="preference-label">Cat Eye</span>
+        </label>
+    </div>
+
+    <div style="margin-top: 30px;">
+        <button type="button" class="prev-btn">Back</button>
+        <button type="button" class="next-btn">Next</button>
+    </div>
+</div>
+
+        <!-- Step 5: Consent -->
+      <div class="form-step">
+    <h2>Review Your Details</h2>
+    <p style="color: black;">Please review your information below before confirming.</p>
+
+    <div id="finalSummary" class="summary-box">
         </div>
+
+    <h3>Consent & Confirmation</h3>
+    <label><input type="checkbox" name="consent_info" value="1" required> I certify that the above information is correct.</label>
+    <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
+    <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
+
+    <div style="margin-top: 20px;">
+        <button type="button" class="prev-btn">Back</button>
+        <button type="submit" name="submit">Make an Appointment</button>
+    </div>
+</div>
 
     </form>
 </div>
@@ -303,5 +358,19 @@ if (!isset($_SESSION['user_id'])) {
             }
           });
         </script>
+        
+        <script>
+            document.getElementById('otherSymptom').addEventListener('change', function() {
+          const concernInput = document.getElementById('concernInput');
+          if (this.checked) {
+              concernInput.style.display = 'block';
+              concernInput.setAttribute('required', 'required');
+          } else {
+              concernInput.style.display = 'none';
+              concernInput.removeAttribute('required');
+          }
+            });
+        </script>
+        
 </body>
 </html>

@@ -32,7 +32,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <!-- Logo container with dropdown (Desktop Only) -->
             <div class="logo-container">
                 <div class="logo">
-                    <img src="" alt="Logo">
+                    <img src="../mod/photo/LOGO.jpg" alt="Logo">
                 </div>
                 
                 <!-- Dropdown for desktop only -->
@@ -93,7 +93,7 @@ if (session_status() === PHP_SESSION_NONE) {
             <div class="nav-links desktop-nav">
                 <ul>
                     <li><a href="../public/about.php">About</a></li>
-                    <li><a href="#">Category</a></li>
+                    
                     <li><a href="../public/store.php">Store</a></li>
                     <li><a href="../public/home.php">Home</a></li>
                     <li><a href="../public/browse.php">Browse</a></li>

@@ -41,7 +41,7 @@ $update->execute();
     </div>
     <div class="eyemaster_wrapper">
         <div class="container">
-            <h1><span>"</span>ABOUT EYE-MASTER<span>"</span></h1>      
+            <h1>ABOUT EYE-MASTER</h1>      
             
             <p>Eye Master Optical Clinic provides eye care services such as eye examinations, medical certificates, prescription glasses, contact lenses, and optical products.</p>
             <p>By booking an appointment or availing of our services, you agree to provide accurate and truthful personal information. Misuse or fraudulent use of our systems is strictly prohibited.</p>
