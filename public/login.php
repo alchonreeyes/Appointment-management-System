@@ -27,7 +27,7 @@ if (isset($_SESSION['login_cooldown_until'])) {
 
     body {
         font-family: 'Segoe UI', sans-serif;
-        background: #f8f9fa;
+        background: #FFF0F0;
         min-height: 100vh;
     }
 

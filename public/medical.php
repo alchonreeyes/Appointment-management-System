@@ -57,16 +57,7 @@ include '../config/db.php';
         </select>
         <input type="text" name="suffix" style="display: none;" id="suffix_concern" placeholder="Enter your suffix...">
       </div>
-      <script>
-        document.getElementById("suffix").addEventListener('change', function() {
-          const suffixConcern = document.getElementById("suffix_concern");
-          if (this.value === "Other") {
-            suffixConcern.style.display = "block";
-          } else {
-            suffixConcern.style.display = "none";
-          }
-        });
-      </script>
+  
     
 
             <div class="form-row three-cols">
@@ -76,8 +67,12 @@ include '../config/db.php';
     <option value="Female">Female</option>
   </select>
 
-  <input type="number" name="age" placeholder="Enter your Age...">
-  <input type="text" name="contact_number" placeholder="ex: 63+">
+  <input type="number" name="age" placeholder="Enter your Age..." required>
+        <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
+
+        <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="13" required>
+        <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+
 </div>
 <div class="form-row single">
   <input type="text" name="occupation" placeholder="Enter your Occupation...">
@@ -237,6 +232,55 @@ include '../config/db.php';
 
 <script src="../actions/appointment.js"></script>
 <?php include '../includes/footer.php'; ?>
+
+    <script>
+        document.getElementById("suffix").addEventListener('change', function() {
+          const suffixConcern = document.getElementById("suffix_concern");
+          if (this.value === "Other") {
+            suffixConcern.style.display = "block";
+          } else {
+            suffixConcern.style.display = "none";
+          }
+        });
+      </script>
+        <script>
+          const ageInput = document.querySelector('input[name="age"]');
+          const phoneInput = document.querySelector('input[name="contact_number"]');
+          const ageWarning = document.getElementById('ageWarning');
+          const phoneWarning = document.getElementById('phoneWarning');
+
+          ageInput.addEventListener('blur', function() {
+            const age = parseInt(this.value);
+            if (isNaN(age) || age < 18 || age > 120) {
+              ageWarning.style.display = 'block';
+              this.value = '';
+            } else {
+              ageWarning.style.display = 'none';
+            }
+          });
+
+          phoneInput.addEventListener('input', function() {
+            let value = this.value.replace(/\s/g, '');
+            if (value.length > 11) {
+              value = value.slice(0, 11);
+            }
+            if (value.length > 0) {
+              value = value.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
+            }
+            this.value = value;
+          });
+
+          phoneInput.addEventListener('blur', function() {
+            const phone = this.value.replace(/\s/g, '');
+            const phoneRegex = /^09\d{9}$/;
+            if (!phoneRegex.test(phone)) {
+              phoneWarning.style.display = 'block';
+              this.value = '';
+            } else {
+              phoneWarning.style.display = 'none';
+            }
+          });
+        </script>
 </body>
 
 </html>

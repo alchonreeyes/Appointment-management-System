@@ -7,7 +7,7 @@
 body {
     overflow-x: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: rgb(245, 245, 245);
+    background: #FFF0F0;
 }
 
 /* Breadcrumb Navigation */
@@ -47,7 +47,7 @@ body {
     align-items: center;
     display: flex;
     justify-content: center;
-    background: #dedede;
+    background: #FFF0F0;
     padding: 40px 20px;
 }
 

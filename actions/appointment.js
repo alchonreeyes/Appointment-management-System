@@ -3,6 +3,42 @@
   'use strict';
 
   document.addEventListener('DOMContentLoaded', function () {
+    const ageInput = document.querySelector('input[name="age"]');
+          const phoneInput = document.querySelector('input[name="contact_number"]');
+          const ageWarning = document.getElementById('ageWarning');
+          const phoneWarning = document.getElementById('phoneWarning');
+
+          ageInput.addEventListener('blur', function() {
+            const age = parseInt(this.value);
+            if (isNaN(age) || age < 18 || age > 120) {
+              ageWarning.style.display = 'block';
+              this.value = '';
+            } else {
+              ageWarning.style.display = 'none';
+            }
+          });
+
+          phoneInput.addEventListener('input', function() {
+            let value = this.value.replace(/\s/g, '');
+            if (value.length > 11) {
+              value = value.slice(0, 11);
+            }
+            if (value.length > 0) {
+              value = value.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
+            }
+            this.value = value;
+          });
+
+          phoneInput.addEventListener('blur', function() {
+            const phone = this.value.replace(/\s/g, '');
+            const phoneRegex = /^09\d{9}$/;
+            if (!phoneRegex.test(phone)) {
+              phoneWarning.style.display = 'block';
+              this.value = '';
+            } else {
+              phoneWarning.style.display = 'none';
+            }
+          });
 
     /* =========================================
        1. INITIALIZATION & VARIABLES
@@ -18,7 +54,7 @@
     const form = document.getElementById("appointmentForm");
 
     let formStepIndex = 0;
-
+    
     // MOVED TO TOP: Define this early so validation can see it
     let appointments = [
       { date: "", time: "", remaining: null },
