@@ -171,7 +171,7 @@ session_start();
             <a href="../public/home.php" class="btn-home">Return to Home</a>
 
             <div class="redirect-text">
-                Redirecting in <span id="countdown">5</span> seconds...
+                Redirecting in <span id="countdown">60</span> seconds...
             </div>
         </div>
     </div>
@@ -181,7 +181,7 @@ session_start();
 
 <script>
     // Countdown Timer Logic
-    let seconds = 5;
+    let seconds = 60;
     const countdownElement = document.getElementById('countdown');
     
     const interval = setInterval(() => {

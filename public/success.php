@@ -25,7 +25,7 @@ session_start();
   <div class="button-group">
     <a href="home.php" class="btn home-btn">🏠 Go to Homepage</a>
     <a href="appointments.php" class="btn view-btn">📅 View My Appointments</a>
-  </div>
+  </div>  
 </div>
 
 </body>

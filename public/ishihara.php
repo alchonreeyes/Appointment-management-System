@@ -47,12 +47,25 @@ include '../config/db.php';
 
         <div class="form-row name-row">
           <input type="text" placeholder="Enter Your Name..." name="full_name" required>
-          <select name="suffix">
-            <option value="">Suffix (Optional)</option>
-            <option value="Jr">Jr</option>
-            <option value="Sr">Sr</option>
-          </select>
-        </div>
+         <select name="suffix" id="suffix">
+          <option value="">Suffix (Optional)</option>
+          <option value="Jr">Jr</option>
+          <option value="Sr">Sr</option>
+          <option value="Other" id="suffix_other">Other</option>
+        </select>
+        <input type="text" style="display: none;" id="suffix_concern" placeholder="Enter your suffix...">
+      </div>
+      <script>
+        document.getElementById("suffix").addEventListener('change', function() {
+          const suffixConcern = document.getElementById("suffix_concern");
+          if (this.value === "Other") {
+            suffixConcern.style.display = "block";
+          } else {
+            suffixConcern.style.display = "none";
+          }
+        });
+      </script>
+    
 
         <div class="form-row three-cols">
           <select name="gender" required>

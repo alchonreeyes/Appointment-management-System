@@ -45,16 +45,29 @@ include '../config/db.php';
         <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
-       <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
-            
-            <div class="form-row name-row">
-  <input type="text" placeholder="Enter Your Name..." name="full_name">
-  <select name="suffix">
-    <option value="">Suffix (Optional)</option>
-    <option value="Jr">Jr</option>
-    <option value="Sr">Sr</option>
-  </select>
-</div>
+      <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
+
+      <div class="form-row name-row">
+        <input type="text" placeholder="Enter Your Name..." name="full_name">
+        <select name="suffix" id="suffix">
+          <option value="">Suffix (Optional)</option>
+          <option value="Jr">Jr</option>
+          <option value="Sr">Sr</option>
+          <option value="Other" id="suffix_other">Other</option>
+        </select>
+        <input type="text" name="suffix" style="display: none;" id="suffix_concern" placeholder="Enter your suffix...">
+      </div>
+      <script>
+        document.getElementById("suffix").addEventListener('change', function() {
+          const suffixConcern = document.getElementById("suffix_concern");
+          if (this.value === "Other") {
+            suffixConcern.style.display = "block";
+          } else {
+            suffixConcern.style.display = "none";
+          }
+        });
+      </script>
+    
 
             <div class="form-row three-cols">
   <select name="gender">
@@ -79,13 +92,25 @@ include '../config/db.php';
     <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
     <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
     <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
-    <label><input type="radio" name="certificate_purpose" value="Other"> Other</label>
+    <label><input type="radio" name="certificate_purpose" value="Other" id="cert-other"> Other</label>
     <input type="text" name="certificate_purpose"value="medical purpose" style="display:none;">
-    <input type="text" name="certificate_other" placeholder="If other, please specify...">
+    <input type="text" name="certificate_other" placeholder="If other, please specify..." style="display: none;" id="certificate_other">
     
     <button type="button" class="prev-btn">Back</button>
     <button type="button" class="next-btn">Next</button>
 </div>
+<script>
+  document.getElementById("cert-other").addEventListener('change', function() {
+    const certificateOther = document.getElementById("certificate_other");
+
+    if(this.checked){
+      certificateOther.style.display = "block";
+    }
+    else{
+      certificateOther.style.display = "none";
+    }
+  })
+</script>
 
   <!-- Step 3: Choose Provider & Time -->
 <div class="form-step">

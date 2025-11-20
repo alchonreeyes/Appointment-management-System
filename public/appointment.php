@@ -53,12 +53,28 @@ if (!isset($_SESSION['user_id'])) {
             
             <div class="form-row name-row">
         <input type="text" placeholder="Enter Your Name..." name="full_name" required>
-        <select name="suffix">
+        
+         <select name="suffix" id="suffix">
           <option value="">Suffix (Optional)</option>
           <option value="Jr">Jr</option>
           <option value="Sr">Sr</option>
+          <option value="Other" id="suffix_other">Other</option>
         </select>
+        <input type="text" name="suffix"  style="display: none;" id="suffix_concern" placeholder="Enter your suffix...">
       </div>
+      <script>
+        document.getElementById("suffix").addEventListener('change', function() {
+          const suffixConcern = document.getElementById("suffix_concern");
+          if (this.value === "Other") {
+            suffixConcern.style.display = "block";
+          } else {
+            suffixConcern.style.display = "none";
+          }
+        });
+      </script>
+    
+
+       
 
             <div class="form-row three-cols">
         <select name="gender" required>
@@ -189,28 +205,41 @@ if (!isset($_SESSION['user_id'])) {
         <!-- Step 3: Symptoms -->
         <div class="form-step">
             <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
-  <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
+            <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
 
             <h3>Eye Health Information</h3>
             <p>Do you currently wear Eye Glasses?</p>
-            <label><input type="radio" name="wear_glasses" value="Yes"> Yes</label>
-            <label><input type="radio" name="wear_glasses" value="No"> No</label>
+            <label><input type="radio" name="wear_glasses" value="Yes" required> Yes</label>
+            <label><input type="radio" name="wear_glasses" value="No" required> No</label>
 
             <p>Do you currently wear Contact Lenses?</p>
-            <label><input type="radio" name="wear_contact_lenses" value="Yes"> Yes</label>
-            <label><input type="radio" name="wear_contact_lenses" value="No"> No</label>
+            <label><input type="radio" name="wear_contact_lenses" value="Yes" required> Yes</label>
+            <label><input type="radio" name="wear_contact_lenses" value="No" required> No</label>
             
             <p>Are you experiencing any eye discomfort?</p>
             <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
             <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
             <label><input type="checkbox" name="symptoms[]" value="Redness"> Eye Redness</label>
             <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Other"> Other</label>
-            <input type="text" name="concern" placeholder="Write a concern...">
+            <label><input type="checkbox" name="symptoms[]" value="Other" id="otherSymptom"> Other</label>
+            <input type="text" name="concern" id="concernInput" placeholder="Write a concern..." style="display: none;">
 
             <button type="button" class="prev-btn">Back</button>
             <button type="button" class="next-btn">Next</button>
         </div>
+
+        <script>
+            document.getElementById('otherSymptom').addEventListener('change', function() {
+          const concernInput = document.getElementById('concernInput');
+          if (this.checked) {
+              concernInput.style.display = 'block';
+              concernInput.setAttribute('required', 'required');
+          } else {
+              concernInput.style.display = 'none';
+              concernInput.removeAttribute('required');
+          }
+            });
+        </script>
 
         <!-- Step 4: Consent -->
         <div class="form-step">
