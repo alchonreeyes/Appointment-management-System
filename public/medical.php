@@ -217,6 +217,11 @@ include '../config/db.php';
 
         <!-- Step 4: Consent -->
         <div class="form-step">
+          <h2>Review Your Details</h2>
+    <p style="color: black;">Please review your information below before confirming.</p>
+
+    <div id="finalSummary" class="summary-box">
+        </div>
              <h3>Consent & Confirmation</h3>
     <label><input type="checkbox" name="consent_info" value="1"> I certify that the above information is correct.</label>
     <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
