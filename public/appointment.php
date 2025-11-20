@@ -49,30 +49,30 @@ if (!isset($_SESSION['user_id'])) {
         <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
-       <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
+             <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
             
             <div class="form-row name-row">
-  <input type="text" placeholder="Enter Your Name..." name="full_name">
-  <select name="suffix">
-    <option value="">Suffix (Optional)</option>
-    <option value="Jr">Jr</option>
-    <option value="Sr">Sr</option>
-  </select>
-</div>
+        <input type="text" placeholder="Enter Your Name..." name="full_name" required>
+        <select name="suffix">
+          <option value="">Suffix (Optional)</option>
+          <option value="Jr">Jr</option>
+          <option value="Sr">Sr</option>
+        </select>
+      </div>
 
             <div class="form-row three-cols">
-  <select name="gender">
-    <option value="">Select Gender...</option>
-    <option value="Male">Male</option>
-    <option value="Female">Female</option>
-  </select>
+        <select name="gender" required>
+          <option value="">Select Gender...</option>
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+        </select>
 
-  <input type="number" name="age" placeholder="Enter your Age...">
-  <input type="text" name="contact_number" placeholder="ex: 63+">
-</div>
-<div class="form-row single">
-  <input type="text" name="occupation" placeholder="Enter your Occupation...">
-</div>
+        <input type="number" name="age" placeholder="Enter your Age..." required>
+        <input type="text" name="contact_number" placeholder="ex: 63+" required>
+      </div>
+      <div class="form-row single">
+        <input type="text" name="occupation" placeholder="Enter your Occupation..." required>
+      </div>
 
             <button type="button" class="next-btn">Next</button>
         </div>
@@ -192,9 +192,13 @@ if (!isset($_SESSION['user_id'])) {
   <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
 
             <h3>Eye Health Information</h3>
-            <p>Do you currently wear Eye Glasses or Contact Lenses?</p>
+            <p>Do you currently wear Eye Glasses?</p>
             <label><input type="radio" name="wear_glasses" value="Yes"> Yes</label>
             <label><input type="radio" name="wear_glasses" value="No"> No</label>
+
+            <p>Do you currently wear Contact Lenses?</p>
+            <label><input type="radio" name="wear_contact_lenses" value="Yes"> Yes</label>
+            <label><input type="radio" name="wear_contact_lenses" value="No"> No</label>
             
             <p>Are you experiencing any eye discomfort?</p>
             <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
