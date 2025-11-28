@@ -3,8 +3,63 @@
   'use strict';
 
   document.addEventListener('DOMContentLoaded', function () {
+    /* =========================================
+       DYNAMIC APPOINTMENT ROWS
+       ========================================= */
+    const addBtn = document.getElementById('add-appt-btn');
+    const row2 = document.getElementById('row-1');
+    const row3 = document.getElementById('row-2');
     
+    // Counter to track how many are showing
+    let visibleRows = 1;
 
+    if(addBtn) {
+        addBtn.addEventListener('click', function() {
+            if (visibleRows === 1) {
+                row2.style.display = 'block';
+                visibleRows = 2;
+            } else if (visibleRows === 2) {
+                row3.style.display = 'block';
+                visibleRows = 3;
+                addBtn.style.display = 'none'; // Max reached
+            }
+        });
+    }
+
+    // Function to hide rows (needs to be global or attached to window)
+    window.hideRow = function(index) {
+        if (index === 1) {
+            // Hide Row 2
+            row2.style.display = 'none';
+            // Clear inputs
+            const dateInput = row2.querySelector('.date-input');
+            const timeSelect = row2.querySelector('.time-select');
+            if(dateInput) dateInput.value = '';
+            if(timeSelect) timeSelect.value = '';
+            
+            // If row 3 is visible, we might want to shift it up, but simple hiding is easier
+            if(visibleRows === 3) {
+                 // If removing row 2 but row 3 is open, maybe just clear row 2?
+                 // Simple logic: Decrement count
+            }
+            visibleRows--;
+        } else if (index === 2) {
+            row3.style.display = 'none';
+            const dateInput = row3.querySelector('.date-input');
+            const timeSelect = row3.querySelector('.time-select');
+            if(dateInput) dateInput.value = '';
+            if(timeSelect) timeSelect.value = '';
+            visibleRows--;
+        }
+        
+        // Show add button again if it was hidden
+        addBtn.style.display = 'inline-block';
+        
+        // Reset the appointment data in the JS array for that index
+        appointments[index].date = "";
+        appointments[index].time = "";
+        appointments[index].remaining = null;
+    };
     /* =========================================
        1. INITIALIZATION & VARIABLES
        ========================================= */
@@ -442,7 +497,20 @@
       }
     }
 
+    /* =========================================
+       SAFE UPDATE SUMMARY (Prevents crash)
+       ========================================= */
     function updateSummary() {
+      // 1. Get elements dynamically to ensure they exist
+      const summaryDiv = document.getElementById("appointmentSummary");
+      const summaryContent = document.getElementById("summaryContent");
+
+      // 2. SAFETY CHECK: If elements are missing, STOP. Do not crash.
+      if (!summaryDiv || !summaryContent) {
+          // It's okay if they are missing in Step 2, just exit silently.
+          return;
+      }
+
       const validAppointments = appointments.filter(a => a.date && a.time);
       
       if (validAppointments.length === 0) {
@@ -464,11 +532,30 @@
     }
 
     function updateHiddenField() {
+      // Always re-query to be safe
+      const field = document.getElementById("appointment_dates_json");
+      
+      if (!field) {
+          console.error("Critical Error: Hidden field 'appointment_dates_json' not found in the DOM!");
+          // Try to find it by name as a fallback
+          const fallback = document.querySelector('input[name="appointment_dates_json"]');
+          if (fallback) {
+              console.log("Recovered using name selector.");
+              // Update logic using fallback
+              const validAppointments = appointments
+                .filter(a => a.date && a.time)
+                .map(a => ({ date: a.date, time: a.time }));
+              fallback.value = JSON.stringify(validAppointments);
+              return;
+          }
+          return;
+      }
+
       const validAppointments = appointments
         .filter(a => a.date && a.time)
         .map(a => ({ date: a.date, time: a.time }));
       
-      hiddenField.value = JSON.stringify(validAppointments);
+      field.value = JSON.stringify(validAppointments);
     }
 
     async function checkAppointmentSlot(index) {
@@ -577,8 +664,18 @@
 
         // Collect form data
         const formData = new FormData(form);
+        
+        // Update the hidden field one last time
         updateHiddenField();
-        formData.set('appointment_dates_json', hiddenField.value);
+        
+        // Re-select the field to ensure we have the value
+        const jsonField = document.getElementById("appointment_dates_json");
+        if (jsonField) {
+            formData.set('appointment_dates_json', jsonField.value);
+        } else {
+            alert("System Error: Could not find appointment data field.");
+            return false;
+        }
 
         try {
           const response = await fetch("../actions/appointment-action.php", {
