@@ -48,9 +48,15 @@ try {
     $phone_number = trim($_POST['contact_number'] ?? '');
     $occupation = trim($_POST['occupation'] ?? '');
     $consent_info = isset($_POST['consent_info']) ? 1 : 0;
+    $concern = trim($_POST['concern'] ?? '');
     $consent_reminders = isset($_POST['consent_reminders']) ? 1 : 0;
     $consent_terms = isset($_POST['consent_terms']) ? 1 : 0;
-
+    // --- NEW CODE START ---
+    // Capture Brands (Array to String)
+    $brands = isset($_POST['brands']) ? implode(", ", $_POST['brands']) : '';
+    
+    // Capture Shapes (Array to String)
+    $shapes = isset($_POST['frame_shape']) ? implode(", ", $_POST['frame_shape']) : '';
     // Detect appointment type
     $type = 'normal';
     if (isset($_POST['certificate_purpose'])) $type = 'medical';
@@ -176,17 +182,19 @@ try {
                 ':appointment_group_id' => $appointment_group_id
             ]);
         } else {
-            // Normal appointment
+            // Normal appointment (UPDATED)
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                         appointment_date, appointment_time,
                         wear_glasses, symptoms, concern,
+                        preferred_brands, preferred_shapes,  /* <--- ADDED THIS */
                         consent_info, consent_reminders, consent_terms,
                         appointment_group_id, status_id
                     ) VALUES (
                         :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
                         :appointment_date, :appointment_time,
                         :wear_glasses, :symptoms, :concern,
+                        :preferred_brands, :preferred_shapes, /* <--- ADDED THIS */
                         :consent_info, :consent_reminders, :consent_terms,
                         :appointment_group_id,
                         (SELECT status_id FROM appointmentstatus WHERE status_name = 'Pending' LIMIT 1)
@@ -205,7 +213,9 @@ try {
                 ':appointment_time' => $time,
                 ':wear_glasses' => $_POST['wear_glasses'] ?? null,
                 ':symptoms' => isset($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : '',
-                ':concern' => $_POST['concern'] ?? '',
+                ':concern' => $concern,
+                ':preferred_brands' => $brands,  // <--- Mapped here
+                ':preferred_shapes' => $shapes,  // <--- Mapped here
                 ':consent_info' => $consent_info,
                 ':consent_reminders' => $consent_reminders,
                 ':consent_terms' => $consent_terms,

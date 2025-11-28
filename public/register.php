@@ -83,14 +83,62 @@ include '../actions/register-action.php';
                                     <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
                                 </svg>
                                 <input 
-                                    type="tel" 
-                                    name="phone_number" 
-                                    placeholder="09123456789" 
-                                    required
-                                >
+    type="tel" 
+    name="phone_number" 
+    placeholder="09123456789" 
+    maxlength="11"
+    pattern="09[0-9]{9}"
+    title="Must start with 09 and be exactly 11 digits (e.g., 09123456789)."
+    required
+>
                             </div>
                         </div>
                     </div>
+                    <div class="form-row">
+    <div class="form-group">
+        <label>Gender <span class="required">*</span></label>
+        <div class="input-wrapper">
+            <select name="gender" required style="padding: 12px; border-radius: 8px;">
+                <option value="">Select Gender...</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label>Age <span class="required">*</span></label>
+        <div class="input-wrapper">
+            <svg class="input-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M11 17h2v-4h4v-2h-4V7h-2v4H7v2h4v4zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+            </svg>
+            <input 
+                type="number" 
+                name="age" 
+                placeholder="Enter Age" 
+                min="1"
+                max="120"
+                required
+            >
+        </div>
+    </div>
+</div>
+
+<div class="form-group full-width">
+    <label>Occupation <span class="required">*</span></label>
+    <div class="input-wrapper">
+        <svg class="input-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 12c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6 6H6c-1.1 0-2 .9-2 2v1h16v-1c0-1.1-.9-2-2-2z"/>
+        </svg>
+        <input 
+            type="text" 
+            name="occupation" 
+            placeholder="Enter your occupation" 
+            required
+        >
+    </div>
+</div>
 
                     <!-- Password -->
                     <div class="form-group full-width">
@@ -255,6 +303,22 @@ include '../actions/register-action.php';
                 return false;
             }
         });
+        // FILE: register.php (inside <script>)
+
+// Phone Number Input Filter
+const phoneInput = document.querySelector('input[name="phone_number"]');
+
+phoneInput.addEventListener('input', function() {
+    // 1. Remove non-digit characters
+    this.value = this.value.replace(/[^0-9]/g, '');
+    
+    // 2. Format as 09XXXXXXXXX and ensure length
+    if (this.value.length > 11) {
+        this.value = this.value.slice(0, 11);
+    }
+});
+
+// ... rest of your existing script code ...
     </script>
 </body>
 </html>

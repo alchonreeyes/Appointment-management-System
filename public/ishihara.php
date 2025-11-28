@@ -1,12 +1,30 @@
-
 <?php
 session_start();
+
 // Check if the user is logged in
 if (!isset($_SESSION['user_id'])) {
+  // Not logged in → redirect back to login
   header("Location: login.php");
   exit;
 }
-include '../config/db.php';
+// --- ADD THIS PHP BLOCK AFTER THE INCLUDES/SESSION START ---
+include '../config/db.php'; // Ensure this is present in appointment.php too
+$db = new Database();
+$pdo = $db->getConnection();
+
+$client_profile_data = [];
+if (isset($_SESSION['user_id'])) {
+    // 1. Fetch user data (Name, Phone from users table) and profile data (Age, Gender, Occupation, Suffix from clients table)
+    $stmt = $pdo->prepare("
+        SELECT u.full_name, u.phone_number, c.age, c.gender, c.occupation, c.suffix
+        FROM users u
+        JOIN clients c ON u.id = c.user_id
+        WHERE u.id = ?
+    ");
+    $stmt->execute([$_SESSION['user_id']]);
+    $client_profile_data = $stmt->fetch(PDO::FETCH_ASSOC);
+}
+// -----------------------------------------------------------
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -46,35 +64,52 @@ include '../config/db.php';
         <p style="color:black;">Fill in your details to proceed with the Ishihara color vision test.</p>
 
         <div class="form-row name-row">
-          <input type="text" placeholder="Enter Your Name..." name="full_name" required>
-         <select name="suffix" id="suffix">
-          <option value="">Suffix (Optional)</option>
-          <option value="Jr">Jr</option>
-          <option value="Sr">Sr</option>
-          <option value="Other" id="suffix_other">Other</option>
-        </select>
-        <input type="text" style="display: none;" id="suffix_concern" placeholder="Enter your suffix...">
-      </div>
-  
+    <input type="text" placeholder="Enter Your Name..." name="full_name" required
+           value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>">
+    
+    <select name="suffix" id="suffix">
+      <option value="">Suffix (Optional)</option>
+      <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
+      <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
+      <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
+    </select>
+    <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..."> 
+</div>
 
-        <div class="form-row three-cols">
-          <select name="gender" required>
-            <option value="">Select Gender...</option>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
+<div class="form-row three-cols">
+    <select name="gender" required>
+      <option value="">Select Gender...</option>
+      <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
+      <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
+    </select>
+    
+    <input 
+    type="number" 
+    name="age" 
+    placeholder="Enter your Age..." 
+    required
+    min="1" 
+    max="120"
+    value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>"
+>
+<p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
 
-          <input type="number" name="age" placeholder="Enter your Age..." required>
-        <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
 
-        <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="13" required>
-        <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+<input 
+    type="text" 
+    name="contact_number" 
+    placeholder="0912 345 678" 
+    maxlength="11" 
+    required
+    value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>"
+>
+<p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+</div>
 
-        </div>
-
-        <div class="form-row single">
-          <input type="text" name="occupation" placeholder="Enter your Occupation..." required>
-        </div>
+<div class="form-row single">
+    <input type="text" name="occupation" placeholder="Enter your Occupation..." required
+           value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>">
+</div>
 
         <button type="button" class="next-btn">Next</button>
       </div>

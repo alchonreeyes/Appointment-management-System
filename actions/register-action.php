@@ -18,6 +18,39 @@ if (isset($_POST['signup'])) {
     $phone_number = trim($_POST['phone_number']);
     $address = trim($_POST['address']);
 
+    // --- ADD THESE NEW VARIABLES ---
+    $gender = trim($_POST['gender']);
+    $age = intval($_POST['age']);
+    $occupation = trim($_POST['occupation']);
+    // Normalize phone number: remove non-digit characters
+    $digits = preg_replace('/\D+/', '', $phone_number);
+
+    // Accept common Philippine formats and convert to canonical local format 09XXXXXXXXX
+    // Accepted input examples:
+    //  - 09XXXXXXXXX  (11 digits)
+    //  - 9XXXXXXXXX   (10 digits, missing leading 0)
+    //  - +639XXXXXXXXX or 639XXXXXXXXX (country code variants)
+    if (preg_match('/^09\d{9}$/', $digits)) {
+        $phone_number = $digits;
+    } elseif (preg_match('/^9\d{9}$/', $digits)) {
+        // add leading 0
+        $phone_number = '0' . $digits;
+    } elseif (preg_match('/^63\d{10}$/', $digits)) {
+        // convert 63XXXXXXXXXX -> 0XXXXXXXXXX
+        $phone_number = '0' . substr($digits, 2);
+    } else {
+        $_SESSION['error'] = "Invalid phone number format. Acceptable formats: 09XXXXXXXXX, 9XXXXXXXXX, +639XXXXXXXXX, or 63XXXXXXXXXX.";
+        header("Location: ../public/register.php");
+        exit;
+    }
+
+    // Final strict check to ensure canonical format before storing: 11 digits starting with 09
+    if (!preg_match('/^09\d{9}$/', $phone_number)) {
+        $_SESSION['error'] = "Invalid phone number after normalization. Must be 09XXXXXXXXX (11 digits).";
+        header("Location: ../public/register.php");
+        exit;
+    }
+
     try {
         $db = new Database();
         $pdo = $db->getConnection();
@@ -45,9 +78,11 @@ if (isset($_POST['signup'])) {
         $userId = $pdo->lastInsertId();
 
         // 🔹 Insert into clients (optional)
-        $stmt = $pdo->prepare("INSERT INTO clients (user_id, birth_date, gender, age, suffix, occupation)
-                               VALUES (?, NULL, NULL, NULL, NULL, NULL)");
-        $stmt->execute([$userId]);
+       // 🔹 Insert into clients (Now capturing essential profile data)
+        // Note: birth_date and suffix remain NULL as they are optional/not captured here
+        $stmt = $pdo->prepare("INSERT INTO clients (user_id, gender, age, occupation)
+                               VALUES (?, ?, ?, ?)");
+        $stmt->execute([$userId, $gender, $age, $occupation]);
 
         // 🔹 Send verification email using PHPMailer
         $mail = new PHPMailer(true);

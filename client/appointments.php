@@ -124,7 +124,7 @@ if (isset($_POST['cancel_appointment'])) {
                 $mail->Port       = 587;
                 
                 // Recipients
-                $mail->setFrom('rogerjuancito0621@gmail.com', 'Eye Master Optical Clinic');
+                $mail->setFrom('alchonreyez@gmail.com', 'Eye Master Optical Clinic');
                 $mail->addAddress($admin_email);
                 
                 foreach ($staff_emails as $staff_email) {

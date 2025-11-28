@@ -63,7 +63,9 @@ $result = $conn->query($sql);
         <div class="filter-option"><input type="checkbox" id="rayban" class="filter-checkbox" data-filter="brand" value="Ray-Ban"><label for="rayban">Ray-Ban</label></div>
         <div class="filter-option"><input type="checkbox" id="oakley" class="filter-checkbox" data-filter="brand" value="Oakley"><label for="oakley">Oakley</label></div>
         <div class="filter-option"><input type="checkbox" id="coach" class="filter-checkbox" data-filter="brand" value="Coach"><label for="coach">Coach</label></div>
-        <div class="filter-option"><input type="checkbox" id="ssss" class="filter-checkbox" data-filter="brand" value="SSSS"><label for="ssss">SSSS</label></div>
+        <div class="filter-option"><input type="checkbox" id="esteria" class="filter-checkbox" data-filter="brand" value="Esteria"><label for="esteria">Esteria</label></div>
+        <div class="filter-option"><input type="checkbox" id="starlight" class="filter-checkbox" data-filter="brand" value="Starlight"><label for="startlight">Startlight</label></div>
+        <div class="filter-option"><input type="checkbox" id="pardasul" class="filter-checkbox" data-filter="brand" value="Pardasul"><label for="pardasul">Pardasul</label></div>
       </div>
       
       <div class="filter-group">
@@ -137,7 +139,7 @@ $result = $conn->query($sql);
     <div class="modal-right">
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
-      <p class="modal-price" id="modalPrice">₱0.00</p>
+      
       <a href="../public/appointment.php"><button class="add-to-cart-btn">Want Prescriptions?</button></a>
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
@@ -241,9 +243,8 @@ function openModal(productId) {
             if (data.error) return alert('Error: ' + data.error);
             
             document.getElementById('modalTitle').textContent = data.product_name;
-            document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
+            
             document.getElementById('modalTitle').textContent = data.product_name;
-            document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
             
             // ADD THIS LINE BELOW:
             document.getElementById('modalDescription').textContent = data.description || "No description available.";

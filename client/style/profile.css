@@ -645,14 +645,42 @@ body {
     visibility: visible;
 }
 
-/* Toggle Button Animation */
+/* Sidebar Toggle Button (Improved Visibility) */
 .side-toggle {
-    position: relative;
-    transition: transform 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 45px;
+    height: 45px;
+    background-color: white;
+    border-radius: 50%; /* Perfect Circle */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2); /* Slight Shadow for depth */
+    font-size: 20px;
+    color: #8B0000; /* Brand Red */
+    transition: all 0.3s ease;
+    text-decoration: none;
+    margin-left: 10px; /* Space from Home Icon */
 }
 
 .side-toggle:hover {
     transform: scale(1.1);
+    background-color: #8B0000;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+}
+
+.side-toggle.active {
+    transform: rotate(90deg);
+    background-color: #8B0000;
+    color: white;
+}
+
+/* Also ensure the container aligns items properly */
+.link-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px; /* More padding */
 }
 
 .side-toggle.active {

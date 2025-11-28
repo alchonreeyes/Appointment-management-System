@@ -92,11 +92,11 @@ if (session_status() === PHP_SESSION_NONE) {
             <!-- Desktop Navigation Links -->
             <div class="nav-links desktop-nav">
                 <ul>
-                    <li><a href="../public/about.php">About</a></li>
-                    
-                    <li><a href="../public/store.php">Store</a></li>
                     <li><a href="../public/home.php">Home</a></li>
                     <li><a href="../public/browse.php">Browse</a></li>
+                    <li><a href="../public/store.php">Store</a></li>
+                    <li><a href="../public/about.php">About</a></li>
+                    
                 </ul>
                 <form class="search-group" id="globalSearchForm" onsubmit="handleSearch(event)">
     <div class="search-select-wrapper">

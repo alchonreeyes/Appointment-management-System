@@ -1,137 +1,184 @@
-/* assets/store.css */
+/* assets/store.css - Modern Revision */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
 
 body {
-    background-color: #fff; /* Clean white background */
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    background-color: #f9f9f9;
+    font-family: 'Poppins', sans-serif; /* Modern Font */
+    color: #333;
 }
 
 .store-container {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 40px 20px;
 }
 
-/* Breadcrumb (Home >> Store Locator) */
+/* Breadcrumb */
 .breadcrumb {
-    font-size: 12px;
+    font-size: 0.9rem;
     color: #666;
-    margin-bottom: 40px;
+    margin-bottom: 30px;
 }
 
 .breadcrumb a {
     text-decoration: none;
     color: #333;
-    font-weight: bold;
+    font-weight: 500;
+}
+
+.breadcrumb a:hover {
+    color: #d94032;
 }
 
 .breadcrumb span {
-    margin: 0 5px;
-    color: #999;
+    margin: 0 8px;
+    color: #ccc;
 }
 
-/* Main Title */
-.page-title {
+/* Header Section */
+.section-header {
     text-align: center;
-    font-family: 'Times New Roman', serif; /* Serif font like the screenshot */
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: 1px;
     margin-bottom: 50px;
-    text-transform: uppercase;
-    color: #000;
 }
 
-/* Country Header */
-.country-header {
-    text-align: center;
-    font-family: 'Times New Roman', serif;
-    font-size: 24px;
-    font-weight: 600;
-    margin-bottom: 40px;
-    color: #000;
-    position: relative;
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 10px;
+    letter-spacing: 1px;
 }
 
-/* Store Content Wrapper */
+.page-subtitle {
+    font-size: 1rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Main Layout (Grid) */
 .store-content {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 40px;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: 350px 1fr; /* Details Left, Map Right */
+    gap: 30px;
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-/* Left Side: Details */
+/* Left Side: Store Info Card */
 .store-details {
-    flex: 1;
-    min-width: 300px;
-    max-width: 500px;
-    padding: 20px;
+    padding: 40px;
+    background-color: #fff;
+}
+
+.store-badge {
+    display: inline-block;
+    background-color: #FFF0F0;
+    color: #d94032;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-transform: uppercase;
 }
 
 .store-name {
-    font-size: 18px;
+    font-size: 1.5rem;
     font-weight: 700;
-    margin-bottom: 15px;
-    color: #000;
+    margin-bottom: 25px;
+    color: #2c3e50;
 }
 
-.store-info {
-    font-size: 14px;
-    line-height: 1.8;
-    color: #444;
+/* Info Rows (Icon + Text) */
+.info-row {
+    display: flex;
+    gap: 15px;
     margin-bottom: 20px;
 }
 
-.store-info strong {
-    color: #000;
-    display: block; /* Makes labels sit on their own line */
-    margin-top: 10px;
+.info-icon {
+    width: 40px;
+    height: 40px;
+    background-color: #f4f4f4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #d94032;
+    flex-shrink: 0;
 }
 
+.info-text h4 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #333;
+}
+
+.info-text p, .info-text a {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+/* Button */
 .store-actions {
     margin-top: 30px;
 }
 
 .btn-direction {
-    display: inline-block;
-    padding: 12px 30px;
-    border: 1px solid #000;
-    background: transparent;
-    color: #000;
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background-color: #d94032; /* Brand Red */
+    color: white;
+    text-align: center;
     text-decoration: none;
-    font-size: 13px;
+    border-radius: 8px;
     font-weight: 600;
-    text-transform: uppercase;
-    transition: all 0.3s;
+    transition: background 0.3s;
+    box-shadow: 0 4px 15px rgba(217, 64, 50, 0.3);
 }
 
 .btn-direction:hover {
-    background: #000;
-    color: #fff;
+    background-color: #b93529;
+    transform: translateY(-2px);
 }
 
 /* Right Side: Map */
 .map-container {
-    flex: 1;
-    min-width: 300px;
-    height: 450px;
-    background: #f0f0f0;
-    border-radius: 4px;
-    overflow: hidden;
+    height: 100%;
+    min-height: 500px;
+    background: #eee;
 }
 
 .map-container iframe {
     width: 100%;
     height: 100%;
     border: 0;
+    display: block;
 }
 
-/* Responsive: Stack them on mobile */
-@media (max-width: 768px) {
+/* Responsive */
+@media (max-width: 900px) {
     .store-content {
-        flex-direction: column;
+        grid-template-columns: 1fr; /* Stack on smaller screens */
     }
     .map-container {
         height: 300px;
+        min-height: 300px;
+    }
+    .store-details {
+        padding: 30px;
     }
 }

@@ -36,19 +36,33 @@ $update->execute();
     <?php include '../includes/navbar.php'; ?>
 
   <div class="carousel">
+    
+    <div class="hero-overlay">
+        <div class="hero-content">
+            <h1>Match Your Style & Confidence</h1>
+            <p>Premium eyewear and expert eye care, all in one place.</p>
+            <div class="hero-buttons">
+                <a href="browse.php" class="hero-btn primary">Shop Frames</a>
+                <a href="book_appointment.php" class="hero-btn outline">Book Exam</a>
+            </div>
+        </div>
+    </div>
+
     <div class="carousel-track">
-      <div class="slide"><img src="../assets/src/hero-mage.png" alEt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/eyewear-share.png" alt="Mountain landscape"></div>
-      <div class="slide"><img src="../assets/src/banner-eye-wear.jpg" alt="jMountain landscape"></div>
-      <!-- Clone first slide for seamless loop -->
-      <div class="slide"><img src="../assets/src/hero-mage.png" alEt="Mountain landscape"></div>
+        <div class="slide">
+            <img src="../assets/src/hero-mage.png" alt="Hero 1" onerror="this.style.display='none'; this.parentElement.style.background='#333'">
+        </div>
+        
+        <div class="slide">
+            <img src="../assets/src/slider1.jpg" alt="Hero 2" onerror="this.style.display='none'; this.parentElement.style.background='#555'">
+        </div>
+        
+        <div class="slide">
+            <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Hero 3" onerror="this.style.display='none'; this.parentElement.style.background='#777'">
+        </div>
     </div>
-    <div class="carousel-dots">
-      <div class="dot active"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-  </div>
+    
+</div>
   <div class="service">
     <div class="service-description">
       <i class="fa-solid fa-shield"></i>
@@ -89,38 +103,32 @@ $update->execute();
       </div>
       
 
-      <div class="eye-glasses">
-        <div class="glasses-card">
-          <img src="../assets/src/eyeglasses.png" alt="">
-          <div class="glasses-description">
-            <h2>Eyeglasses sports</h2>
-            <p>Fasionable eyewear for every mood, Every day</p>
-            <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
-          </div>
-          
-          </div>
-          <div class="flex-column">
-
-            <div class="glasses-card">
-              <img src="../assets/src/book1.png" alt="">
-              <div class="glasses-description">
-                <h2>Eyeglasses sports</h2>
-                <p>Fasionable eyewear for every mood, Every day</p>
-               <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
-            </div>
-          </div>
-          <div class="glasses-card">
-              <img src="../assets/src/book1.png" alt="">
-              <div class="glasses-description">
-            <h2>Eyeglasses sports</h2>
-            <p>Fasionable eyewear for every mood, Every day</p>
-            <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:white;">View More</a></button>
-              </div>
-          </div>
-          </div>
+      <div class="product-showcase">
+    <div class="showcase-card">
+        <img src="../assets/src/eyeglasses.png" alt="Sports">
+        <div class="card-overlay">
+            <h3>Active Lifestyle</h3>
+            <p>Durable frames for your daily moves.</p>
+            <a href="browse.php" class="card-btn">View Collection</a>
         </div>
-          </div>
-      </div>
+    </div>
+    <div class="showcase-card">
+        <img src="../assets/src/book1.png" alt="Reading">
+        <div class="card-overlay">
+            <h3>Reading Essentials</h3>
+            <p>Clarity for every chapter.</p>
+            <a href="browse.php" class="card-btn">View Collection</a>
+        </div>
+    </div>
+    <div class="showcase-card">
+        <img src="../assets/src/pink-glasses.jpg" alt="Fashion">
+        <div class="card-overlay">
+            <h3>Designer Series</h3>
+            <p>Stand out with premium aesthetics.</p>
+            <a href="browse.php" class="card-btn">View Collection</a>
+        </div>
+    </div>
+</div>
 
       <div class="gray-line-area">
         <div class="gray-line"></div>

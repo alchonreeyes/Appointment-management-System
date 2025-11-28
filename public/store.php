@@ -6,7 +6,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Store Locator | Eye Master</title>
+    <title>Visit Us | Eye Master Optical</title>
     
     <link rel="stylesheet" href="../assets/navbar.css">
     <link rel="stylesheet" href="../assets/store.css">
@@ -18,44 +18,47 @@ session_start();
 
 <div class="store-container">
     <div class="breadcrumb">
-        <a href="home.php">Home</a> <span>»</span> Store Locator
+        <a href="home.php">Home</a> <span>/</span> Locations
     </div>
 
-    <h1 class="page-title">Store Locator</h1>
-
-    <h2 class="country-header">Philippines</h2>
+    <div class="section-header">
+        <h1 class="page-title">Visit Our Clinic</h1>
+        <p class="page-subtitle">Experience expert eye care and browse our premium collection in person.</p>
+    </div>
 
     <div class="store-content">
         
         <div class="store-details">
-            <div class="store-name">Eye Master Optical Clinic</div>
+            <span class="store-badge">Main Branch</span>
+            <h2 class="store-name">Eye Master Optical - Caloocan</h2>
             
-            <div class="store-info">
-                <strong>Address:</strong>
-                120 G 11th Avenue, Corner M.H. Del Pilar Street<br>
-                Grace Park West, Caloocan<br>
-                Metro Manila, Philippines
-                
-                <strong>Operating Hours:</strong>
-                Monday - Friday: 8:00 AM - 5:00 PM<br>
-                Saturday: 9:00 AM - 6:00 PM<br>
-                Sunday: Closed
-                
-                <strong>Contact:</strong>
-                0920 947 30** / (02) 361-56**<br>
-                eyemaster@gmail.com
+            <div class="info-row">
+                <div class="info-icon"><i class="fa-solid fa-location-dot"></i></div>
+                <div class="info-text">
+                    <h4>Address</h4>
+                    <p>120 G 11th Avenue, Corner M.H. Del Pilar Street<br>Grace Park West, Caloocan City</p>
+                </div>
+            </div>
+<BR></BR>
+            <div class="info-row">
+                <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
+                <div class="info-text">
+                    <h4>Contact Us</h4>
+                    
+                    <p>Email: eyemaster@gmail.com</p>
+                </div>
             </div>
 
             <div class="store-actions">
-                <a href="https://www.google.com/maps/dir//Eye+Master+Optical+Clinic" target="_blank" class="btn-direction">
-                    Get Directions
+                <a href="https://www.google.com/maps/dir//Eye+Master+Optical,+120+G+11th+Ave,+Grace+Park+West,+Caloocan,+Metro+Manila/@14.6528886,120.9845382,17z" target="_blank" class="btn-direction">
+                    <i class="fa-solid fa-map-location-dot"></i> Get Directions
                 </a>
             </div>
         </div>
 
         <div class="map-container">
             <iframe 
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3860.270439713762!2d120.9876093153563!3d14.640623079904608!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3397b5d76c177939%3A0x69f307cc55d5e5d3!2sEye%20Master%20Optical%20Clinic!5e0!3m2!1sen!2sph!4v1678881234567!5m2!1sen!2sph" 
+                src="https://maps.google.com/maps?q=Eye+Master+Optical+Clinic+Caloocan&t=&z=15&ie=UTF8&iwloc=&output=embed" 
                 allowfullscreen="" 
                 loading="lazy" 
                 referrerpolicy="no-referrer-when-downgrade">

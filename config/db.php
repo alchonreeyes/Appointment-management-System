@@ -17,10 +17,20 @@ class Database{
             exit;
         }
     }
+    
 
     public function getConnection(){
         return $this->pdo;
     }
 }
 
+?>
+<?php
+// FILE: config/mailer_settings.php
+
+// Define PHPMailer Credentials securely
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_USERNAME', 'alchonreyez@gmail.com'); // Your Gmail
+define('SMTP_PASSWORD', 'urwbzscfmaynltzx'); // Your App Password
+define('SMTP_PORT', 587);
 ?>
