@@ -268,53 +268,103 @@ if (isset($_SESSION['user_id'])) {
     <h2>Frame & Style Preferences</h2>
     <p style="color: black;">Help us personalize your visit. Select the brands or styles you are interested in trying on (Optional).</p>
 
-    <h4 style="color: #004aad; margin-bottom: 15px;">Preferred Brands</h4>
-    <div class="preference-grid">
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Ray-Ban">
-            <span class="preference-label">Ray-Ban</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Oakley">
-            <span class="preference-label">Oakley</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Gucci">
-            <span class="preference-label">Gucci</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Prada">
-            <span class="preference-label">Prada</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Coach">
-            <span class="preference-label">Coach</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="brands[]" value="Others">
-            <span class="preference-label">Others</span>
-        </label>
-    </div>
+    <h5 style="margin: 15px 0 10px 0; font-size: 13px;">Preferred Shape (Select multiple)</h5>
+<div class="preference-grid">
+    <label class="preference-option-image">
+        <input type="checkbox" name="preferred_shapes[]" value="Round">
+        <div class="shape-image-container">
+            <img src="https://tse1.mm.bing.net/th/id/OIP.c_VyXyCrEfbfq1xSD0FJSgHaDt?w=1500&h=750&rs=1&pid=ImgDetMain&o=7&rm=3" alt="Round Frame">
+        </div>
+        <span class="shape-label-text">Round</span>
+    </label>
 
-    <h4 style="color: #004aad; margin-bottom: 15px; margin-top: 20px;">Frame Shape</h4>
-    <div class="preference-grid">
-        <label class="preference-option">
-            <input type="checkbox" name="frame_shape[]" value="Round">
-            <span class="preference-label">Round</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="frame_shape[]" value="Square">
-            <span class="preference-label">Square</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="frame_shape[]" value="Aviator">
-            <span class="preference-label">Aviator</span>
-        </label>
-        <label class="preference-option">
-            <input type="checkbox" name="frame_shape[]" value="Cat Eye">
-            <span class="preference-label">Cat Eye</span>
-        </label>
-    </div>
+    <label class="preference-option-image">
+        <input type="checkbox" name="preferred_shapes[]" value="Square">
+        <div class="shape-image-container">
+            <img src="https://tse2.mm.bing.net/th/id/OIP.VgX3dhkRsQEOyxMajdQmSAHaDt?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Square Frame">
+        </div>
+        <span class="shape-label-text">Square</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="preferred_shapes[]" value="Rectangle">
+        <div class="shape-image-container">
+            <img src="https://tse3.mm.bing.net/th/id/OIP.hJYXw1ybwzJ2rCWfpa85IQHaDt?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Rectangle Frame">
+        </div>
+        <span class="shape-label-text">Rectangle</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="preferred_shapes[]" value="Oval">
+        <div class="shape-image-container">
+            <img src="https://image.lensmartonline.com/2023-03-16/16789366314990.jpg?imageView2/2/interlace/1/ignore-error/1/w/1200" alt="Oval Frame">
+        </div>
+        <span class="shape-label-text">Oval</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="preferred_shapes[]" value="Oversized">
+        <div class="shape-image-container">
+            <img src="https://www.topofstyle.com/image/1/00/7p/wh/1007pwh-zeelool-vintage-oversized-thick-cat-eye-glasses-for-women-with_500x660_0.jpg" alt="Oversized Frame">
+        </div>
+        <span class="shape-label-text">Oversized</span>
+    </label>
+</div>
+<h5 style="margin: 5px 0 10px 0; font-size: 13px;">Preferred Brands (Select multiple)</h5>
+<div class="preference-grid">
+    
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Ray-Ban">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Ray-Ban" alt="Ray-Ban">
+        </div>
+        <span class="shape-label-text">Ray-Ban</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Oakley">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Oakley" alt="Oakley">
+        </div>
+        <span class="shape-label-text">Oakley</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Gucci">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Starlight" alt="Gucci">
+        </div>
+        <span class="shape-label-text">Starlight</span>
+    </label>
+    
+    
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Gucci">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Pardasul" alt="Gucci">
+        </div>
+        <span class="shape-label-text">Pardasul</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Prada">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Esteria" alt="Prada">
+        </div>
+        <span class="shape-label-text">Esteria</span>
+    </label>
+
+    <label class="preference-option-image">
+        <input type="checkbox" name="brands[]" value="Coach">
+        <div class="shape-image-container">
+            <img src="https://placehold.co/100x60/ffffff/000000?text=Coach" alt="Coach">
+        </div>
+        <span class="shape-label-text">Coach</span>
+    </label>
+
+    
+
+</div>
 
     <div style="margin-top: 30px;">
         <button type="button" class="prev-btn">Back</button>

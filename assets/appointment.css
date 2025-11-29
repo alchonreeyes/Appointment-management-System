@@ -20,6 +20,7 @@ body {
     flex-direction: column;
     align-items: center; /* Centers the content horizontally */
 }
+
 /* =========================================
    8. Step 4: Style Preference Grid
    ========================================= */
@@ -422,6 +423,96 @@ p {
     font-size: 14px;
     margin: 10px 0 5px 0;
     color: #444;
+}
+/* =========================================
+   11. IMAGE-BASED PREFERENCE OPTIONS
+   ========================================= */
+
+/* Container for the image-based option card */
+.preference-option-image {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* Base styles to match existing options */
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    background: #fff;
+    transition: all 0.2s ease;
+    height: 100%; /* Ensures cards are uniform height in the grid */
+    position: relative;
+}
+
+/* Hide the actual checkbox input */
+.preference-option-image input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+    height: 0;
+    width: 0;
+}
+
+/* Container to fix image size and aspect ratio */
+.shape-image-container {
+    width: 100%;
+    height: 60px; /* Fixed height for image area */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+
+/* Styling for the image itself */
+.shape-image-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* Ensures any image fits nicely without distortion */
+    /* Gray placeholder style as requested */
+    filter: grayscale(100%) opacity(0.6);
+    transition: all 0.2s;
+}
+
+/* Styling for the text label below the image */
+.shape-label-text {
+    font-size: 12px;
+    font-weight: 500;
+    color: #555;
+    text-align: center;
+}
+
+/* --- STATE STYLES (Hover & Selected) --- */
+
+/* Hover State */
+.preference-option-image:hover {
+    border-color: #004aad;
+    background-color: #f0f9ff;
+}
+.preference-option-image:hover img {
+    opacity: 0.9; /* Slightly darker on hover */
+}
+.preference-option-image:hover .shape-label-text {
+    color: #004aad;
+}
+
+/* Selected State (using :has() selector for modern browsers) */
+/* When the hidden checkbox inside is checked, style the parent label */
+.preference-option-image:has(input:checked) {
+    border-color: #004aad;
+    background-color: #e6f0ff;
+    box-shadow: 0 0 0 2px rgba(0, 74, 173, 0.2); /* Subtle outer ring */
+}
+
+/* "Turn on" the image when selected */
+.preference-option-image:has(input:checked) img {
+    filter: grayscale(0%) opacity(1); /* Full color and opacity */
+}
+
+/* Bold the text when selected */
+.preference-option-image:has(input:checked) .shape-label-text {
+    color: #004aad;
+    font-weight: 700;
 }
 @media (min-width: 768px) {
     .appointment-container button {

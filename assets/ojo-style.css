@@ -3,7 +3,7 @@
 
 :root {
     --primary-color: #000000;
-    --accent-color: #f26522; /* OJO Orange - Change to your brand color if needed */
+    --accent-color: red; /* OJO Orange - Change to your brand color if needed */
     --text-color: #333333;
     --border-color: #e5e5e5;
 }
@@ -58,7 +58,7 @@ body {
 .dot.pending { background-color: #f39c12; }
 .dot.confirmed { background-color: #27ae60; }
 .dot.completed { background-color: #2980b9; }
-.dot.cancelled { background-color: #e74c3c; }
+.dot.cancelled { background-color: red; }
 
 /* Action Links */
 .action-link {
@@ -154,7 +154,7 @@ body {
 }
 
 .account-header h1 {
-    font-family: 'Playfair Display', serif;
+    font-family: poppins, sans-serif;
     font-size: 2.5rem;
     text-transform: uppercase;
     letter-spacing: 1px;
