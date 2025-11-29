@@ -67,11 +67,7 @@ $update->execute();
     <div class="service-description">
       <i class="fa-solid fa-shield"></i>
       <span>Eyewear Insurance</span>
-    </div>
-    <div class="service-description">
-      <i class="fa-solid fa-user"></i>
-      <span>24/7 Contact Support</span>
-    </div>
+  </div>
     <div class="service-description">
       <i class="fa-regular fa-calendar"></i> 
       <span>appointment now</span>
@@ -90,11 +86,10 @@ $update->execute();
   <div class="gray-line-area">
         <div class="gray-line"></div>
       </div>
-
-      <div class="bottom-description">
-        <h1 style="text-align: center; font-size:50px; font-family:'Times New Roman', Times, serif ;">We've Got your eyes covered</h1>
-        <p style="text-align: center;">when you browse glasses online, it should be safe. With over 12 years of experience.</p>
-      </div>
+<div class="bottom-description">
+    <h1>We've Got Your Eyes Covered</h1>
+    <p>When you browse glasses online, it should be safe. With over 12 years of experience.</p>
+</div>
       
       
       
@@ -135,7 +130,7 @@ $update->execute();
       </div>
       
       <div class="feature-highlight">
-  <h1 style="font-family: 'Times New Roman', Times, serif;">EYEWEAR FOR EVERYONE®</h1>
+  <h1>EYEWEAR FOR EVERYONE®</h1>
   <h2>STYLE & CLARITY MADE FOR YOU</h2>
 </div>
 
@@ -195,7 +190,7 @@ $update->execute();
 </div>
 
 <div class="concern-consults">
-  <h1 style="font-size: 3rem; font-size:arial; color:red;">WHY CHOOSE EYE-MASTER?</h1>
+<h1>why choose Eye-Master?</h1>
         <div class="features-container">
             <!-- Feature 1: Direct from Factory -->
             <div class="feature-card">

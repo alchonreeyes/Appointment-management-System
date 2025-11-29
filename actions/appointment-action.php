@@ -40,7 +40,7 @@ try {
     $client_id = $client['client_id'];
 
     // Common input fields
-    $service_id = $_POST['service_id'] ?? 1;
+    $service_id = $_POST['service_id'] ?? 6;
     $full_name = trim($_POST['full_name'] ?? '');
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');

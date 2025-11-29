@@ -1,0 +1,252 @@
+/* assets/ojo-style.css */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Poppins:wght@300;400;500;600&display=swap');
+
+:root {
+    --primary-color: #000000; /* Minimalist Black */
+    --accent-color: #f26522; /* OJO Orange */
+    --bg-color: #ffffff;
+    --text-muted: #666666;
+    --border-color: #eeeeee;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'Poppins', sans-serif;
+    color: var(--primary-color);
+}
+
+/* --- MAIN LAYOUT (Mimicking OJO Dashboard) --- */
+.ojo-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 60px 20px;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.page-header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+/* --- THE SPLIT LAYOUT (Sidebar Left, Content Right) --- */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 60px;
+    min-height: 500px;
+}
+
+/* LEFT MENU (Simple Text Links) */
+.dashboard-menu {
+    border-right: 1px solid var(--border-color);
+    padding-right: 20px;
+}
+
+.dashboard-menu ul {
+    list-style: none;
+}
+
+.dashboard-menu li {
+    margin-bottom: 20px;
+}
+
+.dashboard-menu a {
+    text-decoration: none;
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 400;
+    display: block;
+    transition: color 0.2s;
+}
+
+.dashboard-menu a:hover, 
+.dashboard-menu a.active {
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* --- CONTENT AREA (Right Side) --- */
+.dashboard-content {
+    padding-bottom: 50px;
+}
+
+/* --- TABLES (Appointments) --- */
+.ojo-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.ojo-table th {
+    text-align: left;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--primary-color);
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ojo-table td {
+    padding: 20px 0;
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.status-dot {
+    height: 8px;
+    width: 8px;
+    background-color: #ccc;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 5px;
+}
+.status-dot.active { background-color: #27ae60; }
+.status-dot.pending { background-color: #f39c12; }
+
+/* --- FORMS (Profile/Settings) --- */
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+.form-group input, 
+.form-group select {
+    width: 100%;
+    padding: 12px 0;
+    border: none;
+    border-bottom: 1px solid #ddd;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    color: var(--primary-color);
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    border-bottom-color: var(--primary-color);
+}
+
+/* --- BUTTONS --- */
+.btn-ojo {
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+    display: inline-block;
+    text-decoration: none;
+}
+
+.btn-ojo:hover {
+    background-color: #d9531e;
+}
+/* --- OJO MODALS --- */
+.ojo-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.ojo-modal {
+    background: white;
+    width: 90%;
+    max-width: 600px;
+    padding: 40px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+}
+
+.ojo-modal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+}
+
+.close-modal {
+    position: absolute;
+    top: 20px; right: 20px;
+    font-size: 1.5rem;
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #999;
+}
+
+/* Action Icons in Table */
+.action-icon {
+    margin-right: 10px;
+    color: var(--text-muted);
+    transition: color 0.2s;
+    cursor: pointer;
+}
+.action-icon:hover { color: var(--accent-color); }
+.action-icon.cancel { color: #e74c3c; }
+
+/* Detail Grid */
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+.detail-item strong {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+    .dashboard-menu {
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+    .dashboard-menu ul {
+        display: flex;
+        overflow-x: auto;
+        gap: 20px;
+    }
+    .dashboard-menu li { margin-bottom: 0; white-space: nowrap; }
+}

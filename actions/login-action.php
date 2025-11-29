@@ -44,10 +44,10 @@ if (isset($_POST['login'])) {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // ========================================
-    // SUCCESSFUL LOGIN
+    // SUCCESSFUL LOGIN (Modified for AJAX)
     // ========================================
     if ($user && password_verify($password, $user['password_hash'])) {
-        // Reset attempts on successful login
+        // Reset attempts
         unset($_SESSION['login_attempts']);
         unset($_SESSION['total_failed_attempts']);
         unset($_SESSION['login_cooldown_until']);
@@ -58,18 +58,23 @@ if (isset($_POST['login'])) {
 
         if($user['is_verified'] == 0){
             $_SESSION['error'] = 'Please verify your email before logging in.';
-            header('Location: ../public/login.php');
+            // For AJAX, we return success=false so page reloads and shows error
+            echo json_encode(['success' => false]);
             exit;
         }
 
-        if ($user['role'] === 'admin' || $user['role'] === 'staff') {
-            header('Location: ../admin/dashboard.php');
-            exit;
-        } else {
-            header("Location: ../public/home.php");
-            exit;
-        }
-    } 
+        // Determine redirect URL
+        $redirectUrl = ($user['role'] === 'admin' || $user['role'] === 'staff') 
+            ? '../admin/dashboard.php' 
+            : '../public/home.php';
+
+        // Return JSON success
+        echo json_encode([
+            'success' => true,
+            'redirect' => $redirectUrl
+        ]);
+        exit;
+    }
     // ========================================
     // FAILED LOGIN
     // ========================================

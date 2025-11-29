@@ -67,6 +67,7 @@ body {
     padding: 40px;
     display: flex;
     align-items: center;
+
     gap: 30px;
     color: white;
 }
@@ -89,7 +90,9 @@ body {
     color: white;
     letter-spacing: 2px;
 }
-
+.profile-header-info{
+    flex-grow: 1;
+}
 .profile-header-info h1 {
     font-size: 32px;
     margin-bottom: 8px;
@@ -863,7 +866,7 @@ body {
     display: flex;
     justify-content: center;
     padding: 25px 40px;
-    background: #f8f9fa;
+    
 }
 
 /* Responsive Design */

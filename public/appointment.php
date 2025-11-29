@@ -64,7 +64,7 @@ if (isset($_SESSION['user_id'])) {
 
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
             <!-- Step 1: Patient Info -->
-             
+             <input type="hidden" name="service_id" value="6">
           <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
@@ -230,30 +230,39 @@ if (isset($_SESSION['user_id'])) {
   </div>
 </div>        
         <!-- Step 3: Symptoms -->
-        <div class="form-step">
-            <h2 style="color: blue; font-size:30px;">Choose your provider & time</h2>
-            <p style="color: black;">Browse through the list of providers and check their upcoming appointment availability with just a glance. If you need more details, like specific time slots, just click on their name in the table.</p>
+       <div class="form-step">
+    <h2 style="color: #004aad; margin-top: 0; font-size: 1.4rem;">Eye Health Information</h2>
+    <p style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">Please provide your current eye history.</p>
 
-            <h3>Eye Health Information</h3>
-            <p>Do you currently wear Eye Glasses?</p>
-            <label><input type="radio" name="wear_glasses" value="Yes" required> Yes</label>
-            <label><input type="radio" name="wear_glasses" value="No" required> No</label>
+    <h5 style="margin: 5px 0; font-size: 13px;">Do you currently wear Eye Glasses?</h5>
+    <div class="radio-group-horizontal">
+        <label><input type="radio" name="wear_glasses" value="Yes" required> Yes</label>
+        <label><input type="radio" name="wear_glasses" value="No" required> No</label>
+    </div>
 
-            <p>Do you currently wear Contact Lenses?</p>
-            <label><input type="radio" name="wear_contact_lenses" value="Yes" required> Yes</label>
-            <label><input type="radio" name="wear_contact_lenses" value="No" required> No</label>
-            
-            <p>Are you experiencing any eye discomfort?</p>
-            <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
-            <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
-            <label><input type="checkbox" name="symptoms[]" value="Redness"> Eye Redness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Other" id="otherSymptom"> Other</label>
-            <input type="text" name="concern" id="concernInput" placeholder="Write a concern..." style="display: none;">
-            <button type="button" class="prev-btn">Back</button>
-            <button type="button" class="next-btn">Next</button>
-        
-        </div>
+    <h5 style="margin: 10px 0 5px 0; font-size: 13px;">Do you currently wear Contact Lenses?</h5>
+    <div class="radio-group-horizontal">
+        <label><input type="radio" name="wear_contact_lenses" value="Yes" required> Yes</label>
+        <label><input type="radio" name="wear_contact_lenses" value="No" required> No</label>
+    </div>
+    
+    <h5 style="margin: 10px 0 5px 0; font-size: 13px;">Are you experiencing any eye discomfort?</h5>
+    <div class="radio-group-horizontal">
+        <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
+        <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
+        <label><input type="checkbox" name="symptoms[]" value="Redness"> Redness</label>
+        <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
+        <label><input type="checkbox" name="symptoms[]" value="Other" id="otherSymptom"> Other</label>
+    </div>
+
+    <input type="text" name="concern" id="concernInput" placeholder="Please describe your concern..." 
+           style="display: none; margin-top: 5px;" class="compact-input">
+
+    <div style="margin-top: 15px;">
+        <button type="button" class="prev-btn">Back</button>
+        <button type="button" class="next-btn">Next</button>
+    </div>
+</div>
 
         <div class="form-step">
     <h2>Frame & Style Preferences</h2>

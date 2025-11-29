@@ -115,16 +115,22 @@ if (isset($_SESSION['user_id'])) {
         
         <!-- Step 2: medical certificate purpose -->
 <div class="form-step">
-    <h3 style="color: black;">Medical Certificate Purpose</h3>
-    <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
-    <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
-    <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
-    <label><input type="radio" name="certificate_purpose" value="Other" id="cert-other"> Other</label>
-    <input type="text" name="certificate_purpose"value="medical purpose" style="display:none;">
-    <input type="text" name="certificate_other" placeholder="If other, please specify..." style="display: none;" id="certificate_other">
+    <h3 style="color: black; margin-top: 0;">Medical Certificate Purpose</h3>
     
-    <button type="button" class="prev-btn">Back</button>
-    <button type="button" class="next-btn">Next</button>
+    <div class="radio-group-horizontal">
+        <label><input type="radio" name="certificate_purpose" value="Work" required> For Work</label>
+        <label><input type="radio" name="certificate_purpose" value="School"> For School</label>
+        <label><input type="radio" name="certificate_purpose" value="Travel"> For Travel</label>
+        <label><input type="radio" name="certificate_purpose" value="Other" id="cert-other"> Other</label>
+    </div>
+
+    <input type="text" name="certificate_other" placeholder="If other, please specify..." 
+           style="display: none; margin-top: 10px;" id="certificate_other" class="compact-input">
+    
+    <div style="margin-top: 20px;">
+        <button type="button" class="prev-btn">Back</button>
+        <button type="button" class="next-btn">Next</button>
+    </div>
 </div>
 <script>
   document.getElementById("cert-other").addEventListener('change', function() {

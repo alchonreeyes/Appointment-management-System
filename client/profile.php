@@ -121,215 +121,80 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
 
 
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Page Title</title>
-    <link rel="stylesheet" href="./style/profile.css">
-    
-    <?php 
-    // Include theme handler
-    if (!isset($current_theme)) {
-        include '../includes/theme_handler.php';
-    }
-    
-    // Load dark mode CSS if needed
-    if ($current_theme === 'dark'): 
-    ?>
-        <link rel="stylesheet" href="./style/dark-mode.css">
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                document.body.classList.add('dark-mode');
-            });
-        </script>
-    <?php endif; ?>
-    
+    <title>My Account | Eye Master</title>
+    <link rel="stylesheet" href="../assets/ojo-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body<?php echo $current_theme === 'dark' ? ' class="dark-mode"' : ''; ?>>
+<body>
     <?php include '../includes/navbar.php' ?>
-    
-    <div class="link-section">
-        <a href="../public/home.php"><i class="fa-solid fa-house"></i></a>
-        <a href="#" class="side-toggle" style="border-radius: 50%; background:white; padding: 10px" ><i class="fa-solid fa-bars"></i></a>
-    </div>
 
-    <?php include 'sidebar.php'; ?>
+    <div class="ojo-container">
+        
+        <div class="account-header">
+            <h1>MY ACCOUNT</h1>
+        </div>
 
-<!-- Overlay -->
-<div class="sidebar-overlay" id="sidebarOverlay"></div>
+        <div class="account-grid">
+            <nav class="account-menu">
+                <ul>
+                    <li><a href="profile.php" class="active">Account Details</a></li>
+                    <li><a href="appointments.php">Appointments</a></li>
+                    <li><a href="settings.php">Settings</a></li>
+                    <li><a href="../actions/logout.php" style="color: #e74c3c;">Log out</a></li>
+                </ul>
+            </nav>
 
-    <div class="profile">
-        <div class="profile-details">
-            <!-- Profile Header -->
-            <div class="profile-header">
-                <div class="profile-avatar">
-                    <div class="avatar-circle">
-                        <?php echo $initials; ?>
-                    </div>
-                </div>
-                <div class="profile-header-info">
-                    <h1><?php echo htmlspecialchars($user['full_name']); ?></h1>
-                    <p class="user-id">ID: <?php echo $user['id']; ?></p>
-                    <span class="user-badge">CLIENT</span>
-                </div>
-            </div>
+            <main class="account-content">
+                
+                <h3>Personal Information</h3>
 
-            <!-- Success/Error Messages -->
-            <?php if (isset($_SESSION['success_message'])): ?>
-                <div class="alert alert-success">
-                    <i class="fa-solid fa-check-circle"></i>
-                    <?php 
-                        echo $_SESSION['success_message']; 
-                        unset($_SESSION['success_message']);
-                    ?>
-                </div>
-            <?php endif; ?>
+                <?php if (isset($_SESSION['success_message'])): ?>
+                    <p style="color: green; margin-bottom: 20px;"><?= $_SESSION['success_message']; unset($_SESSION['success_message']); ?></p>
+                <?php endif; ?>
 
-            <?php if (isset($error_message)): ?>
-                <div class="alert alert-error">
-                    <i class="fa-solid fa-exclamation-circle"></i>
-                    <?php echo $error_message; ?>
-                </div>
-            <?php endif; ?>
-
-            <!-- Profile Information Section -->
-            <div class="profile-section">
-                <h2 class="section-title">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                    Profile Information
-                </h2>
-
-                <form method="POST" action="" class="profile-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="full_name">FULL NAME <span class="required">*</span></label>
-                            <input type="text" id="full_name" name="full_name" 
-                                   value="<?php echo htmlspecialchars($user['full_name']); ?>" required>
+                <form method="POST" action="">
+                    <div class="ojo-form-grid">
+                        <div class="ojo-group">
+                            <label>Full Name</label>
+                            <input type="text" name="full_name" value="<?= htmlspecialchars($user['full_name']) ?>">
                         </div>
-
-                        <div class="form-group">
-                            <label for="suffix">SUFFIX</label>
-                            <input type="text" id="suffix" name="suffix" 
-                                   value="<?php echo htmlspecialchars($user['suffix']); ?>" 
-                                   placeholder="Jr., Sr., III, etc.">
+                        <div class="ojo-group">
+                            <label>Email Address</label>
+                            <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" readonly style="color:#999;">
                         </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="email">EMAIL ADDRESS <span class="required">*</span></label>
-                            <input type="email" id="email" name="email" 
-                                   value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                        <div class="ojo-group">
+                            <label>Phone Number</label>
+                            <input type="text" name="phone_number" value="<?= htmlspecialchars($user['phone_number']) ?>">
                         </div>
-
-                        <div class="form-group">
-                            <label for="phone_number">PHONE NUMBER</label>
-                            <input type="text" id="phone_number" name="phone_number" 
-                                   value="<?php echo htmlspecialchars($user['phone_number']); ?>">
+                        <div class="ojo-group">
+                            <label>Occupation</label>
+                            <input type="text" name="occupation" value="<?= htmlspecialchars($user['occupation']) ?>">
                         </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="birth_date">BIRTH DATE</label>
-                            <input type="date" id="birth_date" name="birth_date" 
-                                   value="<?php echo htmlspecialchars($user['birth_date']); ?>">
+                        <div class="ojo-group">
+                            <label>Age</label>
+                            <input type="number" name="age" value="<?= htmlspecialchars($user['age']) ?>">
                         </div>
-
-                        <div class="form-group">
-                            <label for="age">AGE</label>
-                            <input type="number" id="age" name="age" 
-                                   value="<?php echo htmlspecialchars($user['age']); ?>">
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="gender">GENDER</label>
-                            <select id="gender" name="gender">
-                                <option value="">Select Gender</option>
-                                <option value="Male" <?php echo $user['gender'] === 'Male' ? 'selected' : ''; ?>>Male</option>
-                                <option value="Female" <?php echo $user['gender'] === 'Female' ? 'selected' : ''; ?>>Female</option>
-                                <option value="Other" <?php echo $user['gender'] === 'Other' ? 'selected' : ''; ?>>Other</option>
+                        <div class="ojo-group">
+                            <label>Gender</label>
+                            <select name="gender">
+                                <option value="Male" <?= $user['gender'] == 'Male' ? 'selected' : '' ?>>Male</option>
+                                <option value="Female" <?= $user['gender'] == 'Female' ? 'selected' : '' ?>>Female</option>
                             </select>
                         </div>
-
-                        <div class="form-group">
-                            <label for="occupation">OCCUPATION</label>
-                            <input type="text" id="occupation" name="occupation" 
-                                   value="<?php echo htmlspecialchars($user['occupation']); ?>">
-                        </div>
                     </div>
 
-                    <div class="form-group full-width">
-                        <label for="address">ADDRESS</label>
-                        <textarea id="address" name="address" rows="3"><?php echo htmlspecialchars($user['address'] ?? ''); ?></textarea>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" name="update_profile" class="btn btn-primary">
-                            <i class="fa-solid fa-pen-to-square"></i> Update Profile
-                        </button>
-                    </div>
+                    <button type="submit" name="update_profile" class="btn-ojo">SAVE CHANGES</button>
                 </form>
-            </div>
 
-            <!-- Change Password Section -->
-            <div class="profile-section">
-                <h2 class="section-title">
-                    <i class="fa-solid fa-lock"></i>
-                    Change Password
-                </h2>
-
-                <form method="POST" action="" class="profile-form">
-                    <div class="form-group">
-                        <label for="current_password">CURRENT PASSWORD <span class="required">*</span></label>
-                        <div class="password-input-wrapper">
-                            <input type="password" id="current_password" name="current_password" required>
-                            <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('current_password')"></i>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="new_password">NEW PASSWORD <span class="required">*</span></label>
-                            <div class="password-input-wrapper">
-                                <input type="password" id="new_password" name="new_password" required>
-                                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('new_password')"></i>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="confirm_password">CONFIRM NEW PASSWORD <span class="required">*</span></label>
-                            <div class="password-input-wrapper">
-                                <input type="password" id="confirm_password" name="confirm_password" required>
-                                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword('confirm_password')"></i>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" name="change_password" class="btn btn-warning">
-                            <i class="fa-solid fa-key"></i> Change Password
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Logout Section -->
-            <div class="profile-section logout-section">
-                <a href="../public/logout.php" class="btn btn-danger" onclick="return confirm('Are you sure you want to logout?')">
-                    <i class="fa-solid fa-right-from-bracket"></i> Logout
-                </a>
-            </div>
+            </main>
         </div>
     </div>
 
     <?php include '../includes/footer.php' ?>
-
 </body>
 </html>

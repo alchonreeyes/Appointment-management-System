@@ -317,5 +317,119 @@ if (isset($_SESSION['login_cooldown_until'])) {
     <?php endif; ?>
 
     <?php include '../includes/footer.php' ?>
+    <div id="successPopup" class="success-overlay">
+    <div class="success-card">
+        <div class="checkmark-circle">
+            <svg class="checkmark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52">
+                <circle class="checkmark__circle" cx="26" cy="26" r="25" fill="none"/>
+                <path class="checkmark__check" fill="none" d="M14.1 27.2l7.1 7.2 16.7-16.8"/>
+            </svg>
+        </div>
+        <h2>Login Successful!</h2>
+        <p>Redirecting to dashboard...</p>
+    </div>
+</div>
+
+<style>
+/* Popup Styles */
+.success-overlay {
+    display: none; /* Hidden initially */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.success-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.success-card {
+    text-align: center;
+    background: white;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.success-overlay.active .success-card {
+    transform: scale(1);
+}
+
+/* Animated Checkmark */
+.checkmark-circle {
+    width: 80px; height: 80px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: #4CAF50;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.checkmark__check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.2s forwards;
+    stroke-width: 4;
+    stroke: #fff;
+}
+
+@keyframes stroke {
+    100% { stroke-dashoffset: 0; }
+}
+
+.success-card h2 { color: #333; margin-bottom: 10px; font-family: 'Poppins', sans-serif; }
+.success-card p { color: #666; font-size: 14px; }
+</style>
+
+<script>
+document.getElementById('loginForm').addEventListener('submit', function(e) {
+    e.preventDefault(); // Stop normal submission
+
+    const formData = new FormData(this);
+    formData.append('login', 'true'); // Add the submit trigger
+
+    const btn = document.getElementById('loginBtn');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = 'Verifying...';
+
+    fetch('../actions/login-action.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show Success Popup
+            const popup = document.getElementById('successPopup');
+            popup.classList.add('active');
+            
+            // Wait 1.5 seconds then redirect
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 1500);
+        } else {
+            // Reload page to show PHP error (handled by session)
+            window.location.reload(); 
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        window.location.reload(); // Fallback
+    });
+});
+</script>
 </body>
 </html>
