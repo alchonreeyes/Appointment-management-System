@@ -20,6 +20,92 @@ body {
     flex-direction: column;
     align-items: center; /* Centers the content horizontally */
 }
+/* --- MODAL STYLES FOR STEP 4 --- */
+.product-modal-overlay {
+    display: none; /* Hidden by default */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* Dimmed background */
+    z-index: 1000; /* Sit on top */
+    justify-content: center;
+    align-items: center;
+}
+
+.product-modal-content {
+    background: white;
+    width: 90%;
+    max-width: 900px;
+    height: 80vh; /* Fixed height */
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    position: relative;
+    animation: fadeIn 0.3s ease;
+}
+
+.product-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+}
+
+.product-modal-body {
+    flex: 1;
+    overflow-y: auto; /* Scrollable inside */
+    padding-right: 5px;
+}
+
+.product-modal-close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.see-more-btn-container {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.btn-see-more {
+    background-color: #333;
+    color: white;
+    padding: 10px 30px;
+    border-radius: 25px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s;
+}
+
+.btn-see-more:hover {
+    background-color: #555;
+}
+
+.btn-done {
+    background-color: #004aad;
+    color: white;
+    padding: 10px 25px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 
 /* =========================================
    8. Step 4: Style Preference Grid

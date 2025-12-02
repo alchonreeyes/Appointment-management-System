@@ -50,7 +50,7 @@ $update->execute();
 
     <div class="carousel-track">
         <div class="slide">
-            <img src="../assets/src/hero-mage.png" alt="Hero 1" onerror="this.style.display='none'; this.parentElement.style.background='#333'">
+            <img src="../assets/src/hero-image-glass.jpg" alt="Hero 1" onerror="this.style.display='none'; this.parentElement.style.background='#333'">
         </div>
         
         <div class="slide">

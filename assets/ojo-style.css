@@ -100,7 +100,7 @@ body {
 }
 
 .ojo-modal h2 {
-    font-family: 'Playfair Display', serif;
+    font-family: poppins, sans-serif;
     font-size: 1.8rem;
     margin-bottom: 25px;
     color: #000;

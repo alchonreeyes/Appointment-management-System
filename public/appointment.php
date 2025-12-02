@@ -11,6 +11,13 @@ if (!isset($_SESSION['user_id'])) {
 include '../config/db.php'; // Ensure this is present in appointment.php too
 $db = new Database();
 $pdo = $db->getConnection();
+// ... inside appointment.php, after $pdo connection is made ...
+
+// FETCH PRODUCTS FOR STEP 4
+// We select all products. You can add "WHERE stock > 0" if you track inventory.
+$productStmt = $pdo->prepare("SELECT product_id, product_name, brand, image_path, frame_type FROM products ORDER BY brand ASC, product_name ASC");
+$productStmt->execute();
+$available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $client_profile_data = [];
 if (isset($_SESSION['user_id'])) {
@@ -64,7 +71,7 @@ if (isset($_SESSION['user_id'])) {
 
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
             <!-- Step 1: Patient Info -->
-             <input type="hidden" name="service_id" value="6">
+             <input type="hidden" name="service_id" value="11">
           <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
@@ -263,108 +270,93 @@ if (isset($_SESSION['user_id'])) {
         <button type="button" class="next-btn">Next</button>
     </div>
 </div>
+<div class="form-step">
+    <h2>Select Frames to Try On</h2>
+    <p style="color: #666;">Select from our top picks below, or click "See More" to view the full collection.</p>
 
-        <div class="form-step">
-    <h2>Frame & Style Preferences</h2>
-    <p style="color: black;">Help us personalize your visit. Select the brands or styles you are interested in trying on (Optional).</p>
+    <?php 
+        // 1. Separate products into "Top 3" and "The Rest"
+        $top_picks = array_slice($available_products, 0, 3);
+        $more_products = array_slice($available_products, 3);
+    ?>
 
-    <h5 style="margin: 15px 0 10px 0; font-size: 13px;">Preferred Shape (Select multiple)</h5>
-<div class="preference-grid">
-    <label class="preference-option-image">
-        <input type="checkbox" name="preferred_shapes[]" value="Round">
-        <div class="shape-image-container">
-            <img src="https://tse1.mm.bing.net/th/id/OIP.c_VyXyCrEfbfq1xSD0FJSgHaDt?w=1500&h=750&rs=1&pid=ImgDetMain&o=7&rm=3" alt="Round Frame">
+    <div class="preference-grid">
+        <?php foreach ($top_picks as $product): ?>
+            <?php 
+                $imgSrc = $product['image_path'];
+                if (strpos($imgSrc, '../photo/') !== false) {
+                    $imgSrc = str_replace('../photo/', '../mod/photo/', $imgSrc);
+                }
+                if (empty($imgSrc)) $imgSrc = 'https://placehold.co/150x80?text=No+Image';
+            ?>
+            <label class="preference-option-image product-card-select">
+                <input type="checkbox" name="selected_products[]" value="<?= htmlspecialchars($product['product_name'] . ' (' . $product['brand'] . ')') ?>">
+                <div class="shape-image-container" style="height: 100px;">
+                    <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                </div>
+                <div style="text-align: center; margin-top: 5px;">
+                    <span class="shape-label-text" style="display:block; font-weight:bold; font-size: 14px;">
+                        <?= htmlspecialchars($product['product_name']) ?>
+                    </span>
+                    <small style="color: #666; font-size: 12px;">
+                        <?= htmlspecialchars($product['brand']) ?>
+                    </small>
+                </div>
+            </label>
+        <?php endforeach; ?>
+    </div>
+
+    <?php if (count($more_products) > 0): ?>
+        <div class="see-more-btn-container">
+            <button type="button" class="btn-see-more" onclick="openProductModal()">+ See More Frames</button>
+            <p style="font-size: 12px; color: #888; margin-top: 5px;">
+                (<?= count($more_products) ?> more styles available)
+            </p>
         </div>
-        <span class="shape-label-text">Round</span>
-    </label>
+    <?php endif; ?>
 
-    <label class="preference-option-image">
-        <input type="checkbox" name="preferred_shapes[]" value="Square">
-        <div class="shape-image-container">
-            <img src="https://tse2.mm.bing.net/th/id/OIP.VgX3dhkRsQEOyxMajdQmSAHaDt?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Square Frame">
-        </div>
-        <span class="shape-label-text">Square</span>
-    </label>
+    <div id="productModal" class="product-modal-overlay">
+        <div class="product-modal-content">
+            
+            <div class="product-modal-header">
+                <h3 style="margin:0; color:#004aad;">Full Frame Collection</h3>
+                <button type="button" class="product-modal-close" onclick="closeProductModal()">&times;</button>
+            </div>
 
-    <label class="preference-option-image">
-        <input type="checkbox" name="preferred_shapes[]" value="Rectangle">
-        <div class="shape-image-container">
-            <img src="https://tse3.mm.bing.net/th/id/OIP.hJYXw1ybwzJ2rCWfpa85IQHaDt?rs=1&pid=ImgDetMain&o=7&rm=3" alt="Rectangle Frame">
-        </div>
-        <span class="shape-label-text">Rectangle</span>
-    </label>
+            <div class="product-modal-body">
+                <div class="preference-grid">
+                    <?php foreach ($more_products as $product): ?>
+                        <?php 
+                            $imgSrc = $product['image_path'];
+                            if (strpos($imgSrc, '../photo/') !== false) {
+                                $imgSrc = str_replace('../photo/', '../mod/photo/', $imgSrc);
+                            }
+                            if (empty($imgSrc)) $imgSrc = 'https://placehold.co/150x80?text=No+Image';
+                        ?>
+                        <label class="preference-option-image product-card-select">
+                            <input type="checkbox" name="selected_products[]" value="<?= htmlspecialchars($product['product_name'] . ' (' . $product['brand'] . ')') ?>">
+                            <div class="shape-image-container" style="height: 100px;">
+                                <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            </div>
+                            <div style="text-align: center; margin-top: 5px;">
+                                <span class="shape-label-text" style="display:block; font-weight:bold; font-size: 14px;">
+                                    <?= htmlspecialchars($product['product_name']) ?>
+                                </span>
+                                <small style="color: #666; font-size: 12px;">
+                                    <?= htmlspecialchars($product['brand']) ?>
+                                </small>
+                            </div>
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
 
-    <label class="preference-option-image">
-        <input type="checkbox" name="preferred_shapes[]" value="Oval">
-        <div class="shape-image-container">
-            <img src="https://image.lensmartonline.com/2023-03-16/16789366314990.jpg?imageView2/2/interlace/1/ignore-error/1/w/1200" alt="Oval Frame">
-        </div>
-        <span class="shape-label-text">Oval</span>
-    </label>
+            <div style="text-align: right; padding-top: 15px; border-top: 1px solid #eee;">
+                <button type="button" class="btn-done" onclick="closeProductModal()">Done Selecting</button>
+            </div>
 
-    <label class="preference-option-image">
-        <input type="checkbox" name="preferred_shapes[]" value="Oversized">
-        <div class="shape-image-container">
-            <img src="https://www.topofstyle.com/image/1/00/7p/wh/1007pwh-zeelool-vintage-oversized-thick-cat-eye-glasses-for-women-with_500x660_0.jpg" alt="Oversized Frame">
         </div>
-        <span class="shape-label-text">Oversized</span>
-    </label>
-</div>
-<h5 style="margin: 5px 0 10px 0; font-size: 13px;">Preferred Brands (Select multiple)</h5>
-<div class="preference-grid">
-    
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Ray-Ban">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Ray-Ban" alt="Ray-Ban">
-        </div>
-        <span class="shape-label-text">Ray-Ban</span>
-    </label>
-
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Oakley">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Oakley" alt="Oakley">
-        </div>
-        <span class="shape-label-text">Oakley</span>
-    </label>
-
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Gucci">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Starlight" alt="Gucci">
-        </div>
-        <span class="shape-label-text">Starlight</span>
-    </label>
-    
-    
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Gucci">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Pardasul" alt="Gucci">
-        </div>
-        <span class="shape-label-text">Pardasul</span>
-    </label>
-
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Prada">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Esteria" alt="Prada">
-        </div>
-        <span class="shape-label-text">Esteria</span>
-    </label>
-
-    <label class="preference-option-image">
-        <input type="checkbox" name="brands[]" value="Coach">
-        <div class="shape-image-container">
-            <img src="https://placehold.co/100x60/ffffff/000000?text=Coach" alt="Coach">
-        </div>
-        <span class="shape-label-text">Coach</span>
-    </label>
-
-    
-
-</div>
+    </div>
 
     <div style="margin-top: 30px;">
         <button type="button" class="prev-btn">Back</button>
@@ -460,6 +452,27 @@ if (isset($_SESSION['user_id'])) {
           }
             });
         </script>
+        <script>
+    // Function to Open Modal
+    function openProductModal() {
+        document.getElementById('productModal').style.display = 'flex';
+    }
+
+    // Function to Close Modal
+    function closeProductModal() {
+        document.getElementById('productModal').style.display = 'none';
         
+        // Optional: Update summary count on the main page if you want
+        // But for now, keeping it simple is best.
+    }
+
+    // Close modal if user clicks outside the white box
+    window.onclick = function(event) {
+        const modal = document.getElementById('productModal');
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    }
+</script> 
 </body>
 </html>

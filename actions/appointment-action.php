@@ -58,6 +58,8 @@ try {
     // Capture Shapes (Array to String)
     $shapes = isset($_POST['frame_shape']) ? implode(", ", $_POST['frame_shape']) : '';
     // Detect appointment type
+    // NEW: Capture Selected Products
+$selected_products = isset($_POST['selected_products']) ? implode(", ", $_POST['selected_products']) : 'None';
     $type = 'normal';
     if (isset($_POST['certificate_purpose'])) $type = 'medical';
     elseif (isset($_POST['ishihara_test_type'])) $type = 'ishihara';
@@ -182,45 +184,45 @@ try {
                 ':appointment_group_id' => $appointment_group_id
             ]);
         } else {
-            // Normal appointment (UPDATED)
-            $sql = "INSERT INTO appointments (
-                        client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
-                        appointment_date, appointment_time,
-                        wear_glasses, symptoms, concern,
-                        preferred_brands, preferred_shapes,  /* <--- ADDED THIS */
-                        consent_info, consent_reminders, consent_terms,
-                        appointment_group_id, status_id
-                    ) VALUES (
-                        :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
-                        :appointment_date, :appointment_time,
-                        :wear_glasses, :symptoms, :concern,
-                        :preferred_brands, :preferred_shapes, /* <--- ADDED THIS */
-                        :consent_info, :consent_reminders, :consent_terms,
-                        :appointment_group_id,
-                        (SELECT status_id FROM appointmentstatus WHERE status_name = 'Pending' LIMIT 1)
-                    )";
-            $stmt = $pdo->prepare($sql);
-            $stmt->execute([
-                ':client_id' => $client_id,
-                ':service_id' => $service_id,
-                ':full_name' => $full_name,
-                ':suffix' => $suffix,
-                ':gender' => $gender,
-                ':age' => $age,
-                ':phone_number' => $phone_number,
-                ':occupation' => $occupation,
-                ':appointment_date' => $date,
-                ':appointment_time' => $time,
-                ':wear_glasses' => $_POST['wear_glasses'] ?? null,
-                ':symptoms' => isset($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : '',
-                ':concern' => $concern,
-                ':preferred_brands' => $brands,  // <--- Mapped here
-                ':preferred_shapes' => $shapes,  // <--- Mapped here
-                ':consent_info' => $consent_info,
-                ':consent_reminders' => $consent_reminders,
-                ':consent_terms' => $consent_terms,
-                ':appointment_group_id' => $appointment_group_id
-            ]);
+            // Normal appointment (UPDATED FOR PRODUCTS)
+$sql = "INSERT INTO appointments (
+            client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
+            appointment_date, appointment_time,
+            wear_glasses, symptoms, concern,
+            selected_products, /* <--- NEW COLUMN */
+            consent_info, consent_reminders, consent_terms,
+            appointment_group_id, status_id
+        ) VALUES (
+            :client_id, :service_id, :full_name, :suffix, :gender, :age, :phone_number, :occupation,
+            :appointment_date, :appointment_time,
+            :wear_glasses, :symptoms, :concern,
+            :selected_products, /* <--- NEW VALUE */
+            :consent_info, :consent_reminders, :consent_terms,
+            :appointment_group_id,
+            (SELECT status_id FROM appointmentstatus WHERE status_name = 'Pending' LIMIT 1)
+        )";
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute([
+    ':client_id' => $client_id,
+    ':service_id' => $service_id,
+    ':full_name' => $full_name,
+    ':suffix' => $suffix,
+    ':gender' => $gender,
+    ':age' => $age,
+    ':phone_number' => $phone_number,
+    ':occupation' => $occupation,
+    ':appointment_date' => $date,
+    ':appointment_time' => $time,
+    ':wear_glasses' => $_POST['wear_glasses'] ?? null,
+    ':symptoms' => isset($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : '',
+    ':concern' => $concern,
+    ':selected_products' => $selected_products, // <--- Bind the new data
+    ':consent_info' => $consent_info,
+    ':consent_reminders' => $consent_reminders,
+    ':consent_terms' => $consent_terms,
+    ':appointment_group_id' => $appointment_group_id
+]);
         }
     }
 

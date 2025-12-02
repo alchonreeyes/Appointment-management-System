@@ -1,4 +1,4 @@
-<?php
+<!-- <?php
 include '../config/db.php';
 
 header('Content-Type: application/json');
@@ -84,4 +84,4 @@ try {
         'message' => 'Database error: ' . $e->getMessage()
     ]);
 }
-?>
+?> -->

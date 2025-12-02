@@ -56,7 +56,7 @@ if (isset($_SESSION['user_id'])) {
   
         <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
         <!-- Step 1: Patient Info -->
-             <input type="hidden" name="service_id" value="7">
+             <input type="hidden" name="service_id" value="12">
         <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
