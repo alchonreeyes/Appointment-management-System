@@ -262,10 +262,27 @@ if (isset($_SESSION['user_id'])) {
     <div id="finalSummary" class="summary-box">
         </div>
              <h3>Consent & Confirmation</h3>
-    <label><input type="checkbox" name="consent_info" value="1"> I certify that the above information is correct.</label>
-    <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
-    <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label><label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
 
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_info" value="1" required> 
+        <span>I certify that the above information is correct.</span>
+    </label>
+</div>
+
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_reminders" value="1"> 
+        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">via SMS or email.</span></span>
+    </label>
+</div>
+
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_terms" value="1" required> 
+        <span>I agree to <span class="legal-link" onclick="openLegalModal(event, 'modal-terms')">terms & privacy policy.</span></span>
+    </label>
+</div>
             <button type="button" class="prev-btn">Back</button>
             <button type="submit" name="submit">Make a Appointment</button>
         </div>
@@ -325,6 +342,59 @@ if (isset($_SESSION['user_id'])) {
             }
           });
         </script>
+        <div id="modal-sms" class="legal-modal">
+    <div class="legal-modal-content">
+        <button type="button" class="close-legal" onclick="closeLegalModal('modal-sms')">&times;</button>
+        <h3 style="margin-top:0; color:#004aad;">Communication Policy</h3>
+        <p style="color:#444; line-height:1.6;">
+            We respect your inbox. By consenting to this, you agree to receive:
+        </p>
+        <ul style="color:#444; line-height:1.6; padding-left:20px;">
+            <li>Appointment confirmation details.</li>
+            <li>Reminders 24 hours before your visit.</li>
+            <li>Notifications when your glasses or results are ready.</li>
+        </ul>
+        <p style="color:#444; font-size:13px; margin-top:15px;">
+            We will never send spam or sell your contact number to third parties.
+        </p>
+    </div>
+</div>
+
+<div id="modal-terms" class="legal-modal">
+    <div class="legal-modal-content">
+        <button type="button" class="close-legal" onclick="closeLegalModal('modal-terms')">&times;</button>
+        <h3 style="margin-top:0; color:#004aad;">Terms & Privacy Policy</h3>
+        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6;">
+            <p><strong>1. Data Privacy</strong><br>
+            Your records are kept strictly confidential in compliance with the Data Privacy Act of 2012.</p>
+            
+            <p><strong>2. Cancellations</strong><br>
+            Please notify us at least 24 hours in advance for cancellations.</p>
+            
+            <p><strong>3. Accuracy</strong><br>
+            You certify that the information provided is accurate to ensure proper medical assessment.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openLegalModal(event, modalId) {
+        // THIS LINE STOPS THE CHECKBOX FROM CHECKING WHEN CLICKING THE LINK
+        event.preventDefault(); 
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    function closeLegalModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modal if clicking outside the white box
+    window.onclick = function(event) {
+        if (event.target.classList.contains('legal-modal')) {
+            event.target.style.display = "none";
+        }
+    }
+</script>
 </body>
 
 </html>

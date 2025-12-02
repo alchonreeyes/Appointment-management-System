@@ -270,6 +270,7 @@ if (isset($_SESSION['user_id'])) {
         <button type="button" class="next-btn">Next</button>
     </div>
 </div>
+
 <div class="form-step">
     <h2>Select Frames to Try On</h2>
     <p style="color: #666;">Select from our top picks below, or click "See More" to view the full collection.</p>
@@ -373,10 +374,27 @@ if (isset($_SESSION['user_id'])) {
         </div>
 
     <h3>Consent & Confirmation</h3>
-    <label><input type="checkbox" name="consent_info" value="1" required> I certify that the above information is correct.</label>
-    <label><input type="checkbox" name="consent_reminders" value="1"> I consent to receive reminders via SMS or email.</label>
-    <label><input type="checkbox" name="consent_terms" value="1" required> I agree to terms & privacy policy.</label>
 
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_info" value="1" required> 
+        <span>I certify that the above information is correct.</span>
+    </label>
+</div>
+
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_reminders" value="1"> 
+        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">via SMS or email.</span></span>
+    </label>
+</div>
+
+<div style="margin-bottom: 12px;">
+    <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
+        <input type="checkbox" name="consent_terms" value="1" required> 
+        <span>I agree to <span class="legal-link" onclick="openLegalModal(event, 'modal-terms')">terms & privacy policy.</span></span>
+    </label>
+</div>
     <div style="margin-top: 20px;">
         <button type="button" class="prev-btn">Back</button>
         <button type="submit" name="submit">Make an Appointment</button>
@@ -473,6 +491,130 @@ if (isset($_SESSION['user_id'])) {
             modal.style.display = "none";
         }
     }
-</script> 
+</script>
+<div id="modal-certify" class="legal-modal-overlay">
+    <div class="legal-modal-content">
+        <div class="legal-modal-header">
+            <h3>Information Certification</h3>
+            <button type="button" class="legal-close" onclick="closeLegalModal('modal-certify')">&times;</button>
+        </div>
+        <div class="legal-modal-body">
+            <p><strong>Accuracy of Information:</strong></p>
+            <p>By checking this box, you declare that all personal details, medical history, and contact information provided in this form are accurate and up-to-date to the best of your knowledge.</p>
+            <p>Providing false information may affect the quality of the eye examination and medical advice given by our specialists.</p>
+        </div>
+    </div>
+</div>
+
+<div id="modal-comm" class="legal-modal-overlay">
+    <div class="legal-modal-content">
+        <div class="legal-modal-header">
+            <h3>Communication Consent</h3>
+            <button type="button" class="legal-close" onclick="closeLegalModal('modal-comm')">&times;</button>
+        </div>
+        <div class="legal-modal-body">
+            <p><strong>How we contact you:</strong></p>
+            <p>We value your privacy. Your phone number and email will strictly be used for:</p>
+            <ul>
+                <li>Appointment Confirmations & Reminders</li>
+                <li>Notification when your glasses/results are ready</li>
+                <li>Emergency schedule changes</li>
+            </ul>
+            <p>We will <strong>never</strong> sell your contact info to third-party advertisers.</p>
+        </div>
+    </div>
+</div>
+
+<div id="modal-terms" class="legal-modal-overlay">
+    <div class="legal-modal-content">
+        <div class="legal-modal-header">
+            <h3>Terms & Privacy Policy</h3>
+            <button type="button" class="legal-close" onclick="closeLegalModal('modal-terms')">&times;</button>
+        </div>
+        <div class="legal-modal-body">
+            <p><strong>1. Data Privacy Act</strong></p>
+            <p>Eye Master Clinic complies with the Data Privacy Act of 2012. Your medical records are stored securely and encrypted.</p>
+            
+            <p><strong>2. Appointment Cancellation</strong></p>
+            <p>Please notify us at least 24 hours in advance if you need to cancel or reschedule.</p>
+            
+            <p><strong>3. Clinic Rights</strong></p>
+            <p>The clinic reserves the right to refuse service to patients who provide fraudulent information or display abusive behavior towards staff.</p>
+        </div>
+    </div>
+    <script>
+    // Open specific modal
+    function openLegalModal(modalId) {
+        // Prevent the checkbox from toggling when clicking the text link
+        event.preventDefault(); 
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    // Close specific modal
+    function closeLegalModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('legal-modal-overlay')) {
+            event.target.style.display = 'none';
+        }
+    });
+</script>
+</div> 
+<div id="modal-sms" class="legal-modal">
+    <div class="legal-modal-content">
+        <button type="button" class="close-legal" onclick="closeLegalModal('modal-sms')">&times;</button>
+        <h3 style="margin-top:0; color:#004aad;">Communication Policy</h3>
+        <p style="color:#444; line-height:1.6;">
+            We respect your inbox. By consenting to this, you agree to receive:
+        </p>
+        <ul style="color:#444; line-height:1.6; padding-left:20px;">
+            <li>Appointment confirmation details.</li>
+            <li>Reminders 24 hours before your visit.</li>
+            <li>Notifications when your glasses or results are ready.</li>
+        </ul>
+        <p style="color:#444; font-size:13px; margin-top:15px;">
+            We will never send spam or sell your contact number to third parties.
+        </p>
+    </div>
+</div>
+
+<div id="modal-terms" class="legal-modal">
+    <div class="legal-modal-content">
+        <button type="button" class="close-legal" onclick="closeLegalModal('modal-terms')">&times;</button>
+        <h3 style="margin-top:0; color:#004aad;">Terms & Privacy Policy</h3>
+        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6;">
+            <p><strong>1. Data Privacy</strong><br>
+            Your records are kept strictly confidential in compliance with the Data Privacy Act of 2012.</p>
+            
+            <p><strong>2. Cancellations</strong><br>
+            Please notify us at least 24 hours in advance for cancellations.</p>
+            
+            <p><strong>3. Accuracy</strong><br>
+            You certify that the information provided is accurate to ensure proper medical assessment.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openLegalModal(event, modalId) {
+        // THIS LINE STOPS THE CHECKBOX FROM CHECKING WHEN CLICKING THE LINK
+        event.preventDefault(); 
+        document.getElementById(modalId).style.display = 'flex';
+    }
+
+    function closeLegalModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Close modal if clicking outside the white box
+    window.onclick = function(event) {
+        if (event.target.classList.contains('legal-modal')) {
+            event.target.style.display = "none";
+        }
+    }
+</script>
 </body>
 </html>
