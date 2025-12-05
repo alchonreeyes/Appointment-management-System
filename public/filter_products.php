@@ -73,6 +73,19 @@ if (!empty($params)) {
 } else {
     $result = $conn->query($sql);
 }
+// ADD SEARCH FILTER LOGIC
+$search = isset($_POST['search']) ? trim($_POST['search']) : '';
+
+if (!empty($search)) {
+    // Search in Name OR Brand
+    $sql .= " AND (product_name LIKE ? OR brand LIKE ?)";
+    $searchParam = "%" . $search . "%";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $types .= "ss"; // Two strings
+}
+
+$sql .= " ORDER BY created_at DESC";
 
 $products = [];
 if ($result->num_rows > 0) {

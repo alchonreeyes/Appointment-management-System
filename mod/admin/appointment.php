@@ -644,18 +644,18 @@ if ($viewFilter === 'eye_exam') {
     $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 6";
+    $whereClauses[] = "a.service_id = 11";
 } elseif ($viewFilter === 'ishihara') {
     $selectClauses[] = "a.ishihara_test_type";
     $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 8";
+    $whereClauses[] = "a.service_id = 12";
 } elseif ($viewFilter === 'medical') {
     $selectClauses[] = "a.certificate_purpose";
     $extraHeaders = "<th>Purpose</th>";
     $extraColumnNames = ['certificate_purpose'];
-    $whereClauses[] = "a.service_id = 7";
+    $whereClauses[] = "a.service_id = 13";
 }
 
 // --- I-apply ang iba pang Filters ---
