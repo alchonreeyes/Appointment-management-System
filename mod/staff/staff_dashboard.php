@@ -1323,10 +1323,28 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 <?php endif; ?>
             </div>
             
-            <div class="qr-section">
+              <div class="qr-section">
                 <div class="qr-code-display">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=EYEMASTER_CLINIC_<?= time() ?>" alt="QR Code">
-                </div>
+    <?php 
+        // 1. Find the latest CONFIRMED appointment to show as a test
+        $qrTestSql = "SELECT appointment_id FROM appointments 
+                      JOIN appointmentstatus s ON appointments.status_id = s.status_id 
+                      WHERE s.status_name = 'Confirmed' 
+                      ORDER BY appointment_date DESC, appointment_time DESC 
+                      LIMIT 1";
+        $qrTestResult = $conn->query($qrTestSql);
+        
+        // Default to a dummy number if no appointments exist yet
+        $qrData = "123"; 
+        
+        if ($qrTestResult && $qrTestResult->num_rows > 0) {
+            $qrData = $qrTestResult->fetch_assoc()['appointment_id'];
+        }
+    ?>
+    <!-- 2. Generate QR with ONLY the ID number -->
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= $qrData ?>" alt="QR Code for Appt #<?= $qrData ?>">
+    <p style="font-size:12px; color:#666; margin-top:5px;">Scan to test (ID: <?= $qrData ?>)</p>
+</div>
                 <button class="scan-btn" onclick="startScan()">Click to Scan</button>
             </div>
         </div>

@@ -71,14 +71,23 @@ if (isset($_POST['action'])) {
             $item = $result->fetch_assoc();
 
             if (!$item) {
-                echo json_encode(['success' => false, 'message' => ucfirst($table) . ' not found']);
+                echo json_encode(['success' => false, 'message' => 'Not found']);
                 exit;
             }
+            
+            // --- NEW: FETCH GALLERY IMAGES IF PRODUCT ---
+            if ($table === 'products') {
+                $galStmt = $conn->prepare("SELECT image_path FROM product_gallery WHERE product_id = ?");
+                $galStmt->bind_param("i", $id);
+                $galStmt->execute();
+                $gallery = $galStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+                $item['gallery'] = $gallery; // Add gallery data to the response
+            }
+            // --------------------------------------------
+
             echo json_encode(['success' => true, 'data' => $item, 'table' => $table]);
-        } catch (Exception $e) {
-            error_log("ViewDetails error: " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error']);
-        }
+
+        } catch (Exception $e) { /* ... error handling ... */ }
         exit;
     }
 
@@ -609,9 +618,7 @@ input#formScheduleDate {
 }
 
 /* --- START: CSS PARA SA SEARCH BAR (NASA KALIWA) --- */
-#searchInput {
-    /* Walang special rule, babalik sa default (kaliwa) */
-}
+
 .filters .add-btn {
     /* Ilipat ang margin-left sa "Add" button para itulak SIYA sa kanan */
     margin-left: auto; 
@@ -915,7 +922,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
         
-        <button type="button" class="add-btn" onclick="openAddModal()">➕ Add New <?= $activeTable === 'schedule' ? 'Schedule' : rtrim(ucfirst($activeTable), 's') ?></button>
+        <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">➕ Add New <?= $activeTable === 'schedule' ? 'Schedule' : rtrim(ucfirst($activeTable), 's') ?></button>
       </form>
     
       <div id="content-wrapper">
@@ -1217,46 +1224,57 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         let contentHTML = '';
         
         if (table === 'products') {
-          // ... (Product view logic - walang pagbabago) ...
-          document.querySelector('#detailTitle').innerHTML = '📦 Product Details';
-          contentHTML = `
-            <div class="detail-section">
-              <div class="detail-row">
-                <span class="detail-label">Product Name</span>
-                <div class="detail-value">${d.product_name}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Brand</span>
-                <div class="detail-value">${d.brand || 'N/A'}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Gender</span>
-                <div class="detail-value">${d.gender || 'N/A'}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Lens Type</span>
-                <div class="detail-value">${d.lens_type || 'N/A'}</div>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Frame Type</span>
-                <div class="detail-value">${d.frame_type || 'N/A'}</div>
-              </div>
-            </div>
-            <div class="detail-section">
-              <div class="detail-row">
-                <span class="detail-label">Product Image</span>
-                <img src="${d.image_path || 'default.jpg'}" alt="Product" 
-                     style="width:100%;max-width:200px;border-radius:8px;margin-top:8px; cursor: zoom-in;" 
-                     onerror="this.src='default.jpg';"
-                     onclick="event.stopPropagation(); openZoomModal(this.src)">
-              </div>
-            </div>
-            <div class="detail-row" style="grid-column: 1 / -1;">
-              <span class="detail-label">Description</span>
-              <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; font-weight: 500;">${d.description || 'N/A'}</div>
-            </div>
-          `;
-        } else if (table === 'schedule') { 
+    document.querySelector('#detailTitle').innerHTML = '📦 Product Details';
+    
+    // 1. Build Gallery HTML Loop
+    let galleryHTML = '';
+    if (d.gallery && d.gallery.length > 0) {
+        galleryHTML = `
+        <div class="detail-row" style="grid-column: 1 / -1; margin-top: 10px;">
+            <span class="detail-label">Additional Gallery Images</span>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px;">`;
+            
+        d.gallery.forEach(img => {
+            galleryHTML += `
+                <img src="${img.image_path}" 
+                     style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; cursor: zoom-in;" 
+                     onclick="openZoomModal(this.src)">`;
+        });
+        
+        galleryHTML += `</div></div>`;
+    } else {
+        galleryHTML = `<div class="detail-row" style="grid-column: 1 / -1; color: #999; font-size: 13px;">No additional gallery images.</div>`;
+    }
+
+    // 2. The Full HTML Content
+    contentHTML = `
+    <div class="detail-section">
+      <div class="detail-row"><span class="detail-label">Product Name</span><div class="detail-value">${d.product_name}</div></div>
+      <div class="detail-row"><span class="detail-label">Brand</span><div class="detail-value">${d.brand || 'N/A'}</div></div>
+      <div class="detail-row"><span class="detail-label">Gender</span><div class="detail-value">${d.gender || 'N/A'}</div></div>
+      <div class="detail-row"><span class="detail-label">Lens / Frame</span><div class="detail-value">${d.lens_type || 'N/A'} / ${d.frame_type || 'N/A'}</div></div>
+    </div>
+
+    <div class="detail-section">
+      <!-- MAIN IMAGE -->
+      <div class="detail-row">
+        <span class="detail-label">Main Cover Image</span>
+        <img src="${d.image_path || 'default.jpg'}" alt="Product" 
+             style="width:100%; max-width:200px; border-radius:8px; margin-top:8px; cursor: zoom-in; border: 1px solid #ddd;" 
+             onerror="this.src='default.jpg';"
+             onclick="event.stopPropagation(); openZoomModal(this.src)">
+      </div>
+    </div>
+
+    <!-- GALLERY SECTION (Inserted Here) -->
+    ${galleryHTML}
+
+    <div class="detail-row" style="grid-column: 1 / -1;">
+      <span class="detail-label">Description</span>
+      <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; font-weight: 500;">${d.description || 'N/A'}</div>
+    </div>
+    `;
+} else if (table === 'schedule') { 
             const formatTime = (timeStr) => {
                 if (!timeStr) return 'N/A';
                 const [hours, minutes] = timeStr.split(':');
