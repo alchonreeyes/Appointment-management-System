@@ -1,7 +1,13 @@
 <?php
+session_start(); // <--- MUST BE LINE 1. Starts the session before any HTML loads.
+
 include '../config/db.php';
 $db = new Database();
 $pdo = $db->getConnection();
+
+// --- 1. VERIFY CLIENT LOGIN STATUS ---
+// Check if user is logged in to decide where the buttons go
+$is_logged_in = isset($_SESSION['user_id']); 
 
 // Auto-update missed appointments
 $update = $pdo->prepare("
@@ -11,6 +17,36 @@ $update = $pdo->prepare("
     AND CONCAT(appointment_date, ' ', appointment_time) < NOW()
 ");
 $update->execute();
+
+// ... (Rest of your fetch logic for services and particulars remains the same) ...
+$stmt = $pdo->prepare("SELECT * FROM services ORDER BY service_id ASC");
+$stmt->execute();
+$services = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmtPart = $pdo->prepare("SELECT * FROM particulars ORDER BY particular_id ASC");
+$stmtPart->execute();
+$allParticulars = $stmtPart->fetchAll(PDO::FETCH_ASSOC);
+
+$groupedParticulars = [];
+foreach ($allParticulars as $p) {
+    $groupedParticulars[$p['service_id']][] = $p;
+}
+
+function formatServiceTitle($title) {
+    $words = explode(' ', $title);
+    if (count($words) > 1) {
+        $lastWord = array_pop($words);
+        return implode(' ', $words) . ' <br> <span class="highlight">' . $lastWord . '</span>';
+    }
+    return $title;
+}
+
+// Map Service IDs to specific booking pages
+$bookingLinks = [
+    11 => '../public/appointment.php',
+    12 => '../public/medical.php',
+    13 => '../public/ishihara.php'
+];
 ?>
 
 <!DOCTYPE html>
@@ -20,23 +56,141 @@ $update->execute();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Book Appointment</title>
     <link rel="stylesheet" href="../assets/book_appointment.css">
+    
     <style>
+        /* --- CAROUSEL SPECIFIC STYLES --- */
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
             margin: 0;
-            background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.9)), url("../assets/src/eyewear-share.jpg");
+            background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.9)), url("../assets/src/eyewear-share.jpg");
             background-size: cover;
             background-repeat: no-repeat;
+            background-attachment: fixed;
+            overflow-x: hidden; /* Prevent horizontal scroll on body */
         }
+        
         .content-wrapper {
             flex: 1;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             width: 100%;
-            padding: 2rem 1rem;
+            padding: 40px 20px;
+            max-width: 1400px; /* Limit max width of the whole section */
+            margin: 0 auto;
+        }
+
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            padding: 0 50px; /* Space for buttons */
+            box-sizing: border-box;
+        }
+
+        .carousel-track-container {
+            overflow: hidden; /* Hide cards that are off-screen */
+            width: 100%;
+            padding: 10px 0 20px 0; /* Space for shadows */
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 20px;
+            transition: transform 0.4s ease-in-out;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .carousel-slide {
+            /* Default: 3 cards per view on large screens */
+            min-width: calc((100% / 3) - 14px); 
+            box-sizing: border-box;
+            display: flex; /* Ensures card stretches height */
+        }
+
+        /* --- CARD STYLES (Adapted from your CSS) --- */
+        .appointment-wrapper {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 100%; /* Fill the slide */
+            height: 100%; /* Fill height */
+            transition: transform 0.3s ease;
+        }
+        
+        .appointment-wrapper:hover {
+            transform: translateY(-5px);
+        }
+
+        /* --- BUTTONS --- */
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .carousel-btn:hover {
+            background: white;
+            color: black;
+        }
+        
+        .carousel-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: transparent;
+            color: #aaa;
+            border-color: #aaa;
+        }
+
+        .prev-btn { left: 0; }
+        .next-btn { right: 0; }
+
+        /* --- INTERNAL ELEMENT STYLES --- */
+        .brand-name { font-size: 2rem; font-weight: 800; margin: 0 0 10px 0; color: #111; line-height: 1.1; }
+        .brand-name .highlight { color: #e63946; }
+        .service-description { font-size: 0.9rem; color: #666; margin-bottom: 20px; min-height: 40px; }
+        
+        .benefits-list, .extra-benefits, .health-screening { margin-bottom: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .benefit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .benefit-item, .extra-item, .disease-item { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: #444; }
+        .check-icon { width: 18px; height: 18px; stroke: #e63946; background: #ffebeb; border-radius: 50%; padding: 3px; flex-shrink: 0; }
+        .icon { width: 18px; height: 18px; stroke: #555; flex-shrink: 0; }
+        .disease-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .appointment-btn {
+            margin-top: auto; /* Push to bottom */
+            background: #111; color: white; padding: 15px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: 700; text-transform: uppercase; font-size: 0.9rem; display: block;
+        }
+        .appointment-btn:hover { background: #e63946; }
+
+        /* --- RESPONSIVE BREAKPOINTS --- */
+        @media (max-width: 1024px) {
+            .carousel-slide { min-width: calc((100% / 2) - 10px); } /* Show 2 cards */
+        }
+        @media (max-width: 700px) {
+            .carousel-slide { min-width: 100%; } /* Show 1 card */
+            .content-wrapper { padding: 20px 10px; }
+            .carousel-container { padding: 0 40px; }
         }
     </style>
 </head>
@@ -44,190 +198,153 @@ $update->execute();
     <?php include '../includes/navbar.php'; ?>
     
     <div class="content-wrapper">
-        <div class="book-appointment">
-            <!-- Vision7 Card -->
-            <div class="appointment-wrapper vision7">
-                <div class="card-header">
-                    <h1 class="brand-name">Eye-Examination<br> <span class="highlight">Appointment</span></h1>
-                    <h2 class="service-title">State-of-the-Art Eye Exam</h2>
-                    <p class="service-description">Our state-of-the-art eye examination can provide a visual health checks to a different extent based on your age, lifestyle and specific needs</p>
-                </div>
-                
-                <div class="benefits-list">
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Case History</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Binocular Eye Exam</span>
-                        </div>
-                    </div>
-                    
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Eye Muscle Movement Test</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Visual Eye Exam</span>
-                        </div>
-                    </div>
-                    
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Objective Refraction</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Diagnosis</span>
-                        </div>
-                    </div>
-                    
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Subjective Refraction</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Consultation for Eyeglass Prescription</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/appointment.php">Book An Appointment</a>
-            </div>
-            <div class="appointment-wrapper vision7">
-                <div class="card-header">
-                    <h1 class="brand-name">Medical
-                        <br>
-                        <span class="highlight">Appointment</span></h1>
-                    <h2 class="service-title">Eye exams to treatments for various eye conditions</h2>
-                    <p class="service-description">comprehensive eye examinations and the most advanced vision correction treatments and procedures for eye diseases and disorders.</p>
-                </div>
-                
-                <div class="benefits-list">
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Visual eye Test for recommended eye-glasses</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Binocular Eye Exam</span>
-                        </div>
-                    </div>
-                    
-                    
-                    
-                    <div class="benefit-row">
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Objective Refraction</span>
-                        </div>
-                        <div class="benefit-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Diagnosis</span>
-                        </div>
-                    </div>
-                    
-                    
-                </div>
-                
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/medical.php">Book AN APPOINTMENT</a>
-            </div>
+        
+        <h1 style="color: white; text-align: center; margin-bottom: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Select Your Appointment</h1>
+
+        <div class="carousel-container">
+            <button class="carousel-btn prev-btn" id="prevBtn">❮</button>
+            <button class="carousel-btn next-btn" id="nextBtn">❯</button>
             
-            <!-- VisionPlus Card -->
-            <div class="appointment-wrapper visionplus">
-                <div class="card-header">
-                    <h1 class="brand-name">Ishihara Test <br>
-                    <span class="highlight">Appointment</span></h1>
-                    <h2 class="service-title"> Color Vision Examination</h2>
-                    <p class="service-description">This appointment is for patients who want to check if they have color vision problems. It uses the Ishihara Color Vision Test, which helps identify red-green color blindness and other color perception issues.</p>
-                </div>
-                
-                <div class="health-screening">
-                    <h3>Can pre-determine health diseases:</h3>
-                    <div class="disease-grid">
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Autism</span>
-                        </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Macular Degeneration</span>
-                        </div>
-                        <div class="disease-item">
-                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                            </svg>
-                            <span>Color Vision Deficiency</span>
-                        </div>
-                        
-                    </div>
-                </div>  
-                
-                <div class="extra-benefits">
-                    <!-- <div class="extra-item">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <circle cx="12" cy="12" r="10"/>
-                            <path d="M12 6v6l4 2"/>
-                        </svg>
-                        <span>Only 3 minutes, straight to your email</span>
-                    </div> -->
-                    <div class="extra-item">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
-                        </svg>
-                        <span>Color Blind Eye examination</span>
-                    </div>
-                    <div class="extra-item">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                        </svg>
-                        <span>Retinal Imaging results in health report</span>
-                    </div>
-                </div>
-                
-                <a class="appointment-btn" style="text-align: center; font-family: Arial, Helvetica, sans-serif; text-decoration: none;" href="../public/ishihara.php">BOOK AN APPOINTMENT</a>
+            <div class="carousel-track-container">
+                <ul class="carousel-track" id="track">
+                    
+                    <?php foreach ($services as $service): ?>
+                        <?php
+                            $sId = $service['service_id'];
+                            $name = $service['service_name'];
+                            $desc = $service['description'];
+                            
+                            $myParticulars = $groupedParticulars[$sId] ?? [];
+                            $benefits = array_filter($myParticulars, fn($p) => $p['category'] === 'benefit');
+                            $diseases = array_filter($myParticulars, fn($p) => $p['category'] === 'disease');
+                            $extras   = array_filter($myParticulars, fn($p) => $p['category'] === 'extra');
+                            $link = $bookingLinks[$sId] ?? '../public/appointment.php';
+                        ?>
+
+                        <li class="carousel-slide">
+                            <div class="appointment-wrapper">
+                                <div class="card-header">
+                                    <h2 class="brand-name"><?= formatServiceTitle($name) ?></h2>
+                                    <p class="service-description"><?= nl2br(htmlspecialchars($desc)) ?></p>
+                                </div>
+                                
+                                <?php if (!empty($benefits)): ?>
+                                <div class="benefits-list">
+                                    <?php $chunks = array_chunk($benefits, 2); foreach ($chunks as $row): ?>
+                                    <div class="benefit-row">
+                                        <?php foreach ($row as $item): ?>
+                                        <div class="benefit-item">
+                                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            <span><?= htmlspecialchars($item['label']) ?></span>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <?php if (!empty($diseases)): ?>
+                                <div class="health-screening">
+                                    <h3 style="font-size:0.85rem; margin-bottom:10px;">Health Screening:</h3>
+                                    <div class="disease-grid">
+                                        <?php foreach ($diseases as $item): ?>
+                                        <div class="disease-item">
+                                            <svg class="check-icon" style="stroke:orange; background:#fff8e1;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                            <span><?= htmlspecialchars($item['label']) ?></span>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>  
+                                <?php endif; ?>
+
+                                <?php if (!empty($extras)): ?>
+                                <div class="extra-benefits">
+                                    <?php foreach ($extras as $item): ?>
+                                    <div class="extra-item">
+                                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line></svg>
+                                        <span><?= htmlspecialchars($item['label']) ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <a class="appointment-btn" href="<?= $link ?>">BOOK NOW</a>
+                            </div>
+                        </li>
+
+                    <?php endforeach; ?>
+                    </ul>
             </div>
         </div>
     </div>
     
     <?php include '../includes/footer.php'; ?>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const track = document.getElementById('track');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            
+            // Get all slides
+            const slides = Array.from(track.children);
+            if(slides.length === 0) return;
+
+            // 1. Calculate how many slides fit in the view
+            const getSlidesPerView = () => {
+                const width = window.innerWidth;
+                if (width <= 700) return 1;
+                if (width <= 1024) return 2;
+                return 3;
+            };
+
+            let currentIndex = 0;
+            let slideWidth = slides[0].getBoundingClientRect().width;
+            let gap = 20; // Must match CSS gap
+
+            // 2. Move Logic
+            const updateCarousel = () => {
+                // Update slide width on resize
+                slideWidth = slides[0].getBoundingClientRect().width;
+                const amountToMove = (slideWidth + gap) * currentIndex;
+                track.style.transform = `translateX(-${amountToMove}px)`;
+                
+                // Update Buttons
+                const slidesPerView = getSlidesPerView();
+                const maxIndex = slides.length - slidesPerView;
+
+                prevBtn.disabled = (currentIndex === 0);
+                nextBtn.disabled = (currentIndex >= maxIndex);
+            };
+
+            // 3. Button Listeners
+            nextBtn.addEventListener('click', () => {
+                const slidesPerView = getSlidesPerView();
+                const maxIndex = slides.length - slidesPerView;
+                if (currentIndex < maxIndex) {
+                    currentIndex++;
+                    updateCarousel();
+                }
+            });
+
+            prevBtn.addEventListener('click', () => {
+                if (currentIndex > 0) {
+                    currentIndex--;
+                    updateCarousel();
+                }
+            });
+
+            // 4. Handle Window Resize
+            window.addEventListener('resize', () => {
+                // Reset to 0 to avoid layout breaking on fast resize
+                currentIndex = 0; 
+                updateCarousel();
+            });
+
+            // Initialize
+            // Wait slightly for layout to settle
+            setTimeout(updateCarousel, 100);
+        });
+    </script>
 </body>
 </html>

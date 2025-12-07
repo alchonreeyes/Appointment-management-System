@@ -1,8 +1,10 @@
 <?php
+// includes/navbar.php
 
-if (session_status() === PHP_SESSION_NONE) {
+// TRICK: Only start a session if one isn't active yet.
+// This prevents the "Headers already sent" error.
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
-
 }
 ?>
 

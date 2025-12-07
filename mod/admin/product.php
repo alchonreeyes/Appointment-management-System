@@ -325,7 +325,7 @@ if (isset($_POST['action'])) {
                         echo json_encode(['success' => false, 'message' => 'Server validation failed: Time From and Time To are required.']);
                         exit;
                     }
-
+                    
                     if (strtotime($time_from) >= strtotime($time_to)) {
                          echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
                         exit;
@@ -922,8 +922,26 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
         
-        <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">➕ Add New <?= $activeTable === 'schedule' ? 'Schedule' : rtrim(ucfirst($activeTable), 's') ?></button>
-      </form>
+       <?php if ($activeTable === 'products'): ?>
+    <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">
+        ➕ Add New Product
+    </button>
+
+<?php elseif ($activeTable === 'services'): ?>
+    <button type="button" class="add-btn" style="background-color: #17a2b8; margin-right: 10px;" onclick="window.location.href='particulars.php'">
+        📋 Manage Particulars
+    </button>
+    
+    <button type="button" class="add-btn" onclick="openAddModal()">
+        ➕ Add New Service
+    </button>
+
+<?php else: ?>
+    <button type="button" class="add-btn" onclick="openAddModal()">
+        ➕ Add New Schedule
+    </button>
+<?php endif; ?>
+</form>
     
       <div id="content-wrapper">
           <div class="stats">

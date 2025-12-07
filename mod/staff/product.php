@@ -608,10 +608,7 @@ input#formScheduleDate {
     cursor: pointer;
 }
 
-/* --- START: CSS PARA SA SEARCH BAR (NASA KALIWA) --- */
-#searchInput {
-    /* Walang special rule, babalik sa default (kaliwa) */
-}
+
 .filters .add-btn {
     /* Ilipat ang margin-left sa "Add" button para itulak SIYA sa kanan */
     margin-left: auto; 
@@ -914,7 +911,25 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
         
-        <button type="button" class="add-btn" onclick="openAddModal()">➕ Add New <?= $activeTable === 'schedule' ? 'Schedule' : rtrim(ucfirst($activeTable), 's') ?></button>
+       <?php if ($activeTable === 'products'): ?>
+            <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">
+                ➕ Add New Product
+            </button>
+
+        <?php elseif ($activeTable === 'services'): ?>
+            <button type="button" class="add-btn" style="background-color: #17a2b8; margin-right: 10px;" onclick="window.location.href='particulars.php'">
+                📋 Manage Particulars
+            </button>
+            
+            <button type="button" class="add-btn" onclick="openAddModal()">
+                ➕ Add New Service
+            </button>
+
+        <?php else: ?>
+            <button type="button" class="add-btn" onclick="openAddModal()">
+                ➕ Add New Schedule
+            </button>
+        <?php endif; ?>
       </form>
     
       <div id="content-wrapper">

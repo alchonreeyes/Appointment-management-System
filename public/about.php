@@ -1,6 +1,5 @@
 <?php
 include '../config/db.php';
-// (Keep your PHP logic here if needed)
 ?>
 
 <!DOCTYPE html>
@@ -15,61 +14,86 @@ include '../config/db.php';
 <body>
     <?php include '../includes/navbar.php'; ?>
 
-    <div class="route-link">
-        <div class="route-wrapper">
-            <a href="../public/home.php">Home</a>
-            <span>/</span>
-            <a href="#">About Us</a>
+    <div class="about-hero">
+        <div class="overlay"></div>
+        <div class="hero-text">
+            <h1>More Than Just Glasses</h1>
+            <p>We are a dedicated team of optometrists and eye care professionals committed to your vision health.</p>
         </div>
     </div>
 
-    <div class="hero-header">
-        <h1>Our Story & Commitment</h1>
+    <div class="stats-container">
+        <div class="stat-item">
+            <span class="number">30+</span>
+            <span class="label">Years </span>
+        </div>
+   
+        <div class="stat-item">
+            <span class="number">100%</span>
+            <span class="label">Certified Doctors</span>
+        </div>
     </div>
 
     <div class="content-wrapper">
         
         <div class="story-section">
             <div class="story-text">
-                <h2>About Eye-Master</h2>
-                <p>Eye Master Optical Clinic has been a trusted provider of comprehensive eye care services for over 12 years. We specialize in precise eye examinations, medical certifications, and high-quality prescription eyewear.</p>
-                <p>Our mission is to provide every patient with clear vision and confidence through expert care and premium optical products.</p>
+                <span class="section-tag">Our Mission</span>
+                <h2>Clear Vision for Everyone</h2>
+                <p>For over 30 years, Eye Master Optical Clinic has been a trusted leader in eye care, combining expert clinical diagnostics with personalized service. Our appointment management system streamlines scheduling and patient records, making it simple to book visits, manage prescriptions, and receive timely reminders so you always get the right care when you need it.</p>
+                <p>We believe that a pair of glasses isn't just a medical necessity—it's a part of your identity. That's why we stock the world's best brands alongside our affordable house lines.</p>
             </div>
-            <div class="story-img">
-                <img src="../assets/src/about-glasses.jpg" alt="Eye Clinic Interior">
+            <div class="story-img-container">
+                <img src="../assets/src/about-glasses.jpg" alt="Clinic Interior">
+                <div class="img-badge">Est. 2012</div>
             </div>
         </div>
 
-        <div class="info-cards">
-            <div class="card">
-                <h3>How We Use Your Data</h3>
-                <ul>
-                    <li>Schedule and manage appointments</li>
-                    <li>Issue medical certificates</li>
-                    <li>Send health reminders & updates</li>
-                    <li>Maintain detailed vision history</li>
-                </ul>
+        <div class="team-section">
+            <div class="text-center">
+                <h2>Meet Our Lead Optometrist</h2>
+                <div class="red-line"></div>
             </div>
             
-            <div class="card">
-                <h3>Communication</h3>
-                <p>We may contact you via SMS or Email to confirm bookings or notify you when your glasses are ready for pickup. We respect your inbox and do not send spam.</p>
-            </div>
-
-            <div class="card">
-                <h3>Security First</h3>
-                <p>Your eye grade, medical records, and contact details are stored securely in our encrypted database. We never share your personal data with third parties.</p>
+            <div class="doctor-card">
+                <div class="doc-img">
+                    <div class="avatar-placeholder">Dr</div>
+                </div>
+                <div class="doc-info">
+                    <h3>Dr. Aliyah Cruz</h3>
+                    <span class="role">Chief Optometrist</span>
+                    <p>With over a decade of clinical experience, Dr. Cruz specializes in pediatric optometry and progressive lens fitting. She ensures every patient leaves with 20/20 confidence.</p>
+                    <div class="doc-socials">
+                        <i class="fa-solid fa-user-doctor"></i> Lic. #0012345
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="story-section reverse">
-            <div class="story-text">
-                <h2>Consent & Trust</h2>
-                <p>By booking an appointment, you agree to provide accurate information to help us treat you better. Fraudulent use of the system helps no one.</p>
-                <p>You may opt-out of marketing communications at any time by contacting our clinic directly. However, we recommend keeping appointment notifications on so you don't miss your slot.</p>
+        <div class="values-section">
+            <div class="text-center">
+                <h2>Our Commitment to You</h2>
+                <p style="color:#666; max-width:600px; margin:0 auto 40px;">We take your health and data seriously. Here is how we operate.</p>
             </div>
-            <div class="story-img">
-                <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Glasses on table">
+
+            <div class="values-grid">
+                <div class="value-card">
+                    <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h3>Data Privacy</h3>
+                    <p>Your medical records and eye grade history are stored in an encrypted database. We strictly follow data privacy laws.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="icon-box"><i class="fa-solid fa-envelope-open-text"></i></div>
+                    <h3>Transparent Comms</h3>
+                    <p>We only contact you for appointment confirmations and health reminders. No spam, ever.</p>
+                </div>
+
+                <div class="value-card">
+                    <div class="icon-box"><i class="fa-solid fa-glasses"></i></div>
+                    <h3>Authenticity</h3>
+                    <p>Every frame and lens in our clinic is guaranteed authentic. We are authorized dealers for all brands we carry.</p>
+                </div>
             </div>
         </div>
 

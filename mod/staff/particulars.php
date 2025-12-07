@@ -2,8 +2,8 @@
 session_start();
 require_once __DIR__ . '/../database.php';
 
-// 1. SECURITY CHECK
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+// 1. SECURITY CHECK (Updated to allow Admin AND Staff)
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], ['admin', 'staff'])) {
     if (isset($_POST['action'])) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']); exit;
     }

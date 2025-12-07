@@ -73,7 +73,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <h1>Match Your Style & Confidence</h1>
             <p>Premium eyewear and expert eye care, all in one place.</p>
             <div class="hero-buttons">
-                <a href="browse.php" class="hero-btn primary">Shop Frames</a>
+                <a href="browse.php" class="hero-btn primary">Browse Frames</a>
                 <a href="book_appointment.php" class="hero-btn outline">Book Exam</a>
             </div>
         </div>

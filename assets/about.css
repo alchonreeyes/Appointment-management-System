@@ -1,50 +1,22 @@
 /* about.css - Modern Revision */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
     font-family: 'Poppins', sans-serif;
-    background-color: #f9f9f9;
+    background-color: #ffffff;
     color: #333;
-    overflow-x: hidden;
     line-height: 1.6;
 }
 
-/* Breadcrumbs */
-.route-link {
-    background: #fff;
-    border-bottom: 1px solid #eee;
-    padding: 15px 5%;
-}
-
-.route-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.9rem;
-}
-
-.route-wrapper a {
-    text-decoration: none;
-    color: #666;
-    font-weight: 500;
-}
-
-.route-wrapper a:hover {
-    color: #d94032;
-}
-
-/* Hero Header */
-.hero-header {
-    background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('../assets/src/hero-mage.png');
+/* 1. HERO SECTION */
+.about-hero {
+    position: relative;
+    background-image: url('../assets/src/hero-mage.png'); /* Ensure this file exists or swap it */
     background-size: cover;
     background-position: center;
-    height: 300px;
+    height: 350px; /* Taller hero */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -52,111 +24,152 @@ body {
     color: white;
 }
 
-.hero-header h1 {
+.overlay {
+    position: absolute;
+    top:0; left:0; right:0; bottom:0;
+    background: rgba(0,0,0,0.6); /* Darker overlay for readability */
+}
+
+.hero-text {
+    position: relative;
+    z-index: 2;
+    max-width: 700px;
+    padding: 20px;
+}
+
+.hero-text h1 {
     font-size: 3rem;
     font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
+    margin-bottom: 10px;
 }
 
-/* Main Container */
-.content-wrapper {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 60px 20px;
+/* 2. STATS BAR */
+.stats-container {
+    background: #d94032; /* Brand Red */
+    color: white;
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+    padding: 30px 20px;
+    margin-top: -30px; /* Pulls it up slightly */
+    position: relative;
+    z-index: 3;
+    flex-wrap: wrap;
 }
 
-/* Story Section (Text + Image) */
+.stat-item { text-align: center; }
+.stat-item .number { display: block; font-size: 2.5rem; font-weight: 700; line-height: 1; }
+.stat-item .label { font-size: 0.9rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; }
+
+/* 3. MAIN CONTENT */
+.content-wrapper { max-width: 1100px; margin: 0 auto; padding: 80px 20px; }
+.text-center { text-align: center; }
+
+/* Story Section */
 .story-section {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 50px;
+    gap: 60px;
     align-items: center;
-    margin-bottom: 80px;
+    margin-bottom: 100px;
 }
 
-.story-text h2 {
-    font-size: 2rem;
-    color: #d94032; /* Brand Red */
-    margin-bottom: 20px;
+.section-tag {
+    color: #d94032;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 1px;
+}
+
+.story-text h2 { font-size: 2.2rem; margin: 10px 0 20px; color: #111; }
+.story-text p { margin-bottom: 15px; color: #555; font-size: 1.05rem; }
+
+.story-img-container { position: relative; }
+.story-img-container img { width: 100%; border-radius: 12px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); }
+.img-badge {
+    position: absolute;
+    bottom: -20px;
+    right: -20px;
+    background: #111;
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
     font-weight: 700;
 }
 
-.story-text p {
-    font-size: 1rem;
-    color: #555;
-    margin-bottom: 15px;
+/* 4. TEAM SECTION */
+.team-section { margin-bottom: 100px; }
+.red-line { width: 60px; height: 4px; background: #d94032; margin: 10px auto 40px; }
+
+.doctor-card {
+    background: #f9f9f9;
+    border-radius: 15px;
+    padding: 40px;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+    max-width: 800px;
+    margin: 0 auto;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
 }
 
-.story-img img {
-    width: 100%;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+.doc-img { flex-shrink: 0; }
+.avatar-placeholder {
+    width: 150px;
+    height: 150px;
+    background: #e0e0e0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #777;
+    border: 4px solid white;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
-/* Reverse Layout for 2nd section */
-.story-section.reverse .story-text {
-    order: 2;
-}
-.story-section.reverse .story-img {
-    order: 1;
-}
+.doc-info h3 { font-size: 1.8rem; margin-bottom: 5px; }
+.doc-info .role { color: #d94032; font-weight: 600; display: block; margin-bottom: 15px; }
+.doc-socials { margin-top: 15px; font-weight: 600; color: #555; }
 
-/* Info Cards Section */
-.info-cards {
+/* 5. VALUES GRID */
+.values-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 30px;
-    margin-bottom: 80px;
 }
 
-.card {
-    background: white;
+.value-card {
     padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-    border-top: 4px solid #d94032;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    transition: transform 0.3s;
+    background: white;
 }
 
-.card h3 {
-    font-size: 1.25rem;
-    margin-bottom: 15px;
-    color: #333;
-}
+.value-card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
 
-.card ul {
-    list-style-position: inside;
-    color: #666;
-}
-
-.card li {
-    margin-bottom: 8px;
-}
-
-/* Privacy Note Box */
-.privacy-note {
-    background-color: #FFF0F0;
-    padding: 40px;
-    border-radius: 10px;
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
-}
-
-.privacy-note h2 {
+.icon-box {
+    width: 50px;
+    height: 50px;
+    background: #fff0f0;
     color: #d94032;
-    margin-bottom: 15px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
 }
+
+.value-card h3 { font-size: 1.2rem; margin-bottom: 10px; }
+.value-card p { font-size: 0.9rem; color: #666; }
 
 /* Responsive */
 @media (max-width: 768px) {
-    .story-section {
-        grid-template-columns: 1fr;
-    }
-    .story-section.reverse .story-text {
-        order: 1; /* Reset order on mobile */
-    }
-    .hero-header h1 {
-        font-size: 2rem;
-    }
+    .stats-container { gap: 30px; }
+    .story-section { grid-template-columns: 1fr; }
+    .doctor-card { flex-direction: column; text-align: center; }
+    .img-badge { right: 10px; }
 }
