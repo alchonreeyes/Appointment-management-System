@@ -234,7 +234,7 @@ $result = $conn->query($sql);
     <div class="modal-right">
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
-      <p class="modal-price" id="modalPrice">₱0.00</p>
+
       <a href="../public/appointment.php"><button class="add-to-cart-btn">Want Prescriptions?</button></a>
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
@@ -343,7 +343,7 @@ function updateProductGrid(products) {
             <div class="product-info">
                 <h3>${product.product_name}</h3>
                 <p style="text-transform: capitalize;">${product.brand} - ${product.frame_type || 'Frame'}</p>
-                <p class="price">₱${parseFloat(product.price).toFixed(2)}</p>
+
                 <button class="see-more-btn" onclick="openModal(${product.product_id})">See more</button>
             </div>
         </div>`;
@@ -390,7 +390,7 @@ function openModal(productId) {
             
             // 1. Basic Info
             document.getElementById('modalTitle').textContent = data.product_name;
-            document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
+
             document.getElementById('modalDescription').textContent = data.description || "No description available.";
             
             // 2. Image Gallery Handling
@@ -445,7 +445,7 @@ function openModal(productId) {
 
 function closeModal() {
     document.getElementById('productModal').classList.remove('active');
-}
+}s
 </script>
 
 </body>

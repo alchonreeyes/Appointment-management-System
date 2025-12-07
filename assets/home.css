@@ -860,7 +860,246 @@ body {
     background-color: #ddd;
     transform: scale(1.1);
 }
+/* --- ADD TO THE BOTTOM OF assets/home.css --- */
 
+/* Section Utility */
+.section-padding {
+    padding: 80px 20px;
+}
+
+/* Steps Section */
+.steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+    max-width: 1200px;
+    margin: 40px auto 0;
+}
+
+.step-card {
+    background: #ffffff;
+    padding: 40px 30px;
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.step-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+}
+
+.step-icon {
+    width: 80px;
+    height: 80px;
+    background: #fff0f0;
+    color: #d94032;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+/* Dynamic Product Grid */
+.dynamic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 25px;
+    max-width: 1200px;
+    margin: 40px auto 0;
+}
+
+.product-item {
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #f0f0f0;
+    transition: all 0.3s ease;
+}
+
+.product-item:hover {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    transform: translateY(-5px);
+}
+
+.p-img-box {
+    width: 100%;
+    height: 220px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.p-img-box img {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+}
+
+.product-item:hover .p-img-box img {
+    transform: scale(1.1);
+}
+
+.p-details {
+    padding: 20px;
+    text-align: center;
+}
+
+.p-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 5px;
+}
+/* --- INFINITE BRANDS MARQUEE --- */
+.marquee-container {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+}
+
+.marquee-content {
+    display: inline-flex;
+    gap: 80px;
+    animation: scrollLeft 30s linear infinite;
+}
+
+.brand-item {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', sans-serif; /* Clean, bold font */
+    cursor: default;
+    transition: color 0.3s;
+}
+
+.brand-item:hover {
+    color: #d94032; /* Brand Red on hover */
+}
+
+@keyframes scrollLeft {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+/* --- BENTO GRID LAYOUT --- */
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr); /* 4 Columns */
+    grid-template-rows: repeat(2, 250px); /* 2 Rows, fixed height */
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.bento-box {
+    border-radius: 15px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.3s ease;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.bento-box:hover {
+    transform: translateY(-5px);
+}
+
+/* Specific Box Styling */
+.promo-box {
+    grid-column: span 2; /* Takes 2 columns */
+    grid-row: span 2;    /* Takes 2 rows (Big square) */
+    background: linear-gradient(135deg, #d94032 0%, #a01c1c 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+}
+
+.bento-content {
+    text-align: center;
+}
+
+.bento-content .tag {
+    background: rgba(255,255,255,0.2);
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.bento-content h3 { font-size: 2rem; margin: 15px 0 5px 0; }
+.bento-content .big-text { font-size: 3.5rem; font-weight: 800; line-height: 1; margin-bottom: 15px; }
+.bento-btn {
+    display: inline-block;
+    background: white;
+    color: #d94032;
+    padding: 12px 30px;
+    border-radius: 30px;
+    text-decoration: none;
+    font-weight: 700;
+    margin-top: 15px;
+    transition: transform 0.2s;
+}
+.bento-btn:hover { transform: scale(1.05); }
+
+.img-box {
+    grid-column: span 1;
+    background-size: cover;
+    background-position: center;
+}
+
+.overlay-text {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.8), transparent);
+    color: white;
+    padding: 20px;
+}
+
+.tip-box {
+    background: #fff;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border: 2px solid #eee;
+}
+
+.feature-box {
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+.feature-box img { width: 80%; margin-top: 10px; border-radius: 10px; }
+
+/* Responsive Adjustments */
+@media (max-width: 900px) {
+    .bento-grid {
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: auto;
+    }
+    .promo-box { grid-column: span 2; grid-row: span 1; height: 300px; }
+}
+@media (max-width: 600px) {
+    .bento-grid { grid-template-columns: 1fr; }
+    .promo-box, .img-box, .tip-box, .feature-box { grid-column: span 1; height: 250px; }
+}
 /* Responsive Design */
 @media (max-width: 768px) {
     .features {

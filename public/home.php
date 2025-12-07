@@ -3,7 +3,7 @@ include '../config/db.php';
 $db = new Database();
 $pdo = $db->getConnection();
 
-// Auto-update missed appointments
+// 1. Auto-update missed appointments (Keep your existing logic)
 $update = $pdo->prepare("
     UPDATE appointments
     SET status_id = 4
@@ -11,6 +11,11 @@ $update = $pdo->prepare("
     AND CONCAT(appointment_date, ' ', appointment_time) < NOW()
 ");
 $update->execute();
+
+// 2. NEW: Fetch 4 Random/Newest Products for the Showcase
+$stmt = $pdo->prepare("SELECT * FROM products ORDER BY created_at DESC LIMIT 4");
+$stmt->execute();
+$featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -18,25 +23,51 @@ $update->execute();
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home</title>
+  <title>Eye Master - Home</title>
   <link rel="stylesheet" href="../assets/card.css">
-  <link rel="stylesheet" href="../assets/home.css"> <!-- this home.css is below of brand and feature description -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="../assets/about-hero-section.css">
-<style>
-    body{
-       font-family: Arial, sans-serif;
-    }
-    
+  <link rel="stylesheet" href="../assets/home.css"> 
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+      /* New Section Styles */
+      .section-padding { padding: 80px 20px; }
+      .text-center { text-align: center; }
+      .section-title { font-size: 2.5rem; color: #333; margin-bottom: 1rem; font-weight: 700; }
+      .section-subtitle { color: #666; margin-bottom: 40px; font-size: 1.1rem; }
+      
+      /* How It Works Steps */
+      .steps-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 1200px; margin: 0 auto; }
+      .step-card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); position: relative; overflow: hidden; transition: transform 0.3s; }
+      .step-card:hover { transform: translateY(-10px); }
+      .step-icon { width: 70px; height: 70px; background: #ffe5e5; color: #d94032; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 20px; }
+      .step-number { position: absolute; top: -10px; right: -10px; font-size: 5rem; color: rgba(0,0,0,0.03); font-weight: 800; }
+
+      /* Face Shape Guide */
+      .guide-section { background: #1a1a1a; color: white; }
+      .guide-container { display: flex; flex-wrap: wrap; align-items: center; max-width: 1200px; margin: 0 auto; gap: 40px; }
+      .guide-text { flex: 1; min-width: 300px; }
+      .guide-text h2 { color: white; margin-bottom: 20px; }
+      .guide-list { list-style: none; }
+      .guide-list li { margin-bottom: 15px; display: flex; align-items: center; gap: 15px; }
+      .guide-list i { color: #d94032; }
+      .guide-image { flex: 1; min-width: 300px; }
+      .guide-image img { width: 100%; border-radius: 10px; }
+
+      /* Dynamic Product Grid overrides */
+      .dynamic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+      .product-item { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.05); transition: 0.3s; }
+      .product-item:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.1); }
+      .p-img-box { height: 200px; width: 100%; background: #f9f9f9; display: flex; align-items: center; justify-content: center; }
+      .p-img-box img { max-width: 100%; max-height: 100%; object-fit: cover; }
+      .p-details { padding: 15px; text-align: center; }
+      .p-name { font-weight: 700; margin-bottom: 5px; color: #333; }
+      .p-price { color: #d94032; font-weight: 600; }
   </style>
 </head>
 <body>
 
-    <?php include '../includes/navbar.php'; ?>
+<?php include '../includes/navbar.php'; ?>
 
-  <div class="carousel">
-    
+<div class="carousel">
     <div class="hero-overlay">
         <div class="hero-content">
             <h1>Match Your Style & Confidence</h1>
@@ -47,251 +78,198 @@ $update->execute();
             </div>
         </div>
     </div>
-
     <div class="carousel-track">
-        <div class="slide">
-            <img src="../assets/src/hero-image-glass.jpg" alt="Hero 1" onerror="this.style.display='none'; this.parentElement.style.background='#333'">
-        </div>
-        
-        <div class="slide">
-            <img src="../assets/src/slider1.jpg" alt="Hero 2" onerror="this.style.display='none'; this.parentElement.style.background='#555'">
-        </div>
-        
-        <div class="slide">
-            <img src="../assets/src/eye-wear-3333903_960_720.jpg" alt="Hero 3" onerror="this.style.display='none'; this.parentElement.style.background='#777'">
-        </div>
+        <div class="slide"><img src="../assets/src/hero-image-glass.jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/slider1.jpg" onerror="this.src='https://images.unsplash.com/photo-1577803645773-f96470509666?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/eye-wear-3333903_960_720.jpg" onerror="this.src='https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1000&auto=format&fit=crop'"></div>
     </div>
-    
 </div>
-  <div class="service">
+
+<div class="service">
     <div class="service-description">
-      <i class="fa-solid fa-shield"></i>
-      <span>Eyewear Insurance</span>
-  </div>
+        <i class="fa-solid fa-glasses"></i>
+        <span>Premium Eyewear</span>
+    </div>
     <div class="service-description">
-      <i class="fa-regular fa-calendar"></i> 
-      <span>appointment now</span>
+        <i class="fa-solid fa-user-doctor"></i>
+        <span>Expert Optometrists</span>
     </div>
-  </div>
-
-  
-  
-
-
-  <!--CONCERN SECTION -->
-  
-  <!--CONCERN SECTION -->
-      
-  
-  <div class="gray-line-area">
-        <div class="gray-line"></div>
-      </div>
-<div class="bottom-description">
-    <h1>We've Got Your Eyes Covered</h1>
-    <p>When you browse glasses online, it should be safe. With over 12 years of experience.</p>
-</div>
-      
-      
-      
-
-
-      </div>
-      
-
-      <div class="product-showcase">
-    <div class="showcase-card">
-        <img src="../assets/src/eyeglasses.png" alt="Sports">
-        <div class="card-overlay">
-            <h3>Active Lifestyle</h3>
-            <p>Durable frames for your daily moves.</p>
-            <a href="browse.php" class="card-btn">View Collection</a>
-        </div>
-    </div>
-    <div class="showcase-card">
-        <img src="../assets/src/book1.png" alt="Reading">
-        <div class="card-overlay">
-            <h3>Reading Essentials</h3>
-            <p>Clarity for every chapter.</p>
-            <a href="browse.php" class="card-btn">View Collection</a>
-        </div>
-    </div>
-    <div class="showcase-card">
-        <img src="../assets/src/pink-glasses.jpg" alt="Fashion">
-        <div class="card-overlay">
-            <h3>Designer Series</h3>
-            <p>Stand out with premium aesthetics.</p>
-            <a href="browse.php" class="card-btn">View Collection</a>
-        </div>
+    <div class="service-description">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span>Eyewear Insurance</span>
     </div>
 </div>
 
-      <div class="gray-line-area">
-        <div class="gray-line"></div>
-      </div>
-      
-      <div class="feature-highlight">
-  <h1>EYEWEAR FOR EVERYONE®</h1>
-  <h2>STYLE & CLARITY MADE FOR YOU</h2>
-</div>
-
-<div class="feature-products">
-  <div class="features">
+<section class="section-padding" style="background: #fff;">
+    <div class="text-center">
+        <h2 class="section-title">Your Journey to Clearer Vision</h2>
+        <p class="section-subtitle">Three simple steps to better eye health and style.</p>
+    </div>
     
-    <!-- Card 1 -->
-    <div class="cards">
-      <img src="../assets/src/eyeglasses.png" alt="Style for Every Scene">
-      <div class="cards-detail">
-        <h3>STYLE FOR<br>EVERY SCENE</h3>
-        <p>Fits for every</p>
-        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
-      </div>
-    </div>
-
-    <!-- Card 2 -->
-    <div class="cards">
-      <img src="../assets/src/pink-glasses.jpg" alt="Designer Vibes">
-      <div class="cards-detail">
-        <h3>Designer<br>Vibes</h3>
-        <p>Effortless looks for every<br>vibe.</p>
-        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
-      </div>
-    </div>
-
-    <!-- Card 3 -->
-    <div class="cards">
-      <img src="../assets/src/glasses-yellow.jpg" alt="Privacy Activated">
-      <div class="cards-detail">
-        <h3>Privacy<br>Activated</h3>
-        <p>Disrupt unwanted<br>tracking</p>
-        <button class="view-more-btn"><a href="./browse.php" style="text-decoration: none; color:gray;">View More</a></button>
-      </div>
-    </div>
-
-  </div>
-  
-  <div class="function-buttons">
-    <button>&lt;</button>
-    <button>&gt;</button>
-  </div>
-</div>
-
-
-  <!-- HERO SECTION BELOW!!! NEW CSS FILE FOR THIS BOOGY-->
-<div class="hero-section">
-  <div class="section-image">
-    <img src="../assets/src/about-glasses.jpg" alt="" width="500px" height="300px">  
-  </div>
-  <div class="section-message">
-    <h1>Fit & Style</h1>
-    <p>Need help figuring out which frames are right for you?</p>
-    <a href="./browse.php" class="cta-button">Browse Eye-Wear</a>
-</div>
-
-</div>
-
-<div class="concern-consults">
-<h1>why choose Eye-Master?</h1>
-        <div class="features-container">
-            <!-- Feature 1: Direct from Factory -->
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M8 32V52H24V32H8Z" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M24 24V52H40V24H24Z" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M40 16V52H56V16H40Z" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M32 8L52 16" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <path d="M32 8L12 16" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="32" cy="8" r="4" fill="#4CAF50" stroke="#1a1a1a" stroke-width="2"/>
-                        <path d="M28 4L30 2L34 2L36 4" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M30 10L26 14L22 12" stroke="#4CAF50" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                        <rect x="10" y="36" width="4" height="4" fill="#1a1a1a"/>
-                        <rect x="18" y="36" width="4" height="4" fill="#1a1a1a"/>
-                        <rect x="26" y="28" width="4" height="4" fill="#1a1a1a"/>
-                        <rect x="34" y="28" width="4" height="4" fill="#1a1a1a"/>
-                        <rect x="42" y="20" width="4" height="4" fill="#1a1a1a"/>
-                        <rect x="50" y="20" width="4" height="4" fill="#1a1a1a"/>
-                    </svg>
-                </div>
-                <h3>About Us</h3>
-                <p>Eye-Master is a premier eyecare clinic dedicated to providing comprehensive vision services since 2010. We combine cutting-edge technology with expert care to ensure your optimal eye health.</p>
-                <br>
-                
-                
-                <a href="../public/about.php" class="cta-button">LEARN MORE</a>
-            </div>
-
-            <!-- Feature 2: Free Eye Test -->
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="38" y="8" width="18" height="48" rx="2" stroke="#1a1a1a" stroke-width="2"/>
-                        <line x1="42" y1="16" x2="52" y2="16" stroke="#1a1a1a" stroke-width="2"/>
-                        <line x1="42" y1="22" x2="52" y2="22" stroke="#1a1a1a" stroke-width="2"/>
-                        <line x1="42" y1="28" x2="52" y2="28" stroke="#1a1a1a" stroke-width="2"/>
-                        <line x1="42" y1="34" x2="52" y2="34" stroke="#1a1a1a" stroke-width="2"/>
-                        <circle cx="20" cy="28" r="14" stroke="#1a1a1a" stroke-width="2"/>
-                        <circle cx="20" cy="28" r="8" stroke="#1a1a1a" stroke-width="2"/>
-                        <circle cx="20" cy="28" r="3" fill="#1a1a1a"/>
-                        <path d="M20 14V10M20 46V42M34 28H38M6 28H2" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
-                        <path d="M12 42L24 30" stroke="#1a1a1a" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="20" cy="28" r="5" stroke="#4CAF50" stroke-width="2"/>
-                    </svg>
-                </div>
-                <h3>Eye Test</h3>
-                <p>Book a eye check-up or service appointment in our main branch</p>
-                <p>Our sales associates and licensed optometrists are ready to assist you!</p>
-                <a href="../public/book_appointment.php" class="cta-button">BOOK AN APPOINTMENT</a>
-            </div>
-
-            <!-- Feature 3: Browse product Services -->
-            <div class="feature-card">
-                <div class="icon-wrapper">
-                    <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M8 16H56L52 44H12L8 16Z" stroke="#1a1a1a" stroke-width="2"/>
-                      <circle cx="20" cy="52" r="4" stroke="#1a1a1a" stroke-width="2"/>
-                      <circle cx="44" cy="52" r="4" stroke="#1a1a1a" stroke-width="2"/>
-                      <path d="M24 24L32 32L40 24" stroke="#4CAF50" stroke-width="2"/>
-                      <path d="M32 16V32" stroke="#4CAF50" stroke-width="2"/>
-                      <rect x="20" y="8" width="24" height="4" rx="2" stroke="#1a1a1a" stroke-width="2"/>
-                      <line x1="16" y1="24" x2="48" y2="24" stroke="#1a1a1a" stroke-width="2"/>
-                      <line x1="14" y1="32" x2="50" y2="32" stroke="#1a1a1a" stroke-width="2"/>
-                    </svg>
-                </div>
-                <h3>Browse product</h3>
-                <p>Explore our extensive collection of eyewear to find the perfect style that matches your personality.</p>
-                <p>Visit our store to try on frames, get expert style advice, and find the glasses that make you look and feel confident!</p>
-                <a href="./browse.php" class="cta-button">See more</a>
-            </div>
+    <div class="steps-grid">
+        <div class="step-card text-center">
+            <span class="step-number">01</span>
+            <div class="step-icon"><i class="fa-regular fa-calendar-check"></i></div>
+            <h3>Book Appointment</h3>
+            <p style="color:#666; font-size: 0.9rem;">Schedule a comprehensive eye exam with our certified doctors at your convenience.</p>
+        </div>
+        <div class="step-card text-center">
+            <span class="step-number">02</span>
+            <div class="step-icon"><i class="fa-solid fa-eye"></i></div>
+            <h3>Get Tested</h3>
+            <p style="color:#666; font-size: 0.9rem;">We use state-of-the-art technology to assess your vision and eye health precisely.</p>
+        </div>
+        <div class="step-card text-center">
+            <span class="step-number">03</span>
+            <div class="step-icon"><i class="fa-solid fa-glasses"></i></div>
+            <h3>Choose Your Style</h3>
+            <p style="color:#666; font-size: 0.9rem;">Browse our vast collection of designer frames and get fitted perfectly.</p>
         </div>
     </div>
+</section>
 
-    <section class="newsletter-section">
-        <div class="newsletter-container">
-            <div class="newsletter-content">
-                <h2>Get the Latest Updates</h2>
-                <p>Enter your email to receive news on our new eyewear, latest promotions, and marketing campaigns.</p>
-            </div>
-            
-            <form class="newsletter-form" action="subscribe.php" method="POST">
-                <input 
-                    type="email" 
-                    name="email" 
-                    placeholder="Your email address" 
-                    required
-                >
-                <button type="submit">
-                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/>
-                    </svg>
-                </button>
-            </form>
-        </div>
-    </section>
+<section class="section-padding" style="background: #f9f9f9;">
+    <div class="text-center">
+        <h2 class="section-title">New Arrivals</h2>
+        <p class="section-subtitle">Fresh styles just added to our collection.</p>
+    </div>
 
-  <?php include '../includes/footer.php'; ?>
-  <script src="../actions/home-imageCarousel.js">
+    <div class="dynamic-grid">
+        <?php if(count($featured_products) > 0): ?>
+            <?php foreach($featured_products as $prod): ?>
+                <?php 
+                    // Path correction logic
+                    $img = $prod['image_path'];
+                    $img = str_replace('../photo/', '../mod/photo/', $img); 
+                ?>
+                <div class="product-item">
+                    <div class="p-img-box">
+                        <img src="<?= htmlspecialchars($img) ?>" alt="<?= htmlspecialchars($prod['product_name']) ?>" onerror="this.src='../assets/src/eyeglasses.png'">
+                    </div>
+                    <div class="p-details">
+                        <div class="p-name"><?= htmlspecialchars($prod['product_name']) ?></div>
+                        <div style="font-size: 0.85rem; color: #777; margin-bottom: 5px;"><?= htmlspecialchars($prod['brand']) ?></div>
+                        <a href="browse.php" class="card-btn">View Details</a>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <p class="text-center">No products found. <a href="browse.php">Go to Shop</a></p>
+        <?php endif; ?>
+    </div>
     
-  </script>
-  
+    <div class="text-center" style="margin-top: 40px;">
+        <a href="browse.php" class="hero-btn primary" style="background: #333; border-color:#333;">View All Products</a>
+    </div>
+</section>
+
+<section class="section-padding guide-section">
+    <div class="guide-container">
+        <div class="guide-text">
+            <h2 class="section-title" style="color:white;">Find Your Perfect Fit</h2>
+            <p style="color:#ccc; margin-bottom: 20px;">Not sure which frame suits you? Here’s a quick guide:</p>
+            <ul class="guide-list">
+                <li><i class="fa-solid fa-check"></i> <span><strong>Round Face:</strong> Try rectangular or square frames to add angles.</span></li>
+                <li><i class="fa-solid fa-check"></i> <span><strong>Oval Face:</strong> Lucky you! Most shapes work, especially wide frames.</span></li>
+                <li><i class="fa-solid fa-check"></i> <span><strong>Square Face:</strong> Round or oval glasses soften strong jawlines.</span></li>
+                <li><i class="fa-solid fa-check"></i> <span><strong>Heart Face:</strong> Aviators or rimless frames balance the forehead.</span></li>
+            </ul>
+            <br>
+            <a href="browse.php" class="hero-btn outline">Find My Frames</a>
+        </div>
+        <div class="guide-image">
+            <img src="../assets/src/about-glasses.jpg" onerror="this.src='https://images.unsplash.com/photo-1589708678074-b5b63022510c?q=80&w=1000&auto=format&fit=crop'" alt="Face Shape Guide">
+        </div>
+    </div>
+</section>
+<section style="background: #fff; padding: 40px 0; overflow: hidden; border-bottom: 1px solid #eee;">
+    <div class="text-center" style="margin-bottom: 30px;">
+        <h3 style="font-size: 1.2rem; color: #999; text-transform: uppercase; letter-spacing: 2px;">Our Premium Partners</h3>
+    </div>
+    <div class="marquee-container">
+        <div class="marquee-content">
+            <span class="brand-item">RAY-BAN</span>
+            <span class="brand-item">OAKLEY</span>
+            <span class="brand-item">GUCCI</span>
+            <span class="brand-item">PRADA</span>
+            <span class="brand-item">TOM FORD</span>
+            <span class="brand-item">VERSACE</span>
+            <span class="brand-item">BURBERRY</span>
+            <span class="brand-item">COACH</span>
+            <span class="brand-item">RAY-BAN</span>
+            <span class="brand-item">OAKLEY</span>
+            <span class="brand-item">GUCCI</span>
+            <span class="brand-item">PRADA</span>
+            <span class="brand-item">TOM FORD</span>
+            <span class="brand-item">VERSACE</span>
+            <span class="brand-item">BURBERRY</span>
+            <span class="brand-item">COACH</span>
+        </div>
+    </div>
+</section>
+
+<section class="section-padding" style="background: #f4f4f4;">
+    <div class="text-center">
+        <h2 class="section-title">Eye Master Highlights</h2>
+        <p class="section-subtitle">Latest updates, promos, and clinic moments.</p>
+    </div>
+
+    <div class="bento-grid">
+        <div class="bento-box promo-box">
+            <div class="bento-content">
+                <span class="tag">Limited Offer</span>
+                <h3>Student Discount</h3>
+                <div class="big-text">20% OFF</div>
+                <p>Get a discount on frames when you present your valid student ID.</p>
+                <a href="book_appointment.php" class="bento-btn">Book Now</a>
+            </div>
+        </div>
+
+        <div class="bento-box img-box" style="background-image: url('../assets/src/about-glasses.jpg');">
+            <div class="overlay-text">
+                <h3>Visit Our Clinic</h3>
+                <p>State-of-the-art equipment for precise eye exams.</p>
+            </div>
+        </div>
+
+        <div class="bento-box tip-box">
+            <div class="icon-top">👁️</div>
+            <h3>Color Vision Test</h3>
+            <p>Trouble seeing colors? We offer Ishihara Color Testing.</p>
+            <a href="services.php" style="color: #d94032; font-weight: bold; text-decoration: none;">Learn More &rarr;</a>
+        </div>
+
+        <div class="bento-box img-box" style="background-image: url('../assets/src/pink-glasses.jpg');">
+             <div class="overlay-text">
+                <h3>Kids Love Us!</h3>
+                <p>Gentle care for your little ones.</p>
+            </div>
+        </div>
+
+        <div class="bento-box feature-box">
+            <h3>New Collection</h3>
+            <p>Anti-Radiation Lenses available now.</p>
+            <img src="../assets/src/glasses-yellow.jpg" alt="Glasses">
+        </div>
+    </div>
+</section>
+<section class="newsletter-section">
+    <div class="newsletter-container">
+        <div class="newsletter-content">
+            <h2>Get the Latest Updates</h2>
+            <p>Enter your email to receive news on our new eyewear, latest promotions, and marketing campaigns.</p>
+        </div>
+        <form class="newsletter-form" action="subscribe.php" method="POST">
+            <input type="email" name="email" placeholder="Your email address" required>
+            <button type="submit">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/></svg>
+            </button>
+        </form>
+    </div>
+</section>
+
+<?php include '../includes/footer.php'; ?>
+<script src="../actions/home-imageCarousel.js"></script>
+
 </body>
 </html>
