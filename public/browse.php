@@ -59,6 +59,68 @@ $result = $conn->query($sql);
         .product-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
         .modal { z-index: 9999; }
     </style>
+    <style>
+    /* Fix to ensure images fit the card (You already have this) */
+    .product-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
+    .modal { z-index: 9999; }
+
+    /* --- NEW MODAL GALLERY STYLES --- */
+    .modal-left {
+        display: flex;
+        flex-direction: column;
+        gap: 15px; /* Space between main image and thumbnails */
+    }
+
+    /* Main large image container */
+    .modal-main-display-container {
+        width: 100%;
+        height: 400px; /* Fixed height for consistency */
+        background-color: #f0f0f0;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #e0e0e0;
+    }
+
+    #modalMainDisplayImg {
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* Ensures entire image is visible */
+        display: block;
+    }
+
+    /* Thumbnail row container */
+    .modal-thumbnails-row {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto; /* Allow scrolling if too many images */
+        padding-bottom: 5px;
+    }
+
+    /* Individual thumbnail style */
+    .thumb-img {
+        width: 70px;
+        height: 70px;
+        object-fit: cover;
+        border-radius: 4px;
+        cursor: pointer;
+        border: 2px solid transparent; /* Invisible border by default */
+        transition: all 0.2s;
+        opacity: 0.7;
+    }
+
+    .thumb-img:hover {
+        opacity: 1;
+    }
+
+    /* Style for the currently active thumbnail (Shopee uses orange/red border) */
+    .thumb-img.active-thumb {
+        border-color: #ee4d2d; /* Shopee orange/red color */
+        opacity: 1;
+    }
+</style>
 </head>
 <body>
 
@@ -162,8 +224,13 @@ $result = $conn->query($sql);
   <div class="modal-content">
     <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-left">
-      <div class="modal-main-image" id="modalMainImage"></div>
+    <div class="modal-main-display-container">
+        <img id="modalMainDisplayImg" src="" alt="Product Image" onerror="this.style.display='none'">
     </div>
+
+    <div class="modal-thumbnails-row" id="modalThumbnailsContainer" style="display: none;">
+        </div>
+</div>
     <div class="modal-right">
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
@@ -305,23 +372,74 @@ function clearAllFilters() {
 
 // --- Modal Logic ---
 function openModal(productId) {
+    // Clear previous data while loading
+    document.getElementById('modalTitle').textContent = 'Loading...';
+    document.getElementById('modalMainDisplayImg').src = '';
+    document.getElementById('modalThumbnailsContainer').innerHTML = '';
+    document.getElementById('modalThumbnailsContainer').style.display = 'none';
+    document.getElementById('productModal').classList.add('active');
+
     fetch('get_product.php?id=' + productId)
         .then(response => response.json())
         .then(data => {
-            if (data.error) return alert('Error: ' + data.error);
+            if (data.error) {
+                alert('Error: ' + data.error);
+                closeModal();
+                return;
+            }
             
+            // 1. Basic Info
             document.getElementById('modalTitle').textContent = data.product_name;
             document.getElementById('modalPrice').textContent = '₱' + parseFloat(data.price).toFixed(2);
             document.getElementById('modalDescription').textContent = data.description || "No description available.";
             
-            const mainImage = document.getElementById('modalMainImage');
-            if (data.image_path) {
-                let cleanPath = data.image_path.replace('../photo/', '../mod/photo/');
-                mainImage.innerHTML = `<img src="${cleanPath}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;">`;
+            // 2. Image Gallery Handling
+            const mainDisplay = document.getElementById('modalMainDisplayImg');
+            const thumbsContainer = document.getElementById('modalThumbnailsContainer');
+            thumbsContainer.innerHTML = ''; // Clear previous thumbs
+
+            // Helper function to clean paths
+            const cleanPath = (path) => path.replace('../photo/', '../mod/photo/');
+
+            if (data.gallery_images && data.gallery_images.length > 0) {
+                // Set initial main image (the first one in the combined list)
+                const firstImage = cleanPath(data.gallery_images[0]);
+                mainDisplay.src = firstImage;
+                mainDisplay.style.display = 'block';
+
+                // Only show thumbnails if there is more than 1 image
+                if (data.gallery_images.length > 1) {
+                    thumbsContainer.style.display = 'flex';
+                    
+                    // Generate Thumbnails
+                    data.gallery_images.forEach((imgRawPath, index) => {
+                        let imgSrc = cleanPath(imgRawPath);
+                        let thumb = document.createElement('img');
+                        thumb.src = imgSrc;
+                        thumb.classList.add('thumb-img');
+                        // Mark first one as active initially
+                        if (index === 0) thumb.classList.add('active-thumb');
+
+                        // Click event to switch main image
+                        thumb.onclick = function() {
+                            mainDisplay.src = imgSrc;
+                            // Update active styling
+                            document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active-thumb'));
+                            this.classList.add('active-thumb');
+                        };
+                        thumbsContainer.appendChild(thumb);
+                    });
+                }
             } else {
-                mainImage.innerHTML = '';
+                 // No images found at all
+                 mainDisplay.style.display = 'none';
+                 mainDisplay.alt = "No image available";
             }
-            document.getElementById('productModal').classList.add('active');
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to fetch product details.");
+            closeModal();
         });
 }
 
