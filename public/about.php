@@ -44,8 +44,9 @@ include '../config/db.php';
                 <p>We believe that a pair of glasses isn't just a medical necessity—it's a part of your identity. That's why we stock the world's best brands alongside our affordable house lines.</p>
             </div>
             <div class="story-img-container">
-                <img src="../assets/src/about-glasses.jpg" alt="Clinic Interior">
+                <img src="../assets/src/hero-img(1).jpg" alt="Clinic Interior">
                 <div class="img-badge">Est. 2012</div>
+                <!-- image container cards layout -->
             </div>
         </div>
 

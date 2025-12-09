@@ -13,7 +13,7 @@ body {
 /* 1. HERO SECTION */
 .about-hero {
     position: relative;
-    background-image: url('../assets/src/hero-mage.png'); /* Ensure this file exists or swap it */
+    background-image: url('../assets/src/hero-img(3).jpg'); /* Ensure this file exists or swap it */
     background-size: cover;
     background-position: center;
     height: 350px; /* Taller hero */

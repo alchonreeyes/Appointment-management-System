@@ -79,9 +79,10 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
     <div class="carousel-track">
-        <div class="slide"><img src="../assets/src/hero-image-glass.jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
-        <div class="slide"><img src="../assets/src/slider1.jpg" onerror="this.src='https://images.unsplash.com/photo-1577803645773-f96470509666?q=80&w=1000&auto=format&fit=crop'"></div>
-        <div class="slide"><img src="../assets/src/eye-wear-3333903_960_720.jpg" onerror="this.src='https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/hero-img(3).jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/hero-img(4).jpg" onerror="this.src='https://images.unsplash.com/photo-1577803645773-f96470509666?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/hero-image-glass.jpg" onerror="this.src='https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1000&auto=format&fit=crop'"></div>
+        <div class="slide"><img src="../assets/src/hero-img(3).jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
     </div>
 </div>
 
@@ -178,8 +179,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <a href="browse.php" class="hero-btn outline">Find My Frames</a>
         </div>
         <div class="guide-image">
-            <img src="../assets/src/about-glasses.jpg" onerror="this.src='https://images.unsplash.com/photo-1589708678074-b5b63022510c?q=80&w=1000&auto=format&fit=crop'" alt="Face Shape Guide">
-        </div>
+            <img src="../assets/src/hero-img(1).jpg" />
     </div>
 </section>
 <section style="background: #fff; padding: 40px 0; overflow: hidden; border-bottom: 1px solid #eee;">
@@ -210,7 +210,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <section class="section-padding" style="background: #f4f4f4;">
     <div class="text-center">
-        <h2 class="section-title">Eye Master Highlights</h2>
+        <h2 class="section-title">Eye Master Optical Clinic</h2>
         <p class="section-subtitle">Latest updates, promos, and clinic moments.</p>
     </div>
 
@@ -225,7 +225,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <div class="bento-box img-box" style="background-image: url('../assets/src/about-glasses.jpg');">
+        <div class="bento-box img-box" style="background-image: url('../assets/src/hero-img(4).jpg');">
             <div class="overlay-text">
                 <h3>Visit Our Clinic</h3>
                 <p>State-of-the-art equipment for precise eye exams.</p>
@@ -240,16 +240,16 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
 
         <div class="bento-box img-box" style="background-image: url('../assets/src/pink-glasses.jpg');">
-             <div class="overlay-text">
-                <h3>Kids Love Us!</h3>
-                <p>Gentle care for your little ones.</p>
+            <div class="overlay-text">
+                <h3>Confidence in Every Frame</h3>
+                <p>Gender-inclusive eyewear designed to flatter every face and boost everyday confidence.</p>
             </div>
         </div>
 
         <div class="bento-box feature-box">
             <h3>New Collection</h3>
             <p>Anti-Radiation Lenses available now.</p>
-            <img src="../assets/src/glasses-yellow.jpg" alt="Glasses">
+            <img src="../assets/src/hero-img(2).jpg" alt="Glasses">
         </div>
     </div>
 </section>

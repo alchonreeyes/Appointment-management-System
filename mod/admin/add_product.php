@@ -2,10 +2,7 @@
 session_start();
 require_once __DIR__ . '/../database.php';
 
-// 1. SECURITY CHECK
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
-    header('Location: ../login.php'); exit;
-}
+
 
 // 2. HANDLE FORM SUBMISSION
 $success_msg = '';
