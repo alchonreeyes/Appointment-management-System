@@ -38,7 +38,8 @@ body {
 }
 
 /* --- THE SPLIT LAYOUT (Sidebar Left, Content Right) --- */
-.dashboard-grid {
+/* The PHP uses .account-grid, so we apply the dashboard styles here */
+.account-grid {
     display: grid;
     grid-template-columns: 250px 1fr;
     gap: 60px;
@@ -46,20 +47,35 @@ body {
 }
 
 /* LEFT MENU (Simple Text Links) */
+.account-menu {
+    border-right: 1px solid var(--border-color);
+    padding-right: 20px;
+}
+/* Fallback/old class for consistency if they are also used */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 60px;
+    min-height: 500px;
+}
 .dashboard-menu {
     border-right: 1px solid var(--border-color);
     padding-right: 20px;
 }
 
-.dashboard-menu ul {
+
+.dashboard-menu ul,
+.account-menu ul {
     list-style: none;
 }
 
-.dashboard-menu li {
+.dashboard-menu li,
+.account-menu li {
     margin-bottom: 20px;
 }
 
-.dashboard-menu a {
+.dashboard-menu a,
+.account-menu a {
     text-decoration: none;
     color: var(--primary-color);
     font-size: 1rem;
@@ -69,13 +85,16 @@ body {
 }
 
 .dashboard-menu a:hover, 
-.dashboard-menu a.active {
+.dashboard-menu a.active,
+.account-menu a:hover,
+.account-menu a.active {
     color: var(--accent-color);
     font-weight: 600;
 }
 
 /* --- CONTENT AREA (Right Side) --- */
-.dashboard-content {
+.dashboard-content,
+.account-content {
     padding-bottom: 50px;
 }
 
@@ -102,6 +121,8 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+/* NOTE: .dot class is used in appointments.php, but .status-dot is defined here. Let's use .dot for consistency in responsiveness */
+.dot,
 .status-dot {
     height: 8px;
     width: 8px;
@@ -110,8 +131,11 @@ body {
     display: inline-block;
     margin-right: 5px;
 }
-.status-dot.active { background-color: #27ae60; }
-.status-dot.pending { background-color: #f39c12; }
+.dot.active, .status-dot.active { background-color: #27ae60; }
+.dot.pending, .status-dot.pending { background-color: #f39c12; }
+.dot.confirmed { background-color: #007bff; }
+.dot.missed { background-color: #e74c3c; }
+.dot.cancelled { background-color: #999; }
 
 /* --- FORMS (Profile/Settings) --- */
 .form-grid {
@@ -217,7 +241,7 @@ body {
 .action-icon.cancel { color: #e74c3c; }
 
 /* Detail Grid */
-.detail-grid {
+.detail-list {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
@@ -230,23 +254,152 @@ body {
     color: #999;
     margin-bottom: 5px;
 }
+.detail-item.full-width {
+    grid-column: 1 / -1;
+}
+.detail-item label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #999;
+    margin-bottom: 5px;
+    font-weight: 500;
+}
+.detail-item span {
+    font-size: 0.95rem;
+    color: var(--primary-color);
+}
+.detail-item { /* Adjust for the modal detail view */
+    margin-bottom: 10px;
+}
 
-/* RESPONSIVE */
+
+/* --- RESPONSIVE MEDIA QUERIES --- */
+
 @media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
+    .ojo-container { padding: 30px 15px; }
+
+    /* 1. Account Layout: Stack sidebar and content */
+    .account-grid, .dashboard-grid {
+        grid-template-columns: 1fr; /* Single column */
         gap: 30px;
     }
-    .dashboard-menu {
+    
+    /* Turn the Account Menu into a horizontally scrolling list */
+    .account-menu, .dashboard-menu {
         border-right: none;
         border-bottom: 1px solid var(--border-color);
-        padding-bottom: 20px;
-        margin-bottom: 20px;
-    }
-    .dashboard-menu ul {
-        display: flex;
+        padding-bottom: 10px;
+        margin-bottom: 10px;
         overflow-x: auto;
-        gap: 20px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none; /* Firefox */
     }
-    .dashboard-menu li { margin-bottom: 0; white-space: nowrap; }
+    .account-menu::-webkit-scrollbar, .dashboard-menu::-webkit-scrollbar {
+        display: none; /* Chrome, Safari */
+    }
+
+    .account-menu ul, .dashboard-menu ul {
+        display: flex;
+        gap: 10px;
+        padding: 0;
+        white-space: nowrap;
+    }
+    
+    .account-menu li, .dashboard-menu li { 
+        margin-bottom: 0;
+        flex: 0 0 auto;
+    }
+
+    .account-menu a, .dashboard-menu a {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        border-radius: 4px;
+    }
+    
+    /* 2. Table to Cards Conversion */
+    .ojo-table {
+        border: none;
+        width: 100%;
+        margin-top: 0;
+    }
+    
+    .ojo-table thead {
+        display: none; /* Hide header row */
+    }
+    
+    .ojo-table tbody, .ojo-table tr, .ojo-table td {
+        display: block; /* Make all table elements block-level */
+        width: 100%;
+    }
+    
+    .ojo-table tr {
+        margin-bottom: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        padding: 10px;
+        padding-top: 5px; 
+    }
+
+    .ojo-table td {
+        border: none;
+        position: relative;
+        padding: 10px 10px 10px 50%; /* Adjust padding for label space */
+        text-align: right;
+        font-size: 0.95rem;
+    }
+    
+    .ojo-table td::before {
+        content: attr(data-label); /* Pull text from data-label attribute */
+        position: absolute;
+        left: 10px;
+        width: calc(50% - 10px);
+        white-space: nowrap;
+        text-align: left;
+        font-weight: 600;
+        color: var(--primary-color);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+    }
+    
+    /* Target the Actions cell for specific layout */
+    .ojo-table td:last-child { 
+        text-align: center;
+        padding: 15px 10px 5px 10px;
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .ojo-table td:last-child::before {
+        content: none; /* Hide label for actions */
+    }
+    
+    .ojo-table td a {
+        display: inline-block;
+        margin: 0 5px;
+    }
+    
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end; /* Align status dot to the right */
+        font-size: 0.95rem;
+        color: var(--primary-color);
+    }
+
+    /* 3. Modal adjustments */
+    .ojo-modal {
+        max-width: 95%;
+        margin: 10px auto;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 25px;
+    }
+    .detail-list {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
 }

@@ -2,7 +2,7 @@
 session_start();
 
 // Check if the user is logged in
-if (!isset($_SESSION['user_id'])) {
+if (!isset($_SESSION['client_id'])) {
   // Not logged in → redirect back to login
   header("Location: login.php");
   exit;
@@ -20,7 +20,7 @@ $productStmt->execute();
 $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $client_profile_data = [];
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION['client_id'])) {
     // 1. Fetch user data (Name, Phone from users table) and profile data (Age, Gender, Occupation, Suffix from clients table)
     $stmt = $pdo->prepare("
         SELECT u.full_name, u.phone_number, c.age, c.gender, c.occupation, c.suffix
@@ -28,7 +28,7 @@ if (isset($_SESSION['user_id'])) {
         JOIN clients c ON u.id = c.user_id
         WHERE u.id = ?
     ");
-    $stmt->execute([$_SESSION['user_id']]);
+    $stmt->execute([$_SESSION['client_id']]);
     $client_profile_data = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 // -----------------------------------------------------------

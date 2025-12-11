@@ -133,14 +133,13 @@ $result = $conn->query($sql);
   
   <?php if(!$searchTerm): ?>
       <h2>LUXE LOOKS, LOVED PRICES</h2>
-      <p>5-star frames with all the style—none of the markup.</p>
-      <div class="stars">★★★★★</div>
+    
   <?php endif; ?>
 </div>
-    <img src="../assets/src/glasses-yellow.jpg" class="hero-image" alt="Hero" onerror="this.style.display='none'">
+    <img src="../assets/src/hero-img(3).jpg" class="hero-image" alt="Hero" onerror="this.style.display='none'">
   </div>
      <!--centered h1 as navbar search bar content it was name of eye glasses  -->
-  <h1>example text it should appear "results: rayban"</h1>
+
   <div class="filters-section">
     <aside class="sidebar">
       <div class="filter-header">
@@ -243,38 +242,39 @@ $result = $conn->query($sql);
 </div>
 
 <?php include '../includes/footer.php';  ?>
-
 <script>
 // 1. Initialize Filters on Load
 const urlParams = new URLSearchParams(window.location.search);
 const initialSearch = urlParams.get('search') || '';
 
-// If there is a search term in URL, update the page title immediately
+// If there is an initial search term from the URL (navbar search)
 if (initialSearch) {
     document.querySelector('.hero-content h1').textContent = `Results: '${initialSearch}'`;
-    // Hide the subtitle/stars if searching
+    // Hide the subtitle if searching
     const sub = document.querySelector('.hero-content h2');
     if(sub) sub.style.display = 'none';
 }
 
-// 2. State Management
+// 2. State Management (CRITICAL: Initialize search term here)
 let activeFilters = { 
     gender: [], 
     brand: [], 
     lens: [], 
     frame: [],
-    search: initialSearch // CRITICAL: Start with the URL search term
+    search: initialSearch 
 };
 
 // 3. Setup Listeners
 document.addEventListener('DOMContentLoaded', () => {
     // Check boxes if they match active filters (optional logic)
-    applyFilters(); // Trigger initial load
+    
+    // --- URGENT FIX: Run applyFilters immediately on DOM load ---
+    applyFilters(); 
 });
 
 document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
-        const type = this.dataset.filter; // e.g. "brand"
+        const type = this.dataset.filter;
         const val = this.value;
         
         if (this.checked) {
@@ -286,16 +286,16 @@ document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
     });
 });
 
-// 4. The Filter Function
+// 4. The Filter Function (The core AJAX call)
 function applyFilters() {
     const formData = new FormData();
-    // We send JSON strings because filter_products.php expects json_decode()
+    // Send all filter arrays as JSON strings
     formData.append('genders', JSON.stringify(activeFilters.gender));
     formData.append('brands', JSON.stringify(activeFilters.brand));
     formData.append('lensTypes', JSON.stringify(activeFilters.lens));
     formData.append('frameTypes', JSON.stringify(activeFilters.frame));
     
-    // Send Search Term as plain text (handled by lines 75-83 in your filter_products.php)
+    // Send the combined Search Term (from URL or from clearAllFilters)
     formData.append('search', activeFilters.search);
     
     fetch('filter_products.php', { 
@@ -307,19 +307,15 @@ function applyFilters() {
         if (data.success) {
             updateProductGrid(data.products);
             document.getElementById('resultsCount').textContent = `Showing ${data.count} results`;
-            
-            // Debugging
-            if(data.count === 0 && activeFilters.search) {
-                console.log("Search for " + activeFilters.search + " returned 0 results.");
-            }
         } else {
             console.error("Backend Error:", data.error);
+            document.getElementById('resultsCount').textContent = `Error loading results.`;
         }
     })
     .catch(error => console.error('Fetch Error:', error));
 }
 
-// 5. Render Grid
+// 5. Render Grid (No change needed here, it handles the output)
 function updateProductGrid(products) {
     const grid = document.getElementById('productGrid');
     
@@ -350,7 +346,7 @@ function updateProductGrid(products) {
     }).join('');
 }
 
-// UI Toggles
+// UI Toggles (No change needed)
 function toggleFilters() {
     document.querySelector('.sidebar').classList.toggle('hidden');
     document.querySelector('.show-filters-btn').classList.toggle('visible');
@@ -359,20 +355,19 @@ function showFilters() { toggleFilters(); }
 
 function clearAllFilters() {
     document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
-    // Reset but KEEP the search term if you want (or clear it too)
-    // For "Clear All", usually we clear the search too:
+    
+    // Reset filters AND search term
     activeFilters = { gender: [], brand: [], lens: [], frame: [], search: '' };
     
-    // Reset URL to remove ?search=...
+    // Clear URL query parameter
     window.history.pushState({}, document.title, window.location.pathname);
     document.querySelector('.hero-content h1').textContent = 'TOP-RATED FRAMES';
     
     applyFilters();
 }
 
-// --- Modal Logic ---
+// --- Modal Logic (No change needed) ---
 function openModal(productId) {
-    // Clear previous data while loading
     document.getElementById('modalTitle').textContent = 'Loading...';
     document.getElementById('modalMainDisplayImg').src = '';
     document.getElementById('modalThumbnailsContainer').innerHTML = '';
@@ -388,42 +383,32 @@ function openModal(productId) {
                 return;
             }
             
-            // 1. Basic Info
             document.getElementById('modalTitle').textContent = data.product_name;
-
             document.getElementById('modalDescription').textContent = data.description || "No description available.";
             
-            // 2. Image Gallery Handling
             const mainDisplay = document.getElementById('modalMainDisplayImg');
             const thumbsContainer = document.getElementById('modalThumbnailsContainer');
-            thumbsContainer.innerHTML = ''; // Clear previous thumbs
+            thumbsContainer.innerHTML = ''; 
 
-            // Helper function to clean paths
             const cleanPath = (path) => path.replace('../photo/', '../mod/photo/');
 
             if (data.gallery_images && data.gallery_images.length > 0) {
-                // Set initial main image (the first one in the combined list)
                 const firstImage = cleanPath(data.gallery_images[0]);
                 mainDisplay.src = firstImage;
                 mainDisplay.style.display = 'block';
 
-                // Only show thumbnails if there is more than 1 image
                 if (data.gallery_images.length > 1) {
                     thumbsContainer.style.display = 'flex';
                     
-                    // Generate Thumbnails
                     data.gallery_images.forEach((imgRawPath, index) => {
                         let imgSrc = cleanPath(imgRawPath);
                         let thumb = document.createElement('img');
                         thumb.src = imgSrc;
                         thumb.classList.add('thumb-img');
-                        // Mark first one as active initially
                         if (index === 0) thumb.classList.add('active-thumb');
 
-                        // Click event to switch main image
                         thumb.onclick = function() {
                             mainDisplay.src = imgSrc;
-                            // Update active styling
                             document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active-thumb'));
                             this.classList.add('active-thumb');
                         };
@@ -431,7 +416,6 @@ function openModal(productId) {
                     });
                 }
             } else {
-                 // No images found at all
                  mainDisplay.style.display = 'none';
                  mainDisplay.alt = "No image available";
             }
@@ -445,8 +429,7 @@ function openModal(productId) {
 
 function closeModal() {
     document.getElementById('productModal').classList.remove('active');
-}s
+}
 </script>
-
 </body>
 </html>

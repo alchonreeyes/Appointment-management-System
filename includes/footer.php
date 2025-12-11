@@ -70,47 +70,74 @@
 
     /* Responsive Design */
 
-    /* For tablets */
-    @media (max-width: 768px) {
-        .footer-container {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
+    /* ... (Keep General Footer Styles as they are) ... */
 
-        .footer-about, .footer-links-container {
-            width: 100%;
-            max-width: 400px; /* Limit width on centered column layout */
-        }
+/* Responsive Design */
 
-        .footer-about .clinic-name {
-            justify-content: center;
-        }
+/* For tablets and medium-sized phones (768px and below) */
+@media (max-width: 768px) {
+    /* 1. Stack the main footer columns (About and Links Container) */
+    .footer-container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
     }
 
-    /* For mobile phones */
-    @media (max-width: 480px) {
-        .site-footer {
-            padding: 30px 15px;
-        }
-
-        .footer-links-container {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .footer-links-column {
-            width: 100%;
-        }
-
-        .site-footer h3 {
-            font-size: 1.1rem;
-        }
-
-        .site-footer p, .site-footer a {
-            font-size: 0.9rem;
-        }
+    .footer-about, .footer-links-container {
+        width: 100%;
+        /* Setting a max-width prevents the content from stretching across a wide tablet screen */
+        max-width: 400px;
     }
+    
+    .footer-about {
+        /* Add some margin below the about section when it stacks */
+        margin-bottom: 25px;
+    }
+
+    .footer-about .clinic-name {
+        justify-content: center;
+    }
+    
+    /* 2. Stack the Link Columns within the Links Container */
+    /* This is the key change to ensure all link lists stack nicely on phones */
+    .footer-links-container {
+        flex-direction: column;
+        gap: 0; /* Remove gap when stacking vertically */
+    }
+
+    /* Reset width/flex for stacked columns */
+    .footer-links-column {
+        width: 100%;
+        min-width: unset; /* Remove the fixed min-width for mobile flexibility */
+        margin-bottom: 20px; /* Add spacing between the stacked link lists */
+    }
+
+    /* Ensure link list text is centered/aligned with the heading */
+    .site-footer ul {
+        text-align: center;
+    }
+}
+
+/* For smaller mobile phones (480px and below) */
+@media (max-width: 480px) {
+    .site-footer {
+        padding: 30px 15px;
+    }
+    
+    /* Fine-tune text sizes for smallest screens */
+    .site-footer h3 {
+        font-size: 1.1rem;
+    }
+    
+    .site-footer p, .site-footer a {
+        font-size: 0.85rem; /* Slightly smaller for the smallest screens */
+    }
+
+    /* Remove the bottom margin on the last stacked link column */
+    .footer-links-column:last-of-type {
+        margin-bottom: 0;
+    }
+}
 </style>
 
 <footer class="site-footer">

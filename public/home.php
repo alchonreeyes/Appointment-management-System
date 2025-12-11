@@ -217,10 +217,9 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="bento-grid">
         <div class="bento-box promo-box">
             <div class="bento-content">
-                <span class="tag">Limited Offer</span>
-                <h3>Student Discount</h3>
-                <div class="big-text">20% OFF</div>
-                <p>Get a discount on frames when you present your valid student ID.</p>
+                
+                <div class="big-text">Free Vision Screening</div>
+                <p>Drop in for a complimentary vision check — no appointment needed for quick screenings.</p>
                 <a href="book_appointment.php" class="bento-btn">Book Now</a>
             </div>
         </div>

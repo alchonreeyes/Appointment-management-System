@@ -1,29 +1,61 @@
 <?php
 session_start();
 
-
-// Database connection
-require '../config/db_mysqli.php'; // Adjust path as needed
-
-$user_id = $_SESSION['user_id'];
-
-// Fetch user data with client details
-$query = "SELECT u.*, c.birth_date, c.gender, c.age, c.suffix, c.occupation 
-          FROM users u 
-          LEFT JOIN clients c ON u.id = c.user_id 
-          WHERE u.id = ?";
-
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-
-// Check if user exists
-if (!$user) {
+// --- 1. SESSION SEGMENTATION CHECK ---
+// Ensure user is logged in using the specific 'client_id' key
+if (!isset($_SESSION['client_id'])) {
     header("Location: ../public/login.php");
     exit();
 }
+
+// --- 2. DATABASE CONNECTION & VARIABLE SETUP (PDO STANDARD) ---
+require '../config/db.php'; // Using consistent PDO connection
+$db = new Database();
+$pdo = $db->getConnection();
+
+// Use the correct, validated client ID
+$user_id = $_SESSION['client_id']; // THIS IS THE CORRECT ID
+
+$error_message = '';
+$success_message = '';
+
+// --- 3. FETCH USER DATA (Using PDO) ---
+try {
+    $query = "SELECT u.*, c.birth_date, c.gender, c.age, c.suffix, c.occupation 
+              FROM users u 
+              LEFT JOIN clients c ON u.id = c.user_id 
+              WHERE u.id = ?";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) {
+        // If the user ID exists but the record is missing, destroy session
+        session_destroy();
+        header("Location: ../public/login.php");
+        exit();
+    }
+} catch (Exception $e) {
+    $error_message = "Error fetching user data: " . $e->getMessage();
+}
+
+// --- 4. HANDLE PROFILE UPDATE (Using PDO & Transaction) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    // ... (Your update logic using $pdo remains valid here) ...
+    // Note: You must convert the MySQLi code for the update block into PDO (as planned previously)
+}
+
+// --- 5. HANDLE PASSWORD CHANGE (Using PDO) ---
+// ... (Your password change logic using $pdo remains valid here) ...
+// Note: You must convert the MySQLi code for the password change block into PDO (as planned previously)
+    
+// --- 6. HANDLE SUCCESS/ERROR MESSAGES ---
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
+}
+
+// ... rest of HTML output logic ...
 
 // Ensure all fields have default values to avoid null warnings
 $user['full_name'] = $user['full_name'] ?? '';

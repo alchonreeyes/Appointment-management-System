@@ -109,24 +109,21 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     </button>
 </form>
             </div>
+          <div class="nav-config desktop-config"> 
 
-            <!-- Desktop User Config -->
             <div class="nav-config desktop-config">
-                <?php if (!isset($_SESSION['user_id'])): ?>
+                <?php 
+                if (!isset($_SESSION['client_id'])): 
+                ?>
                     <i class="fa-regular fa-user"></i>
                     <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
                     <a href="../public/appointment.php" class="book-btn">Book Appointment</a>
                 <?php else: ?>
-                    <div class="user-menu">
-                        <button class="user-icon">
-                            <a href="../client/profile.php"><i class="fa-regular fa-user"></i></a>
-                        </button>
-                        <!-- <div class="dropdown-menu">
-                            <a href="../client/profile.php">Profile</a>
-                            <a href="../public/my-appointments.php">My Appointments</a>
-                            <a href="../public/settings.php">Settings</a>
-                            <a href="../actions/logout.php">Logout</a>
-                        </div> -->
+                    <div class="user-menu" style="align-items: center; display: flex;">
+                        <a href="../client/profile.php" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
+                            <i class="fa-regular fa-user" style="font-size: 1.6rem;"></i>
+                            <span style="display:inline-block; margin-left:8px; font-size:14px; font-weight:600; line-height:1; vertical-align:middle; color: #004aad;">Profile</span>
+                        </a>
                     </div>
                     <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
                 <?php endif; ?>
@@ -148,7 +145,7 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                 <li><a href="../public/home.php">Home</a></li>
                 <li><a href="../public/browse.php">Browse</a></li>
                 <li><a href="../public/store.php">Store</a></li>
-                <li><a href="#">Category</a></li>
+               
                 <li><a href="../public/about.php">About</a></li>
             </ul>
 
@@ -167,10 +164,10 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                     <a href="../client/profile.php" class="mobile-nav-link">
                         <i class="fa-regular fa-user"></i> Profile
                     </a>
-                    <a href="../public/my-appointments.php" class="mobile-nav-link">
+                    <a href="../client/appointments.php" class="mobile-nav-link">
                         <i class="fa-regular fa-calendar"></i> My Appointments
                     </a>
-                    <a href="../public/settings.php" class="mobile-nav-link">
+                    <a href="../client/settings.php" class="mobile-nav-link">
                         <i class="fa-solid fa-gear"></i> Settings
                     </a>
                     <a href="../actions/logout.php" class="mobile-nav-link">

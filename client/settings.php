@@ -1,11 +1,13 @@
 <?php
 session_start();
 require '../config/db_mysqli.php'; 
-
-if (!isset($_SESSION['user_id'])) {
+// Old way: if (!isset($_SESSION['user_id'])) ...
+// NEW WAY:
+if (!isset($_SESSION['client_id'])) {
     header("Location: ../public/login.php");
     exit();
 }
+$user_id = $_SESSION['client_id']; // Assign to variable for rest of script
 
 $user_id = $_SESSION['user_id'];
 

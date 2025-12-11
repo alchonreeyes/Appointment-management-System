@@ -3,6 +3,14 @@ session_start();
 // Check if in cooldown
 $in_cooldown = false;
 $cooldown_remaining = 0;
+
+// <<< FIX: Check for the SEGMENTED key 'client_id' >>>
+if (isset($_SESSION['client_id'])) {
+    // If client is logged in, redirect them away from the login page
+    header("Location: home.php"); 
+    exit(); 
+}
+
 if (isset($_SESSION['login_cooldown_until'])) {
     $cooldown_remaining = $_SESSION['login_cooldown_until'] - time();
     if ($cooldown_remaining > 0) {
@@ -252,12 +260,7 @@ if (isset($_SESSION['login_cooldown_until'])) {
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
 
-            <?php if (isset($_GET['error'])): ?>
-                <div class="alert alert-error">
-                    Invalid email or password. Please try again.
-                </div>
-            <?php endif; ?>
-
+            
             <form action="../actions/login-action.php" method="POST" id="loginForm">
                 <div class="input-group">
                     <label for="email">Email Address</label>

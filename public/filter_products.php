@@ -1,5 +1,5 @@
 <?php
-// filter_products.php
+// filter_products.php - FINAL COMBINED SEARCH AND FILTER LOGIC
 header('Content-Type: application/json');
 
 $servername = "localhost";
@@ -7,98 +7,99 @@ $username = "root";
 $password = "";
 $dbname = "capstone";
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    die(json_encode(['error' => 'Connection failed']));
+// Using exception handling for connection errors
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $conn = new mysqli($servername, $username, $password, $dbname);
+} catch (Exception $e) {
+    die(json_encode(['success' => false, 'error' => 'Connection failed']));
 }
 
-// Get filter parameters from POST and decode JSON
+// 1. Get filter parameters from POST and decode JSON
 $genders = isset($_POST['genders']) ? json_decode($_POST['genders'], true) : [];
 $brands = isset($_POST['brands']) ? json_decode($_POST['brands'], true) : [];
 $lensTypes = isset($_POST['lensTypes']) ? json_decode($_POST['lensTypes'], true) : [];
 $frameTypes = isset($_POST['frameTypes']) ? json_decode($_POST['frameTypes'], true) : [];
+$search = isset($_POST['search']) ? trim($_POST['search']) : ''; // Get the search term
 
-// Ensure they are arrays
+// Ensure filters are arrays
 $genders = is_array($genders) ? $genders : [];
 $brands = is_array($brands) ? $brands : [];
 $lensTypes = is_array($lensTypes) ? $lensTypes : [];
 $frameTypes = is_array($frameTypes) ? $frameTypes : [];
 
-// Build the SQL query
+
+// 2. Build the SQL Query (Start with base query)
 $sql = "SELECT * FROM products WHERE 1=1";
 $params = [];
 $types = "";
 
-// Add gender filter
-if (!empty($genders)) {
-    $placeholders = str_repeat('?,', count($genders) - 1) . '?';
-    $sql .= " AND gender IN ($placeholders)";
-    $params = array_merge($params, $genders);
-    $types .= str_repeat('s', count($genders));
-}
-
-// Add brand filter
-if (!empty($brands)) {
-    $placeholders = str_repeat('?,', count($brands) - 1) . '?';
-    $sql .= " AND brand IN ($placeholders)";
-    $params = array_merge($params, $brands);
-    $types .= str_repeat('s', count($brands));
-}
-
-// Add lens type filter
-if (!empty($lensTypes)) {
-    $placeholders = str_repeat('?,', count($lensTypes) - 1) . '?';
-    $sql .= " AND lens_type IN ($placeholders)";
-    $params = array_merge($params, $lensTypes);
-    $types .= str_repeat('s', count($lensTypes));
-}
-
-// Add frame type filter
-if (!empty($frameTypes)) {
-    $placeholders = str_repeat('?,', count($frameTypes) - 1) . '?';
-    $sql .= " AND frame_type IN ($placeholders)";
-    $params = array_merge($params, $frameTypes);
-    $types .= str_repeat('s', count($frameTypes));
-}
-
-$sql .= " ORDER BY created_at DESC";
-
-// Execute query
-if (!empty($params)) {
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param($types, ...$params);
-    $stmt->execute();
-    $result = $stmt->get_result();
-} else {
-    $result = $conn->query($sql);
-}
-// ADD SEARCH FILTER LOGIC
-$search = isset($_POST['search']) ? trim($_POST['search']) : '';
-
-if (!empty($search)) {
-    // Search in Name OR Brand
-    $sql .= " AND (product_name LIKE ? OR brand LIKE ?)";
-    $searchParam = "%" . $search . "%";
-    $params[] = $searchParam;
-    $params[] = $searchParam;
-    $types .= "ss"; // Two strings
-}
-
-$sql .= " ORDER BY created_at DESC";
-
-$products = [];
-if ($result->num_rows > 0) {
-    while($row = $result->fetch_assoc()) {
-        $products[] = $row;
+// Helper function for building IN clauses
+function buildInClause($arr, $field, &$sql, &$params, &$types) {
+    if (!empty($arr)) {
+        $placeholders = str_repeat('?,', count($arr) - 1) . '?';
+        $sql .= " AND $field IN ($placeholders)";
+        $params = array_merge($params, $arr);
+        $types .= str_repeat('s', count($arr));
     }
 }
 
-echo json_encode([
-    'success' => true,
-    'products' => $products,
-    'count' => count($products)
-]);
+// 3. Add sidebar filter clauses
+buildInClause($genders, 'gender', $sql, $params, $types);
+buildInClause($brands, 'brand', $sql, $params, $types);
+buildInClause($lensTypes, 'lens_type', $sql, $params, $types);
+buildInClause($frameTypes, 'frame_type', $sql, $params, $types);
+
+
+// 4. Add the combined SEARCH FILTER
+if (!empty($search)) {
+    // We wrap the search OR logic in parentheses to combine with AND filters
+    $sql .= " AND (product_name LIKE ? OR brand LIKE ?)";
+    $searchParam = "%" . $search . "%";
+    
+    // Add parameters for search
+    $params[] = $searchParam;
+    $params[] = $searchParam;
+    $types .= "ss"; 
+}
+
+$sql .= " ORDER BY created_at DESC";
+
+
+// 5. Execute Query
+try {
+    if (empty($params)) {
+        // No parameters, just run the simple query
+        $result = $conn->query($sql);
+    } else {
+        // Use prepared statement for security and correct parameter binding
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+             throw new Exception("Prepared statement failed: " . $conn->error);
+        }
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $result = $stmt->get_result();
+    }
+    
+    $products = [];
+    if ($result) {
+        while($row = $result->fetch_assoc()) {
+            $products[] = $row;
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'products' => $products,
+        'count' => count($products),
+        'debug_sql' => $sql, // Optional: for debugging purposes
+        'debug_params' => $params // Optional: for debugging purposes
+    ]);
+
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'error' => 'Database Query Error: ' . $e->getMessage()]);
+}
 
 $conn->close();
 ?>
