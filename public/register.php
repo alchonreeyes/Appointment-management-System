@@ -1,11 +1,11 @@
-
-
 <?php 
-session_start();
-include '../actions/register-action.php';
-// <<< CRITICAL SESSION LOCK (Rule A) >>>
-if (isset($_SESSION['user_id'])) {
-    // Redirect authenticated client to their home page
+// 1. Start the session once at the top of the page
+session_start(); 
+
+// 2. We DELETE the line: include '../actions/register-action.php';
+
+// 3. CRITICAL SESSION LOCK (Use segmented key)
+if (isset($_SESSION['client_id'])) {
     header("Location: home.php"); 
     exit(); 
 }

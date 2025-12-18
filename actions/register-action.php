@@ -1,55 +1,43 @@
 <?php
-include '../config/db.php';
+// actions/register-action.php
 session_start();
+include '../config/db.php';
+require_once __DIR__ . '/../config/encryption_util.php'; // Correct path to utility
+require_once '../vendor/autoload.php'; // Load PHPMailer
 
-// Import PHPMailer
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// If Composer autoload doesn't work, include PHPMailer manually
-require '../vendor/phpmailer/phpmailer/src/Exception.php';
-require '../vendor/phpmailer/phpmailer/src/PHPMailer.php';
-require '../vendor/phpmailer/phpmailer/src/SMTP.php';
 
 if (isset($_POST['signup'])) {
+    // --- 1. COLLECT AND VALIDATE INPUT ---
     $full_name = trim($_POST['full_name']);
     $email = trim($_POST['email']);
     $password = $_POST['password'];
     $phone_number = trim($_POST['phone_number']);
     $address = trim($_POST['address']);
-
-    // --- ADD THESE NEW VARIABLES ---
     $gender = trim($_POST['gender']);
     $age = intval($_POST['age']);
     $occupation = trim($_POST['occupation']);
-    // Normalize phone number: remove non-digit characters
-    $digits = preg_replace('/\D+/', '', $phone_number);
 
-    // Accept common Philippine formats and convert to canonical local format 09XXXXXXXXX
-    // Accepted input examples:
-    //  - 09XXXXXXXXX  (11 digits)
-    //  - 9XXXXXXXXX   (10 digits, missing leading 0)
-    //  - +639XXXXXXXXX or 639XXXXXXXXX (country code variants)
-    if (preg_match('/^09\d{9}$/', $digits)) {
-        $phone_number = $digits;
-    } elseif (preg_match('/^9\d{9}$/', $digits)) {
-        // add leading 0
-        $phone_number = '0' . $digits;
-    } elseif (preg_match('/^63\d{10}$/', $digits)) {
-        // convert 63XXXXXXXXXX -> 0XXXXXXXXXX
-        $phone_number = '0' . substr($digits, 2);
-    } else {
-        $_SESSION['error'] = "Invalid phone number format. Acceptable formats: 09XXXXXXXXX, 9XXXXXXXXX, +639XXXXXXXXX, or 63XXXXXXXXXX.";
-        header("Location: ../public/register.php");
-        exit;
-    }
+    // Sa loob ng IF block kung saan mo nakuha ang user data:
+    if ($user_data_from_db) {
+    // I-decrypt ang data bago ito gamitin sa HTML inputs
+    $client_profile_data['full_name'] = decrypt_data($user_data_from_db['full_name']);
+    $client_profile_data['phone_number'] = decrypt_data($user_data_from_db['phone_number']);
+}
 
-    // Final strict check to ensure canonical format before storing: 11 digits starting with 09
-    if (!preg_match('/^09\d{9}$/', $phone_number)) {
-        $_SESSION['error'] = "Invalid phone number after normalization. Must be 09XXXXXXXXX (11 digits).";
-        header("Location: ../public/register.php");
-        exit;
-    }
+    // --- (Keep your phone number validation logic here) ---
+$digits = preg_replace('/\D+/', '', $phone_number);
+// Validate format first: 09XXXXXXXXX (11 digits)
+if (!preg_match('/^09\d{9}$/', $digits)) {
+    $_SESSION['error'] = "Invalid phone number format. Must be 09XXXXXXXXX (11 digits).";
+    header("Location: ../public/register.php");
+    exit;
+}
+// Use cleaned number and encrypt for storage (variable used later when inserting)
+$phone_number = $digits;
+$encrypted_phone_number = encrypt_data($phone_number);
 
     try {
         $db = new Database();
@@ -64,35 +52,38 @@ if (isset($_POST['signup'])) {
             exit;
         }
 
+        // --- 2. ENCRYPT SENSITIVE DATA ---
+        $encrypted_full_name = encrypt_data($full_name);
+        $encrypted_phone_number = encrypt_data($phone_number);
+        $encrypted_address = encrypt_data($address);
+        $encrypted_occupation = encrypt_data($occupation);
+
         // 🔹 Generate 6-digit verification code
         $verification_code = rand(100000, 999999);
 
         // 🔹 Hash password
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-        // 🔹 Insert into users (unverified)
+        // --- 3. INSERT INTO USERS TABLE ---
         $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password_hash, phone_number, address, verification_code, is_verified)
                                VALUES (?, ?, ?, ?, ?, ?, 0)");
-        $stmt->execute([$full_name, $email, $hashedPassword, $phone_number, $address, $verification_code]);
+        $stmt->execute([$encrypted_full_name, $email, $hashedPassword, $encrypted_phone_number, $encrypted_address, $verification_code]);
 
         $userId = $pdo->lastInsertId();
 
-        // 🔹 Insert into clients (optional)
-       // 🔹 Insert into clients (Now capturing essential profile data)
-        // Note: birth_date and suffix remain NULL as they are optional/not captured here
+        // --- 4. INSERT INTO CLIENTS TABLE (Profile Data) ---
         $stmt = $pdo->prepare("INSERT INTO clients (user_id, gender, age, occupation)
                                VALUES (?, ?, ?, ?)");
-        $stmt->execute([$userId, $gender, $age, $occupation]);
+        $stmt->execute([$userId, $gender, $age, $encrypted_occupation]);
 
-        // 🔹 Send verification email using PHPMailer
-        $mail = new PHPMailer(true);
-
+        // --- 5. SEND VERIFICATION EMAIL ---
+        $mail = new PHPMailer(true); 
         try {
             $mail->isSMTP();
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
-            $mail->Username = 'alchonreyez@gmail.com'; // your Gmail    
-            $mail->Password = 'urwbzscfmaynltzx'; // your app password
+            $mail->Username = 'alchonreyez@gmail.com'; 
+            $mail->Password = 'urwbzscfmaynltzx'; // Use your App Password here
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
 
@@ -114,14 +105,16 @@ if (isset($_POST['signup'])) {
 
             $mail->send();
 
+            // Success logic
             $_SESSION['email'] = $email;
             $_SESSION['success'] = "A verification code has been sent to your email.";
             header("Location: ../public/verify_email.php");
             exit;
 
         } catch (Exception $e) {
-            $_SESSION['error'] = "Mailer Error: " . $mail->ErrorInfo;
+            // Log the error but redirect the user (don't expose internal error)
             error_log("Mailer Error: " . $mail->ErrorInfo);
+            $_SESSION['error'] = "Mailer Error: Could not send verification email. " . $mail->ErrorInfo;
             header("Location: ../public/register.php");
             exit;
         }

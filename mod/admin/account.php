@@ -559,10 +559,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 </head>
 <body>
 
-<div id="loader-overlay">
+<!-- <div id="loader-overlay">
     <div class="loader-spinner"></div>
     <p class="loader-text">Loading Accounts...</p>
-</div>
+</div> -->
 <div id="main-content" style="display: none;">
 
     <div class="vertical-bar"><div class="circle"></div></div>
@@ -1012,31 +1012,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
 </div>
 <script>
-// =======================================================
-// <-- BAGONG SCRIPT para sa Loading Screen
-// =======================================================
-document.addEventListener('DOMContentLoaded', function() {
-    // Set timer for 1 second
-    setTimeout(function() {
-        const loader = document.getElementById('loader-overlay');
-        const content = document.getElementById('main-content');
-        
-        if (loader) {
-            // Start fade out
-            loader.style.opacity = '0';
-            // Remove from DOM after fade out finishes
-            loader.addEventListener('transitionend', () => {
-                loader.style.display = 'none';
-            }, { once: true });
-        }
-        
-        if (content) {
-            // Show main content
-            content.style.display = 'block';
-            // Apply fade-in animation
-            content.style.animation = 'fadeInContent 0.5s ease';
-        }
-    }, 1000); // 1000 milliseconds = 1 second
+// admin_dashboard.php (O anumang Admin file na may page loader)
+document.addEventListener('DOMContentLoaded', () => {
+    const pageLoader = document.getElementById('page-loader-overlay');
+    const content = document.getElementById('main-content'); // O .dashboard
+
+    // Para sa Page Loader (na may 1s delay)
+    if (pageLoader) {
+        pageLoader.style.display = 'none'; // Direktang itago
+    }
+    if (content) {
+        content.style.display = 'block'; // Direktang ipakita
+        content.style.animation = 'fadeInContent 0.5s ease';
+    }
+    
+    // Para sa Dashboard.php, tanggalin ang visibility: hidden; sa CSS/HTML kung gumamit ka nito
+    const dashboard = document.querySelector('.dashboard');
+    if(dashboard) dashboard.style.visibility = 'visible';
 });
 </script>
 

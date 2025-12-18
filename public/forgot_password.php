@@ -2,7 +2,7 @@
 session_start();
 
 // <<< CRITICAL SESSION LOCK (Rule A) >>>
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION['client_id'])) {
     // Redirect authenticated client to their home page
     header("Location: home.php"); 
     exit(); 

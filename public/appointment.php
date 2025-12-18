@@ -1,27 +1,22 @@
 <?php
 session_start();
 
-// Check if the user is logged in
+// 1. UNAHIN ANG MGA REQUIRES (Dapat nandito ang mga "tools" mo)
+require_once '../config/db.php';
+require_once '../config/encryption_util.php'; // <--- SIGURADUHIN NA TAMA ANG PATH NA ITO
+
+// 2. CHECK SESSION
 if (!isset($_SESSION['client_id'])) {
-  // Not logged in → redirect back to login
-  header("Location: login.php");
-  exit;
+    header("Location: login.php");
+    exit;
 }
-// --- ADD THIS PHP BLOCK AFTER THE INCLUDES/SESSION START ---
-include '../config/db.php'; // Ensure this is present in appointment.php too
+
 $db = new Database();
 $pdo = $db->getConnection();
-// ... inside appointment.php, after $pdo connection is made ...
 
-// FETCH PRODUCTS FOR STEP 4
-// We select all products. You can add "WHERE stock > 0" if you track inventory.
-$productStmt = $pdo->prepare("SELECT product_id, product_name, brand, image_path, frame_type FROM products ORDER BY brand ASC, product_name ASC");
-$productStmt->execute();
-$available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
-
+// 3. FETCH DATA
 $client_profile_data = [];
 if (isset($_SESSION['client_id'])) {
-    // 1. Fetch user data (Name, Phone from users table) and profile data (Age, Gender, Occupation, Suffix from clients table)
     $stmt = $pdo->prepare("
         SELECT u.full_name, u.phone_number, c.age, c.gender, c.occupation, c.suffix
         FROM users u
@@ -29,10 +24,60 @@ if (isset($_SESSION['client_id'])) {
         WHERE u.id = ?
     ");
     $stmt->execute([$_SESSION['client_id']]);
-    $client_profile_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    $encrypted_row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($encrypted_row) {
+        // I-copy lahat ng data (kasama ang plain text fields gaya ng age)
+        $client_profile_data = $encrypted_row;
+
+        // Debug container
+        $decrypt_debug = [
+            'function_exists' => function_exists('decrypt_data'),
+            'raw' => [
+                'full_name' => $encrypted_row['full_name'] ?? null,
+                'phone_number' => $encrypted_row['phone_number'] ?? null,
+            ],
+            'results' => [],
+            'errors' => [],
+        ];
+
+        // I-decrypt ang mga kailangang i-decrypt with try/catch so we can log issues
+        if (function_exists('decrypt_data')) {
+            try {
+                $client_profile_data['full_name'] = decrypt_data($encrypted_row['full_name']);
+                $decrypt_debug['results']['full_name'] = $client_profile_data['full_name'];
+            } catch (Throwable $e) {
+                $decrypt_debug['errors']['full_name'] = $e->getMessage();
+                // fallback to raw value to avoid breaking UI
+                $client_profile_data['full_name'] = $encrypted_row['full_name'];
+            }
+
+            try {
+                $client_profile_data['phone_number'] = decrypt_data($encrypted_row['phone_number']);
+                $decrypt_debug['results']['phone_number'] = $client_profile_data['phone_number'];
+            } catch (Throwable $e) {
+                $decrypt_debug['errors']['phone_number'] = $e->getMessage();
+                $client_profile_data['phone_number'] = $encrypted_row['phone_number'];
+            }
+        } else {
+            $decrypt_debug['errors']['decrypt_function'] = 'decrypt_data() not found';
+        }
+
+        // Send debug to browser console (safe JSON encode)
+        echo '<script>console.log("decrypt debug: ", ' . json_encode($decrypt_debug, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) . ');</script>';
+
+        // Also log to PHP error log in case browser console isn't available
+        error_log('decrypt debug: ' . json_encode($decrypt_debug));
+    }
 }
-// -----------------------------------------------------------
+
+// 4. FETCH PRODUCTS (Dito na ang ibang query mo...)
+$productStmt = $pdo->prepare("SELECT product_id, product_name, brand, image_path, frame_type FROM products ORDER BY brand ASC, product_name ASC");
+$productStmt->execute();
+$available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
+
 ?>
+
 
 
 

@@ -1,11 +1,11 @@
 <?php
 session_start();
-// Assuming config/db.php uses PDO or MySQLi connection method that is globally accessible
-require_once '../config/db_mysqli.php'; 
-
+// Use consistent PDO connection
+require_once '../config/db.php'; 
 header('Content-Type: application/json');
 
-if (!isset($_SESSION['user_id'])) {
+// --- 1. SESSION AND REQUEST VALIDATION (Check for segmented key) ---
+if (!isset($_SESSION['client_id'])) {
     echo json_encode(['success' => false, 'message' => 'Session expired. Please log in.']);
     exit;
 }
@@ -15,43 +15,53 @@ if (!isset($_POST['current_password'])) {
     exit;
 }
 
-$user_id = $_SESSION['user_id'];
+$user_id = $_SESSION['client_id']; // Use the correct segmented ID
 $input_password = $_POST['current_password'];
+$db = new Database();
+$pdo = $db->getConnection();
 
 try {
-    // 1. Fetch the user's hashed password
-    $stmt = $conn->prepare("SELECT password_hash FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $user = $result->fetch_assoc();
+    // --- 2. FETCH HASHED PASSWORD (PDO) ---
+    $stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
-        echo json_encode(['success' => false, 'message' => 'User not found.']);
+        // This should not happen if client_id is set, but good for integrity
+        echo json_encode(['success' => false, 'message' => 'User record not found in database.']);
         exit;
     }
 
     $hashed_password = $user['password_hash'];
 
-    // 2. Verify the input password against the hash
+    // --- 3. VERIFY PASSWORD (PHP function) ---
     if (!password_verify($input_password, $hashed_password)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid password. Account deletion requires your correct current password.']);
+        echo json_encode(['success' => false, 'message' => 'Invalid password. Verification failed.']);
         exit;
     }
 
-    // 3. Password verified - Start Deletion
-    // Because the foreign key constraints in your DB have ON DELETE CASCADE (clients, appointments), 
-    // deleting the user automatically cleans up all associated records.
-    $delete_stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
-    $delete_stmt->bind_param("i", $user_id);
-    $delete_stmt->execute();
+    // --- 4. EXECUTE DELETION (PDO Transaction) ---
+    // Deletes the user, which cascades deletion to clients and appointments.
+    $pdo->beginTransaction();
 
-    // 4. Logout and Success
+    $delete_stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+    $delete_stmt->execute([$user_id]);
+    
+    $pdo->commit();
+
+    // --- 5. LOGOUT AND SUCCESS ---
     session_destroy();
     echo json_encode(['success' => true, 'message' => 'Your account has been permanently deleted.']);
 
 } catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
     error_log("Account Deletion Error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Database error during deletion.']);
+    // Use the specific MySQL error code 1451 for Foreign Key violations
+    if ($e->getCode() == 23000) { // 23000 is the SQLSTATE for Integrity Constraint Violation
+         $message = 'Deletion failed. Some data is still linked and must be manually reviewed.';
+    } else {
+         $message = 'Database error during deletion: ' . $e->getMessage();
+    }
+    echo json_encode(['success' => false, 'message' => $message]);
 }
 ?>

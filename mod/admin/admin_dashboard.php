@@ -25,10 +25,10 @@ if (file_exists($actionFile)) {
 </head>
 <body>
 
-<div id="page-loader-overlay">
+<!-- <div id="page-loader-overlay">
     <div class="loader-spinner-fullpage"></div>
     <p>Loading Dashboard...</p>
-</div>
+</div> -->
 
 
 <div id="loader-overlay">
@@ -310,20 +310,23 @@ function hideLoader() {
 // ===================================
 // <-- FIX #5: BAGONG 1-SECOND PAGE LOADER
 // ===================================
+// admin_dashboard.php (O anumang Admin file na may page loader)
 document.addEventListener('DOMContentLoaded', () => {
     const pageLoader = document.getElementById('page-loader-overlay');
-    // Itago ang main content para maiwasan ang "flash"
+    const content = document.getElementById('main-content'); // O .dashboard
+
+    // Para sa Page Loader (na may 1s delay)
+    if (pageLoader) {
+        pageLoader.style.display = 'none'; // Direktang itago
+    }
+    if (content) {
+        content.style.display = 'block'; // Direktang ipakita
+        content.style.animation = 'fadeInContent 0.5s ease';
+    }
+    
+    // Para sa Dashboard.php, tanggalin ang visibility: hidden; sa CSS/HTML kung gumamit ka nito
     const dashboard = document.querySelector('.dashboard');
-    if(dashboard) dashboard.style.visibility = 'hidden';
-
-    setTimeout(() => {
-        pageLoader.style.opacity = '0'; // Simulan ang fade out
-        if(dashboard) dashboard.style.visibility = 'visible'; // Ipakita ang content
-
-        setTimeout(() => {
-            pageLoader.style.display = 'none'; // Itago ang loader pagkatapos ng fade
-        }, 500); // 0.5s fade duration (tugma sa CSS transition)
-    }, 1000); // 1-second delay
+    if(dashboard) dashboard.style.visibility = 'visible';
 });
 
 

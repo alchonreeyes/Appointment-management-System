@@ -1,22 +1,24 @@
 <?php
 session_start();
-require '../config/db_mysqli.php'; 
-// Old way: if (!isset($_SESSION['user_id'])) ...
-// NEW WAY:
+require '../config/db.php';
+
+$db = new Database();
+$pdo = $db->getConnection();
+
 if (!isset($_SESSION['client_id'])) {
     header("Location: ../public/login.php");
     exit();
 }
-$user_id = $_SESSION['client_id']; // Assign to variable for rest of script
+$user_id = (int) $_SESSION['client_id'];
 
-$user_id = $_SESSION['user_id'];
-
-// Fetch basic user data
-$query = "SELECT full_name, email FROM users WHERE id = ?";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$user = $stmt->get_result()->fetch_assoc();
+try {
+    $stmt = $pdo->prepare("SELECT full_name, email FROM users WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Optionally log $e->getMessage()
+    $user = null;
+}
 ?>
 
 <!DOCTYPE html>

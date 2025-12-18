@@ -2,143 +2,96 @@
 session_start();
 
 // --- 1. SESSION SEGMENTATION CHECK ---
-// Ensure user is logged in using the specific 'client_id' key
 if (!isset($_SESSION['client_id'])) {
     header("Location: ../public/login.php");
     exit();
 }
 
-// --- 2. DATABASE CONNECTION & VARIABLE SETUP (PDO STANDARD) ---
-require '../config/db.php'; // Using consistent PDO connection
+// --- 2. DATABASE & UTILITIES SETUP ---
+require '../config/db.php'; 
+require_once '../config/encryption_util.php'; 
+
 $db = new Database();
 $pdo = $db->getConnection();
-
-// Use the correct, validated client ID
-$user_id = $_SESSION['client_id']; // THIS IS THE CORRECT ID
+$user_id = $_SESSION['client_id']; 
 
 $error_message = '';
 $success_message = '';
+$user = []; 
 
-// --- 3. FETCH USER DATA (Using PDO) ---
-try {
-    $query = "SELECT u.*, c.birth_date, c.gender, c.age, c.suffix, c.occupation 
-              FROM users u 
-              LEFT JOIN clients c ON u.id = c.user_id 
-              WHERE u.id = ?";
-    $stmt = $pdo->prepare($query);
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if (!$user) {
-        // If the user ID exists but the record is missing, destroy session
-        session_destroy();
-        header("Location: ../public/login.php");
-        exit();
-    }
-} catch (Exception $e) {
-    $error_message = "Error fetching user data: " . $e->getMessage();
-}
-
-// --- 4. HANDLE PROFILE UPDATE (Using PDO & Transaction) ---
+// =======================================================
+// 3. HANDLE PROFILE UPDATE (PDO + ENCRYPTION)
+// =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-    // ... (Your update logic using $pdo remains valid here) ...
-    // Note: You must convert the MySQLi code for the update block into PDO (as planned previously)
-}
-
-// --- 5. HANDLE PASSWORD CHANGE (Using PDO) ---
-// ... (Your password change logic using $pdo remains valid here) ...
-// Note: You must convert the MySQLi code for the password change block into PDO (as planned previously)
-    
-// --- 6. HANDLE SUCCESS/ERROR MESSAGES ---
-if (isset($_SESSION['success_message'])) {
-    $success_message = $_SESSION['success_message'];
-    unset($_SESSION['success_message']);
-}
-
-// ... rest of HTML output logic ...
-
-// Ensure all fields have default values to avoid null warnings
-$user['full_name'] = $user['full_name'] ?? '';
-$user['email'] = $user['email'] ?? '';
-$user['phone_number'] = $user['phone_number'] ?? '';
-$user['address'] = $user['address'] ?? '';
-$user['birth_date'] = $user['birth_date'] ?? '';
-$user['gender'] = $user['gender'] ?? '';
-$user['age'] = $user['age'] ?? '';
-$user['suffix'] = $user['suffix'] ?? '';
-$user['occupation'] = $user['occupation'] ?? '';    
-
-// Get user initials for avatar
-$name_parts = explode(' ', $user['full_name']);
-$initials = '';
-if (count($name_parts) >= 2) {
-    $initials = strtoupper(substr($name_parts[0], 0, 1) . substr($name_parts[1], 0, 1));
-} else {
-    $initials = strtoupper(substr($user['full_name'], 0, 2));
-}
-
-// Handle profile update
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-    $full_name = trim($_POST['full_name']);
-    $email = trim($_POST['email']);
-    $phone_number = trim($_POST['phone_number']);
-    $address = trim($_POST['address']);
+    $email = trim($_POST['email'] ?? ''); 
+    $age = intval($_POST['age'] ?? 0);
+    $gender = trim($_POST['gender'] ?? '');
+    $occupation = trim($_POST['occupation'] ?? '');
     $birth_date = !empty($_POST['birth_date']) ? $_POST['birth_date'] : null;
-    $gender = !empty($_POST['gender']) ? $_POST['gender'] : null;
-    $age = !empty($_POST['age']) ? intval($_POST['age']) : null;
-    $suffix = trim($_POST['suffix']);
-    $occupation = trim($_POST['occupation']);
+    $suffix = trim($_POST['suffix'] ?? '');
     
-    // Update users table
-    $update_user = "UPDATE users SET full_name = ?, email = ?, phone_number = ?, address = ? WHERE id = ?";
-    $stmt_user = $conn->prepare($update_user);
-    $stmt_user->bind_param("ssssi", $full_name, $email, $phone_number, $address, $user_id);
+    $full_name = trim($_POST['full_name'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
+    $address = trim($_POST['address'] ?? '');
     
-    // Check if client record exists
-    $check_client = "SELECT client_id FROM clients WHERE user_id = ?";
-    $stmt_check = $conn->prepare($check_client);
-    $stmt_check->bind_param("i", $user_id);
-    $stmt_check->execute();
-    $client_exists = $stmt_check->get_result()->fetch_assoc();
-    
-    if ($client_exists) {
-        // Update existing client record
-        $update_client = "UPDATE clients SET birth_date = ?, gender = ?, age = ?, suffix = ?, occupation = ? WHERE user_id = ?";
-        $stmt_client = $conn->prepare($update_client);
-        $stmt_client->bind_param("ssissi", $birth_date, $gender, $age, $suffix, $occupation, $user_id);
-        $stmt_client->execute();
-    } else {
-        // Insert new client record
-        $insert_client = "INSERT INTO clients (user_id, birth_date, gender, age, suffix, occupation) VALUES (?, ?, ?, ?, ?, ?)";
-        $stmt_client = $conn->prepare($insert_client);
-        $stmt_client->bind_param("ississ", $user_id, $birth_date, $gender, $age, $suffix, $occupation);
-        $stmt_client->execute();
-    }
-    
-    if ($stmt_user->execute()) {
+    // ENCRYPT bago i-save sa database
+    $encrypted_full_name = encrypt_data($full_name);
+    $encrypted_phone_number = encrypt_data($phone_number);
+    $encrypted_address = encrypt_data($address);
+
+    try {
+        $pdo->beginTransaction();
+
+        $update_user_stmt = $pdo->prepare("
+            UPDATE users SET full_name = ?, email = ?, phone_number = ?, address = ? WHERE id = ?
+        ");
+        $update_user_stmt->execute([
+            $encrypted_full_name,
+            $email, 
+            $encrypted_phone_number,
+            $encrypted_address,
+            $user_id
+        ]);
+
+        $update_client_stmt = $pdo->prepare("
+            UPDATE clients 
+            SET birth_date = ?, gender = ?, age = ?, suffix = ?, occupation = ? 
+            WHERE user_id = ?
+        ");
+        $update_client_stmt->execute([
+            $birth_date, $gender, $age, $suffix, $occupation, $user_id
+        ]);
+        
+        $pdo->commit();
         $_SESSION['success_message'] = "Profile updated successfully!";
         header("Location: profile.php");
         exit();
-    } else {
-        $error_message = "Failed to update profile.";
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $error_message = "Update failed: " . $e->getMessage();
     }
 }
 
-// Handle password change
+// =======================================================
+// 4. HANDLE PASSWORD CHANGE
+// =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
     
-    // Verify current password
-    if (password_verify($current_password, $user['password_hash'])) {
+    $fetch_hash_stmt = $pdo->prepare("SELECT password_hash FROM users WHERE id = ?");
+    $fetch_hash_stmt->execute([$user_id]);
+    $user_pass_data = $fetch_hash_stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($user_pass_data && password_verify($current_password, $user_pass_data['password_hash'])) {
         if ($new_password === $confirm_password) {
-            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $hashed_password = password_hash($new_password, PASSWORD_BCRYPT); 
             $update_password = "UPDATE users SET password_hash = ? WHERE id = ?";
-            $stmt_pass = $conn->prepare($update_password);
-            $stmt_pass->bind_param("si", $hashed_password, $user_id);
+            $stmt_pass = $pdo->prepare($update_password);
             
-            if ($stmt_pass->execute()) {
+            if ($stmt_pass->execute([$hashed_password, $user_id])) {
                 $_SESSION['success_message'] = "Password changed successfully!";
                 header("Location: profile.php");
                 exit();
@@ -151,7 +104,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
     }
 }
 
+// =======================================================
+// 5. FETCH AND DECRYPT USER DATA (DITO ANG SOLUSYON)
+// =======================================================
+try {
+    $query = "SELECT u.*, c.birth_date, c.gender, c.age, c.suffix, c.occupation 
+              FROM users u 
+              LEFT JOIN clients c ON u.id = c.user_id 
+              WHERE u.id = ?";
+    $stmt = $pdo->prepare($query);
+    $stmt->execute([$user_id]);
+    $user_encrypted = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    if (!$user_encrypted) {
+        session_destroy();
+        header("Location: ../public/login.php");
+        exit();
+    }
+    
+    // I-initialize ang $user array para sa HTML
+    $user = $user_encrypted;
+
+    // --- CRITICAL DECRYPTION STEP ---
+    // Binabago natin ang "gibberish" phone number para maging readable numbers
+    $user['full_name']    = decrypt_data($user_encrypted['full_name'] ?? '');
+    $user['phone_number'] = decrypt_data($user_encrypted['phone_number'] ?? '');
+    $user['address']      = decrypt_data($user_encrypted['address'] ?? ''); 
+    $user['occupation']   = decrypt_data($user_encrypted['occupation'] ?? '');
+ 
+} catch (Exception $e) {
+    $error_message = "Error fetching profile data: " . $e->getMessage();
+}
+
+// --- 6. HANDLE MESSAGES & INITIALS ---
+if (isset($_SESSION['success_message'])) {
+    $success_message = $_SESSION['success_message'];
+    unset($_SESSION['success_message']);
+}
+
+$name_parts = explode(' ', $user['full_name'] ?? '');
+$initials = '';
+if (count($name_parts) >= 2) {
+    $initials = strtoupper(substr($name_parts[0], 0, 1) . substr($name_parts[1], 0, 1));
+} else {
+    $initials = strtoupper(substr($user['full_name'] ?? 'U', 0, 2));
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">

@@ -854,10 +854,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 </head>
 <body>
 
-<div id="loader-overlay">
+<!-- <div id="loader-overlay">
     <div class="loader-spinner"></div>
     <p class="loader-text">Loading Products & Services...</p>
-</div>
+</div> -->
 <div id="main-content" style="display: none;">
 
     <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
@@ -1939,24 +1939,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 </div>
 <script>
-// ... (Loading screen script) ...
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(function() {
-        const loader = document.getElementById('loader-overlay');
-        const content = document.getElementById('main-content');
-        
-        if (loader) {
-            loader.style.opacity = '0';
-            loader.addEventListener('transitionend', () => {
-                loader.style.display = 'none';
-            }, { once: true });
-        }
-        
-        if (content) {
-            content.style.display = 'block';
-            content.style.animation = 'fadeInContent 0.5s ease';
-        }
-    }, 1000); // Ginamit ko pa rin ang 1s delay mo
+// ... (Loading screen script) ...// admin_dashboard.php (O anumang Admin file na may page loader)
+document.addEventListener('DOMContentLoaded', () => {
+    const pageLoader = document.getElementById('page-loader-overlay');
+    const content = document.getElementById('main-content'); // O .dashboard
+
+    // Para sa Page Loader (na may 1s delay)
+    if (pageLoader) {
+        pageLoader.style.display = 'none'; // Direktang itago
+    }
+    if (content) {
+        content.style.display = 'block'; // Direktang ipakita
+        content.style.animation = 'fadeInContent 0.5s ease';
+    }
+    
+    // Para sa Dashboard.php, tanggalin ang visibility: hidden; sa CSS/HTML kung gumamit ka nito
+    const dashboard = document.querySelector('.dashboard');
+    if(dashboard) dashboard.style.visibility = 'visible';
 });
 </script>
 
