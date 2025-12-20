@@ -33,7 +33,7 @@ body {
 
 /* Header */
 .signup-header {
-    background: linear-gradient(135deg, #d4a574 0%, #c49563 100%);
+    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
     padding: 40px 50px;
     text-align: center;
     color: white;
@@ -103,7 +103,7 @@ body {
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #d4a574 0%, #c49563 100%);
+    background: linear-gradient(90deg, #d47474 0%, #c46363 100%);
     width: 0%;
     transition: width 0.3s ease;
 }
@@ -179,7 +179,7 @@ body {
 .input-wrapper input:focus,
 .input-wrapper select:focus {
     outline: none;
-    border-bottom-color: #d4a574;
+    border-bottom-color: #d47474;
 }
 
 .input-wrapper input::placeholder {
@@ -198,7 +198,7 @@ body {
 }
 
 .toggle-password:hover {
-    fill: #d4a574;
+    fill: #ff3535;
 }
 
 /* Password Strength */
@@ -288,14 +288,14 @@ body {
 }
 
 .checkbox-group label a {
-    color: #d4a574;
+    color: #ff4b4b;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s ease;
 }
 
 .checkbox-group label a:hover {
-    color: #c49563;
+    color: #ff1717;
     text-decoration: underline;
 }
 
@@ -303,7 +303,7 @@ body {
 .submit-btn {
     width: 100%;
     padding: 16px;
-    background: #d4a574;
+    background: #ff3131;
     color: white;
     border: none;
     border-radius: 25px;
@@ -331,14 +331,14 @@ body {
 }
 
 .login-link a {
-    color: #d4a574;
+    color: #991b1b;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s ease;
 }
 
 .login-link a:hover {
-    color: #c49563;
+    color: #991b1b;
 }
 
 /* Responsive Design */
