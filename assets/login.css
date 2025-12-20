@@ -84,7 +84,7 @@ body {
 .input-group input[type="email"]:focus,
 .input-group input[type="password"]:focus {
     outline: none;
-    border-bottom-color: #d4a574;
+    border-bottom-color: #f51f1f;
 }
 
 .input-group input::placeholder {
@@ -127,14 +127,14 @@ body {
 }
 
 .forgot-password:hover {
-    color: #d4a574;
+    color: #ff0000;
 }
 
 /* Login Button */
 .login-button {
     width: 100%;
     padding: 16px;
-    background: #d4a574;
+    background: #ff0000;
     color: white;
     border: none;
     border-radius: 25px;
@@ -193,7 +193,7 @@ body {
 }
 
 .register-link a {
-    color: #d4a574;
+    color: #ff0d0d;
     text-decoration: none;
     font-weight: 600;
     transition: color 0.2s ease;
