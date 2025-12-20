@@ -835,15 +835,17 @@ body::after {
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="passwordInput">Password</label>
-                    <div class="input-wrapper">
-                        <i class="input-icon fas fa-lock"></i>
-                        <input type="password" class="form-input" id="passwordInput" name="password" placeholder="Enter your password" required>
-                        <span class="password-toggle" id="passwordToggle">
-                            <i class="fas fa-eye-slash" id="toggleIcon"></i>
-                        </span>
-                    </div>
-                </div>
+    <label>Password</label>
+    <div class="password-wrapper">
+        <input type="password" name="password" id="loginPassword" required placeholder="Enter your password">
+        <span class="toggle-password" onclick="togglePasswordVisibility()">
+            <svg id="eyeIcon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+        </span>
+    </div>
+</div>
 
                 <button type="submit" class="btn-login" id="loginButton" name="login">
                     Sign In

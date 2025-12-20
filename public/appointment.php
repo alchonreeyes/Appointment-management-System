@@ -36,6 +36,7 @@ if (isset($_SESSION['client_id'])) {
             'raw' => [
                 'full_name' => $encrypted_row['full_name'] ?? null,
                 'phone_number' => $encrypted_row['phone_number'] ?? null,
+                'occupation' => $encrypted_row['occupation'] ?? null,
             ],
             'results' => [],
             'errors' => [],
@@ -58,6 +59,14 @@ if (isset($_SESSION['client_id'])) {
             } catch (Throwable $e) {
                 $decrypt_debug['errors']['phone_number'] = $e->getMessage();
                 $client_profile_data['phone_number'] = $encrypted_row['phone_number'];
+            }
+
+            try {
+                $client_profile_data['occupation'] = decrypt_data($encrypted_row['occupation']);
+                $decrypt_debug['results']['occupation'] = $client_profile_data['occupation'];
+            } catch (Throwable $e) {
+                $decrypt_debug['errors']['occupation'] = $e->getMessage();
+                $client_profile_data['occupation'] = $encrypted_row['occupation'];
             }
         } else {
             $decrypt_debug['errors']['decrypt_function'] = 'decrypt_data() not found';
