@@ -12,7 +12,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../login.php');
+        header('Location: ../../public/login.php');
     }
     exit;
 }

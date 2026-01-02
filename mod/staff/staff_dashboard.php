@@ -13,7 +13,7 @@ require_once __DIR__ . '/../database.php';
 // <-- FIX #1: Ginamit ang tamang Session variables galing sa login.php
 // ======================================================================
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
-    header('Location: ../login.php'); // Itatapon pabalik sa login kung hindi staff
+     header('Location: ../../public/login.php'); // Itatapon pabalik sa login kung hindi staff
     exit;
 }
 

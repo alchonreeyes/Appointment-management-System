@@ -7,7 +7,7 @@ if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], ['admin', 
     if (isset($_POST['action'])) {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']); exit;
     }
-    header('Location: ../login.php'); exit;
+     header('Location: ../../public/login.php');
 }
 
 // 2. BACKEND ACTIONS (Handle Add/Edit/Delete)

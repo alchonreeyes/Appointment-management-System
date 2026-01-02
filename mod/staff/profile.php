@@ -15,7 +15,7 @@ if (!$user_id || $user_role !== 'staff') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../login.php'); 
+         header('Location: ../../public/login.php');
     }
     exit; // Stop all further execution
 }

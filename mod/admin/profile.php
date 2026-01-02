@@ -15,7 +15,7 @@ if (!$user_id || $user_role !== 'admin') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../login.php'); // Tama na ang path
+      header('Location: ../../public/login.php');
     }
     exit; // Stop all further execution
 }
@@ -91,11 +91,25 @@ if (isset($_POST['action'])) {
         }
         exit;
     }
-
     if ($action === 'logout') {
-        session_destroy();
-        echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
-        exit;
+      // Only remove admin-specific session keys so other roles (client/staff) remain logged in
+      $adminKeys = ['user_id', 'user_role', 'full_name', 'admin_data']; // add any other admin-specific keys you use
+      foreach ($adminKeys as $k) {
+        if (isset($_SESSION[$k])) {
+          unset($_SESSION[$k]);
+        }
+      }
+
+      // If you store admin in a sub-array, remove it too
+      if (isset($_SESSION['admin'])) {
+        unset($_SESSION['admin']);
+      }
+
+      // Regenerate session id to prevent fixation but keep remaining session data intact
+      session_regenerate_id(true);
+
+      echo json_encode(['success' => true, 'message' => 'Logged out successfully']);
+      exit;
     }
 }
 
@@ -665,7 +679,7 @@ nav a.active { background:#dc3545; color:#fff; }
        .then(payload => {
          if (payload.success) {
            showToast('Logging out...', 'success');
-           setTimeout(() => { window.location.href = '../login.php'; }, 1000); // Correct redirect
+           setTimeout(() => { window.location.href = '../../public/login.php'; }, 1000); // Correct redirect
          } else { showToast('Logout failed.', 'error'); }
        })
        .catch(err => { console.error(err); showToast('Logout network error.', 'error'); setTimeout(() => { window.location.href = '../login.php'; }, 1500); }); // Correct redirect

@@ -4,7 +4,7 @@ require_once __DIR__ . '/../database.php';
 // 1. SECURITY CHECK (Updated to allow Admin AND Staff)
 // We check if the role is IN the allowed list ['admin', 'staff']
 if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], ['admin', 'staff'])) {
-    header('Location: ../login.php'); exit;
+    header('Location: ../../public/login.php');
 }
 
 // 2. HANDLE FORM SUBMISSION

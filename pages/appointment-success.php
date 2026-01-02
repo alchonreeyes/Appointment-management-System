@@ -168,7 +168,7 @@ session_start();
             <h2 style="color:#333; margin-top:0;">Appointment Booked</h2>
             <p>Thank you! Your appointment has been successfully scheduled. We have sent a confirmation email with the details.</p>
             
-            <a href="../public/home.php" class="btn-home">Return to Home</a>
+            <a href="../client/appointments.php" class="btn-home">Check Appointments</a>
 
             <div class="redirect-text">
                 Redirecting in <span id="countdown">60</span> seconds...
