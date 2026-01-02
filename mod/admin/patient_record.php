@@ -3,7 +3,7 @@
 session_start();
 // Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
 require_once __DIR__ . '/../database.php';
-
+require_once __DIR__ . '/../../config/encryption_util.php';
 // =======================================================
 // 1. INAYOS NA SECURITY CHECK
 // =======================================================
@@ -49,6 +49,16 @@ if (isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Appointment not found']);
                 exit;
             }
+             // =======================================================
+        // 1. DECRYPTION PARA SA MAIN MODAL DATA
+        // =======================================================
+        // Dito natin "bubuksan" ang lock para sa modal display
+        $appt['full_name']    = decrypt_data($appt['full_name']);
+        $appt['phone_number'] = decrypt_data($appt['phone_number']);
+        $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
+        $appt['concern']      = decrypt_data($appt['concern'] ?? '');
+        $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
+        $appt['notes']        = decrypt_data($appt['notes'] ?? '');
             
             // =======================================================
             // BAGO: Kunin ang past appointment history (kasama ang appointment_id)
@@ -76,7 +86,7 @@ if (isset($_POST['action'])) {
             }
             // =======================================================
             
-            // BAGO: Ipadala ang BUONG $appt object AT $history pabalik
+    // BAGO: Ipadala ang BUONG $appt object AT $history pabalik
             echo json_encode(['success' => true, 'data' => $appt, 'history' => $history]);
 
         } catch (Exception $e) {
@@ -791,7 +801,9 @@ select, input[type="date"], input[type="text"] {
                       <?= htmlspecialchars($initials) ?>
                     </div>
                     <div>
-                      <div style="font-weight:700;color:#223;"><?= htmlspecialchars($appt['full_name']) ?></div>
+                   <div style="font-weight:700;color:#223;">
+    <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>
+</div>
                     </div>
                   </div>
                 </td>

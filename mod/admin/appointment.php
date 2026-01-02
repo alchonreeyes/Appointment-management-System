@@ -5,6 +5,7 @@ session_start();
 require_once __DIR__ . '/../database.php';
 
 // BAGO: I-load ang PHPMailer gamit ang Composer autoload
+require_once __DIR__ . '/../../config/encryption_util.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // BAGO: Idagdag ang PHPMailer classes
@@ -36,6 +37,7 @@ try {
     if ($status_result) {
         while ($row = $status_result->fetch_assoc()) {
             $status_ids[$row['status_name']] = $row['status_id'];
+        
         }
     }
 
@@ -578,6 +580,16 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                 exit;
             }
             
+            // =======================================================
+        // 1. DECRYPTION PARA SA MAIN MODAL DATA
+        // =======================================================
+        // Dito natin "bubuksan" ang lock para sa modal display
+        $appt['full_name']    = decrypt_data($appt['full_name']);
+        $appt['phone_number'] = decrypt_data($appt['phone_number']);
+        $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
+        $appt['concern']      = decrypt_data($appt['concern'] ?? '');
+        $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
+        $appt['notes']        = decrypt_data($appt['notes'] ?? '');
             // =======================================================
             // BAGO: Kunin ang past appointment history (kasama ang appointment_id)
             // =======================================================
@@ -1177,7 +1189,9 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
                     <?= htmlspecialchars($initials) ?>
                     </div>
                     <div>
-                    <div style="font-weight:700;color:#223;"><?= htmlspecialchars($appt['full_name']) ?></div>
+                   <div style="font-weight:700;color:#223;">
+    <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>
+</div>
                     </div>
                 </div>
                 </td>
