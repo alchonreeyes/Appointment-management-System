@@ -94,6 +94,7 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             <!-- Desktop Navigation Links -->
             <div class="nav-links desktop-nav">
                 <ul>
+
                     <li><a href="../public/home.php">Home</a></li>
                     <li><a href="../public/browse.php">Browse</a></li>
                     <li><a href="../public/store.php">Store</a></li>
@@ -114,11 +115,14 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             <div class="nav-config desktop-config">
                 <?php 
                 if (!isset($_SESSION['client_id'])): 
-                ?>
+                    ?>
+                    
+                    <!-- <i class="fa-regular fa-user"></i> -->
                     <i class="fa-regular fa-user"></i>
                     <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
                     <a href="../public/appointment.php" class="book-btn">Book Appointment</a>
-                <?php else: ?>
+                     
+                    <?php else: ?>
                     <div class="user-menu" style="align-items: center; display: flex;">
                         <a href="../client/profile.php" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
                             <i class="fa-regular fa-user" style="font-size: 1.6rem;"></i>
@@ -139,16 +143,16 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             </button>
         </div>
         
+
         <div class="mobile-nav-content">
             <!-- Mobile Navigation Links -->
             <ul class="mobile-nav-links">
                 <li><a href="../public/home.php">Home</a></li>
                 <li><a href="../public/browse.php">Browse</a></li>
                 <li><a href="../public/store.php">Store</a></li>
-               
                 <li><a href="../public/about.php">About</a></li>
             </ul>
-
+               
             <!-- Mobile Search -->
             <div class="mobile-nav-search">
                 <input type="text" placeholder="I'm looking for.....">
@@ -159,6 +163,7 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                 <?php if (!isset($_SESSION['user_id'])): ?>
                     <a href="../public/login.php" class="mobile-nav-link">
                         <i class="fa-regular fa-user"></i> Sign In & Sign Up
+                        <!--- -->    
                     </a>
                 <?php else: ?>
                     <a href="../client/profile.php" class="mobile-nav-link">

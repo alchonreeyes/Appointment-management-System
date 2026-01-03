@@ -130,7 +130,7 @@ try {
     $user['full_name']    = decrypt_data($user_encrypted['full_name'] ?? '');
     $user['phone_number'] = decrypt_data($user_encrypted['phone_number'] ?? '');
     $user['address']      = decrypt_data($user_encrypted['address'] ?? ''); 
-    $user['occupation']   = decrypt_data($user_encrypted['occupation'] ?? '');
+    $user['occupation']   = decrypt_data($user_encrypted['occupation'] ?? '');  
  
 } catch (Exception $e) {
     $error_message = "Error fetching profile data: " . $e->getMessage();
@@ -206,14 +206,11 @@ if (count($name_parts) >= 2) {
                         </div>
                         <div class="ojo-group">
                             <label>Age</label>
-                            <input type="number" name="age" value="<?= htmlspecialchars($user['age']) ?>">
+                            <input type="text" name="age" value="<?= htmlspecialchars($user['age']) ?>" inputmode="numeric" pattern="[0-9]*" maxlength="3">
                         </div>
                         <div class="ojo-group">
                             <label>Gender</label>
-                            <select name="gender">
-                                <option value="Male" <?= $user['gender'] == 'Male' ? 'selected' : '' ?>>Male</option>
-                                <option value="Female" <?= $user['gender'] == 'Female' ? 'selected' : '' ?>>Female</option>
-                            </select>
+                            <input type="text" name="gender" value="<?= htmlspecialchars($user['gender'] ?? '') ?>" readonly>
                         </div>
                     </div>
 
