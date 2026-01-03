@@ -1,5 +1,46 @@
+<?php
+// =========================================================
+// FOOTER LOGIC: FETCH DATA FROM DATABASE
+// =========================================================
+
+// 1. Check DB Connection (kung wala pa)
+if (!isset($pdo)) {
+    // Adjust path based on where footer is included. 
+    // Assuming relative to footer.php location inside includes/
+    // If footer is called from public/, this path '../config/db.php' works usually.
+    // We use file_exists to be safe or just standard require.
+    if (file_exists('../config/db.php')) {
+        require_once '../config/db.php';
+    } elseif (file_exists('../../config/db.php')) {
+        require_once '../../config/db.php';
+    }
+    
+    // Create connection only if $db object doesn't exist
+    if (!isset($db)) {
+        $db = new Database();
+        $pdo = $db->getConnection();
+    }
+}
+
+// 2. FETCH SERVICES (Appointments) - LIMIT 4
+// Kukunin natin ang service_name at ID para sa link
+$stmtServices = $pdo->prepare("SELECT service_id, service_name FROM services LIMIT 4");
+$stmtServices->execute();
+$footerServices = $stmtServices->fetchAll(PDO::FETCH_ASSOC);
+
+// 3. FETCH BRANDS (Products) - LIMIT 10 (5 for Col 1, 5 for Col 2)
+// DISTINCT para walang duplicate na brand name
+$stmtBrands = $pdo->prepare("SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand ASC LIMIT 10");
+$stmtBrands->execute();
+$allBrands = $stmtBrands->fetchAll(PDO::FETCH_ASSOC);
+
+// Hatiin ang brands: 5 sa left, 5 sa right
+$brandsCol1 = array_slice($allBrands, 0, 5);
+$brandsCol2 = array_slice($allBrands, 5, 5);
+?>
+
 <style>
-    /* General Footer Styles */
+    /* General Footer Styles (PRESERVED FROM ORIGINAL) */
     .site-footer {
         background-color: #090909ff;
         color: #fff;
@@ -43,153 +84,124 @@
         margin-bottom: 8px;
     }
 
-    .site-footer a {
-        color: #fff;
+    .site-footer ul li a {
+        color: #ccc;
         text-decoration: none;
-        font-size: 0.85rem;
+        font-size: 0.9rem;
         transition: color 0.3s ease;
     }
 
-    .site-footer a:hover {
-        color: #cccccc;
+    .site-footer ul li a:hover {
+        color: #fff;
+        text-decoration: underline;
     }
 
-    .footer-about .clinic-name {
+    /* Social Icons Styling */
+    .social-icons {
+        margin-top: 15px;
         display: flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 15px;
+        gap: 15px;
     }
 
-    .footer-links-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 30px;
-        flex: 2; /* Allows this section to take more space */
+    .social-icons a {
+        color: #fff;
+        font-size: 1.2rem;
+        transition: transform 0.3s ease, color 0.3s ease;
     }
 
-    /* Responsive Design */
-
-    /* ... (Keep General Footer Styles as they are) ... */
-
-/* Responsive Design */
-
-/* For tablets and medium-sized phones (768px and below) */
-@media (max-width: 768px) {
-    /* 1. Stack the main footer columns (About and Links Container) */
-    .footer-container {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
-    }
-
-    .footer-about, .footer-links-container {
-        width: 100%;
-        /* Setting a max-width prevents the content from stretching across a wide tablet screen */
-        max-width: 400px;
+    .social-icons a:hover {
+        color: #007bff; /* Example hover color */
+        transform: translateY(-3px);
     }
     
-    .footer-about {
-        /* Add some margin below the about section when it stacks */
-        margin-bottom: 25px;
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .footer-container {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .social-icons {
+            justify-content: center;
+        }
     }
-
-    .footer-about .clinic-name {
-        justify-content: center;
-    }
-    
-    /* 2. Stack the Link Columns within the Links Container */
-    /* This is the key change to ensure all link lists stack nicely on phones */
-    .footer-links-container {
-        flex-direction: column;
-        gap: 0; /* Remove gap when stacking vertically */
-    }
-
-    /* Reset width/flex for stacked columns */
-    .footer-links-column {
-        width: 100%;
-        min-width: unset; /* Remove the fixed min-width for mobile flexibility */
-        margin-bottom: 20px; /* Add spacing between the stacked link lists */
-    }
-
-    /* Ensure link list text is centered/aligned with the heading */
-    .site-footer ul {
-        text-align: center;
-    }
-}
-
-/* For smaller mobile phones (480px and below) */
-@media (max-width: 480px) {
-    .site-footer {
-        padding: 30px 15px;
-    }
-    
-    /* Fine-tune text sizes for smallest screens */
-    .site-footer h3 {
-        font-size: 1.1rem;
-    }
-    
-    .site-footer p, .site-footer a {
-        font-size: 0.85rem; /* Slightly smaller for the smallest screens */
-    }
-
-    /* Remove the bottom margin on the last stacked link column */
-    .footer-links-column:last-of-type {
-        margin-bottom: 0;
-    }
-}
 </style>
 
 <footer class="site-footer">
     <div class="footer-container">
         
         <div class="footer-about">
-            <div class="clinic-name">
-                <!-- Add your logo source -->
-                <img src="path/to/your/logo.png" alt="Logo" width="40" height="40">
-                <h3>Eye Master Optical Clinic</h3>
+            <h3>Eye Master</h3>
+            <p>
+                Providing quality eye care services and products since 2024. 
+                Your vision is our priority. Visit our clinic for a comprehensive 
+                eye examination and a wide range of eyewear.
+            </p>
+            
+            <div class="social-icons">
+                <a href="#" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+                <a href="#" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                <a href="#" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                <a href="#" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
             </div>
-            <p><strong>Hours of Operation:</strong></p>
-            <p>Monday - Friday: 8:00 AM - 5:00 PM</p>
-            <p>Saturday: 9:00 AM - 6:00 PM</p>
-            <p>Sunday: Closed</p>
         </div>
 
-        <div class="footer-links-container">
+        <div class="footer-links-column-container" style="display: flex; gap: 50px; flex: 2; justify-content: flex-end; flex-wrap: wrap;">
+            
             <div class="footer-links-column">
-                <h3>Appointment</h3>
+                <h3>Appointments</h3>
                 <ul>
-                    <li><a href="#">Eye Glasses Exam Form</a></li>
-                    <li><a href="#">Medical Certificate</a></li>
+                    <?php if (!empty($footerServices)): ?>
+                        <?php foreach ($footerServices as $svc): ?>
+                            <li>
+                                <a href="../public/appointment.php?service_id=<?= $svc['service_id'] ?>">
+                                    <?= htmlspecialchars($svc['service_name']) ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li><a href="#">No services available</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
 
             <div class="footer-links-column">
                 <h3>Brands</h3>
                 <ul>
-                    <li><a href="#">Ray-Ban</a></li>
-                    <li><a href="#">Oakley</a></li>
-                    <li><a href="#">Coach</a></li>
-                    <li><a href="#">Armani Exchange</a></li>
-                    <li><a href="#">Arnette</a></li>
-                    <li><a href="#">Celine</a></li>
-                    <li><a href="#">Roman King</a></li>
+                    <?php if (!empty($brandsCol1)): ?>
+                        <?php foreach ($brandsCol1 as $br): ?>
+                            <li>
+                                <a href="../public/browse.php?search=<?= urlencode($br['brand']) ?>">
+                                    <?= htmlspecialchars($br['brand']) ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li><a href="#">No brands available</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
 
             <div class="footer-links-column">
-                <h3>&nbsp;</h3> <!-- Empty heading for alignment -->
-                <ul>
-                    <li><a href="#">C. Lindbergh</a></li>
-                    <li><a href="#">Airflex</a></li>
-                    <li><a href="#">Memoflex</a></li>
-                    <li><a href="#">Kate Spade New York</a></li>
-                    <li><a href="#">Herman Miller</a></li>
-                    <li><a href="#">Hush Puppies</a></li>
-                    <li><a href="#">Jiashie Eyes</a></li>
+                <h3>&nbsp;</h3> <ul>
+                    <?php if (!empty($brandsCol2)): ?>
+                        <?php foreach ($brandsCol2 as $br): ?>
+                            <li>
+                                <a href="../public/browse.php?search=<?= urlencode($br['brand']) ?>">
+                                    <?= htmlspecialchars($br['brand']) ?>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>&nbsp;</li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
 
+    </div>
+    
+    <div style="text-align: center; border-top: 1px solid #333; margin-top: 30px; padding-top: 20px; font-size: 0.8rem; color: #aaa;">
+        &copy; <?= date('Y') ?> Eye Master Optical. All Rights Reserved.
     </div>
 </footer>
