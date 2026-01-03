@@ -97,7 +97,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
     <div class="service-description">
         <i class="fa-solid fa-shield-halved"></i>
-        <span>Eyewear Insurance</span>
+        <span>Eyewear Warranty</span>
     </div>
 </div>
 

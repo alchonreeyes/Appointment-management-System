@@ -1,6 +1,10 @@
 <?php 
 session_start();
 
+// ✅ CAPTURE REDIRECT URL FROM QUERY PARAMETER
+$redirect_after_login = $_GET['redirect'] ?? '../public/home.php';
+$_SESSION['redirect_after_login'] = $redirect_after_login;
+
 // 1. CHECK SESSION (Kung naka-login na, bawal na dito)
 if (isset($_SESSION['client_id'])) {
     header("Location: home.php"); 
@@ -128,7 +132,7 @@ if (isset($_SESSION['login_cooldown_until'])) {
                     <label for="password">Password</label>
                     <div style="position:relative;">
                         <input type="password" id="password" name="password" required <?= $in_cooldown ? 'disabled' : '' ?> style="width:100%">
-                        </div>
+                    </div>
                 </div>
 
                 <div class="remember-forgot">

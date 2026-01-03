@@ -41,9 +41,10 @@ session_start();
             </div>
 <BR></BR>
             <div class="info-row">
-                <div class="info-icon"><i class="fa-solid fa-phone"></i></div>
+
+                <div class="info-icon"><i class="fa-solid fa-envelope"></i></div>
                 <div class="info-text">
-                    <h4>Contact Us</h4>
+                    <h4>Email Us</h4>
                     
                     <p>Email: eyemaster@gmail.com</p>
                 </div>

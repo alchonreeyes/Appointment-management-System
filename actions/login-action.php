@@ -29,13 +29,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // =========================================================
     // PRIORITY 1: CHECK ADMIN / STAFF TABLE
-    // (Assuming table name is 'admin' and has a 'role' column)
     // =========================================================
     $stmtAdmin = $pdo->prepare("SELECT * FROM admin WHERE email = ? LIMIT 1");
     $stmtAdmin->execute([$email]);
     $adminUser = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
 
-    // NOTE: Plain Text Password Check muna para sa Admin/Staff (gaya ng request mo)
     if ($adminUser && $adminUser['password'] === $password) {
         
         // RESET FAILURES
@@ -43,9 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION['login_cooldown_until']);
 
         // SET SESSION FOR ADMIN/STAFF
-        // Gumamit tayo ng ibang session key para hindi maghalo sa client
         $_SESSION['user_id'] = $adminUser['id'];
-        $_SESSION['user_role'] = $adminUser['role']; // 'admin' or 'staff'
+        $_SESSION['user_role'] = $adminUser['role'];
         $_SESSION['full_name'] = $adminUser['name'];
 
         // DETERMINE REDIRECT PATH
@@ -53,7 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($adminUser['role'] === 'admin') {
             $redirect = '../mod/admin/admin_dashboard.php';
         } else {
-            // Assuming staff dashboard path
             $redirect = '../mod/staff/staff_dashboard.php'; 
         }
 
@@ -72,7 +68,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmtClient->execute([$email]);
     $clientUser = $stmtClient->fetch(PDO::FETCH_ASSOC);
 
-    // Client uses Hashed Password (standard security)
     if ($clientUser && password_verify($password, $clientUser['password_hash'])) {
         
         // RESET FAILURES
@@ -90,9 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
+        // ✅ USE SAVED REDIRECT OR DEFAULT TO HOME
+        $redirect_url = $_SESSION['redirect_after_login'] ?? '../public/home.php';
+        unset($_SESSION['redirect_after_login']); // Clean up session
+
         echo json_encode([
             'success' => true,
-            'redirect' => '../public/home.php'
+            'redirect' => $redirect_url
         ]);
         exit;
     }
