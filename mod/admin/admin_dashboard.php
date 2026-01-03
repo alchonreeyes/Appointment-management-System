@@ -160,7 +160,7 @@ if (file_exists($actionFile)) {
                     <?php foreach ($recentAppointments as $apt): ?>
                     <div class="recent-item">
                         <div class="recent-item-info">
-                            <h4><?= htmlspecialchars($apt['full_name']) ?></h4>
+                            <h4>    <?= htmlspecialchars(decrypt_data($apt['full_name'])) ?></h4>
                             <p><?= htmlspecialchars($apt['service_name']) ?> - <?= date('g:i A', strtotime($apt['appointment_date'])) ?></p>
                         </div>
                         <span class="status <?= strtolower($apt['status_name']) ?>">

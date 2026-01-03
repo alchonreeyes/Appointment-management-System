@@ -5,6 +5,7 @@ session_start();
 require_once __DIR__ . '/../database.php';
 
 // BAGO: I-load ang PHPMailer gamit ang Composer autoload
+require_once __DIR__ . '/../../config/encryption_util.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // BAGO: Idagdag ang PHPMailer classes
@@ -21,7 +22,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-         header('Location: ../../public/login.php');
+        header('Location: ../../public/login.php');
     }
     exit;
 }
@@ -36,6 +37,7 @@ try {
     if ($status_result) {
         while ($row = $status_result->fetch_assoc()) {
             $status_ids[$row['status_name']] = $row['status_id'];
+        
         }
     }
 
@@ -579,6 +581,16 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
             }
             
             // =======================================================
+        // 1. DECRYPTION PARA SA MAIN MODAL DATA
+        // =======================================================
+        // Dito natin "bubuksan" ang lock para sa modal display
+        $appt['full_name']    = decrypt_data($appt['full_name']);
+        $appt['phone_number'] = decrypt_data($appt['phone_number']);
+        $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
+        $appt['concern']      = decrypt_data($appt['concern'] ?? '');
+        $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
+        $appt['notes']        = decrypt_data($appt['notes'] ?? '');
+            // =======================================================
             // BAGO: Kunin ang past appointment history (kasama ang appointment_id)
             // =======================================================
             $history = [];
@@ -644,18 +656,18 @@ if ($viewFilter === 'eye_exam') {
     $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 6";
+    $whereClauses[] = "a.service_id = 11";
 } elseif ($viewFilter === 'ishihara') {
     $selectClauses[] = "a.ishihara_test_type";
     $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 8";
+    $whereClauses[] = "a.service_id = 12";
 } elseif ($viewFilter === 'medical') {
     $selectClauses[] = "a.certificate_purpose";
     $extraHeaders = "<th>Purpose</th>";
     $extraColumnNames = ['certificate_purpose'];
-    $whereClauses[] = "a.service_id = 7";
+    $whereClauses[] = "a.service_id = 13";
 }
 
 // --- I-apply ang iba pang Filters ---
@@ -1110,12 +1122,16 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     <?php endif; ?>
     
     <form id="filtersForm" method="get" class="filters">
-        <div>
-            <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
-            <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
-        </div>
+       <div>
+    <!-- ✅ BAGONG BUTTON: All Records -->
+    <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" id="clearViewFilter">
+        All Records
+    </button>
+    <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
+    <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
+    <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
+    <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
+</div>
         <select name="status" id="statusFilter" title="Filter by status">
             <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Status</option>
             <option value="Pending" <?= $statusFilter==='Pending'?'selected':'' ?>>Pending</option>
@@ -1176,7 +1192,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
                     <?= htmlspecialchars($initials) ?>
                     </div>
                     <div>
-                    <div style="font-weight:700;color:#223;"><?= htmlspecialchars($appt['full_name']) ?></div>
+                    <div style="font-weight:700;color:#223;"> <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>  </div>
                     </div>
                 </div>
                 </td>

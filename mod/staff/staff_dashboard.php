@@ -5,7 +5,7 @@ session_start();
 
 
 require_once __DIR__ . '/../database.php';
-
+require_once __DIR__ . '/../../config/encryption_util.php';
 
 
 
@@ -269,7 +269,9 @@ $sql_recent = "SELECT a.full_name, ser.service_name, a.appointment_date, s.statu
                LIMIT 3";
 $result_recent = $conn->query($sql_recent);
 $recentAppointments = $result_recent ? $result_recent->fetch_all(MYSQLI_ASSOC) : [];
-
+        // =======================================================
+        // Dito natin "bubuksan" ang lock para sa modal display
+      
 // ===== FALLBACK DATA (if empty) =====
 if (empty($dailyData)) {
     $dailyData = [['date' => date('Y-m-d'), 'count' => 0]];
@@ -1312,7 +1314,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <?php foreach ($recentAppointments as $apt): ?>
                     <div class="recent-item">
                         <div class="recent-item-info">
-                            <h4><?= htmlspecialchars($apt['full_name']) ?></h4>
+                            <h4><?= htmlspecialchars(decrypt_data($apt['full_name'])) ?></h4>
                             <p><?= htmlspecialchars($apt['service_name']) ?> - <?= date('g:i A', strtotime($apt['appointment_date'])) ?></p>
                         </div>
                         <span class="status <?= strtolower($apt['status_name']) ?>">

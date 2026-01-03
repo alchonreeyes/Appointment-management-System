@@ -126,7 +126,7 @@ try {
 
     if (!$user) {
         session_destroy();
-        header('Location: ../login.php');
+        header('Location: ../../');
         exit;
     }
 

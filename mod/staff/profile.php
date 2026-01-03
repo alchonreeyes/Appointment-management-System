@@ -110,7 +110,7 @@ try {
 
     if (!$user) {
         session_destroy();
-        header('Location: ../login.php');
+        header('Location: ../../public/login.php');
         exit;
     }
 
@@ -660,7 +660,7 @@ nav a.active { background:#2563eb; color:#fff; }
        .then(payload => {
          if (payload.success) {
            showToast('Logging out...', 'success');
-           setTimeout(() => { window.location.href = '../login.php'; }, 1000); // Correct redirect
+           setTimeout(() => { window.location.href = '../../public/login.php'; }, 1000); // Correct redirect
          } else { showToast('Logout failed.', 'error'); }
        })
        .catch(err => { console.error(err); showToast('Logout network error.', 'error'); setTimeout(() => { window.location.href = '../login.php'; }, 1500); }); // Correct redirect
@@ -750,5 +750,6 @@ document.addEventListener('DOMContentLoaded', function() {
         history.go(1);
     };
 </script>
+
 </body>
 </html>
