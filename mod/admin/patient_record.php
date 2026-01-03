@@ -60,6 +60,7 @@ if (isset($_POST['action'])) {
         $appt['concern']      = decrypt_data($appt['concern'] ?? '');
         $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
         $appt['notes']        = decrypt_data($appt['notes'] ?? '');
+        $appt['previous_color_issues']        = decrypt_data($appt['previous_color_issues'] ?? '');
             
             // =======================================================
             // BAGO: Kunin ang past appointment history (kasama ang appointment_id)

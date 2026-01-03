@@ -28,46 +28,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!isset($_SESSION['login_attempts'])) $_SESSION['login_attempts'] = 0;
 
     // =========================================================
-    // PRIORITY 1: CHECK ADMIN / STAFF TABLE
+    // PRIORITY 1: CHECK ADMIN TABLE
     // =========================================================
     $stmtAdmin = $pdo->prepare("SELECT * FROM admin WHERE email = ? LIMIT 1");
     $stmtAdmin->execute([$email]);
     $adminUser = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
 
+    // NOTE: Plain Text Password for Admin
     if ($adminUser && $adminUser['password'] === $password) {
         
         // RESET FAILURES
         unset($_SESSION['login_attempts']);
         unset($_SESSION['login_cooldown_until']);
 
-        // SET SESSION FOR ADMIN/STAFF
+        // SET SESSION FOR ADMIN
         $_SESSION['user_id'] = $adminUser['id'];
-        $_SESSION['user_role'] = $adminUser['role'];
+        $_SESSION['user_role'] = 'admin'; // Always 'admin' from this table
         $_SESSION['full_name'] = $adminUser['name'];
-
-        // DETERMINE REDIRECT PATH
-        $redirect = '';
-        if ($adminUser['role'] === 'admin') {
-            $redirect = '../mod/admin/admin_dashboard.php';
-        } else {
-            $redirect = '../mod/staff/staff_dashboard.php'; 
-        }
 
         echo json_encode([
             'success' => true,
-            'message' => 'Welcome, ' . $adminUser['role'] . '!',
-            'redirect' => $redirect
+            'message' => 'Welcome, Admin!',
+            'redirect' => '../mod/admin/admin_dashboard.php'
         ]);
         exit;
     }
 
     // =========================================================
-    // PRIORITY 2: CHECK CLIENTS TABLE (USERS)
+    // PRIORITY 2: CHECK STAFF TABLE
+    // =========================================================
+    $stmtStaff = $pdo->prepare("SELECT * FROM staff WHERE email = ? LIMIT 1");
+    $stmtStaff->execute([$email]);
+    $staffUser = $stmtStaff->fetch(PDO::FETCH_ASSOC);
+
+    // NOTE: Based on your database, staff uses plain text password too
+    // If you want hashed passwords for staff, use password_verify() instead
+    if ($staffUser && $staffUser['password'] === $password) {
+        
+        // Check if staff is active
+        if ($staffUser['status'] !== 'Active') {
+            echo json_encode(['success' => false, 'message' => 'Your account has been deactivated. Please contact admin.']);
+            exit;
+        }
+        
+        // RESET FAILURES
+        unset($_SESSION['login_attempts']);
+        unset($_SESSION['login_cooldown_until']);
+
+        // SET SESSION FOR STAFF
+        $_SESSION['user_id'] = $staffUser['staff_id'];
+        $_SESSION['user_role'] = 'staff';
+        $_SESSION['full_name'] = $staffUser['full_name'];
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'Welcome, Staff!',
+            'redirect' => '../mod/staff/staff_dashboard.php'
+        ]);
+        exit;
+    }
+
+    // =========================================================
+    // PRIORITY 3: CHECK CLIENTS TABLE (USERS)
     // =========================================================
     $stmtClient = $pdo->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
     $stmtClient->execute([$email]);
     $clientUser = $stmtClient->fetch(PDO::FETCH_ASSOC);
 
+    // NOTE: Clients use hashed passwords (secure)
     if ($clientUser && password_verify($password, $clientUser['password_hash'])) {
         
         // RESET FAILURES
@@ -79,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['client_email'] = $clientUser['email'];
         $_SESSION['client_role'] = 'client';
 
-        // Check Verification (Optional)
+        // Check Verification
         if ($clientUser['is_verified'] == 0) {
             echo json_encode(['success' => false, 'message' => 'Please verify your email first.']);
             exit;
@@ -97,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // =========================================================
-    // FAILED LOGIN (Neither Admin nor Client)
+    // FAILED LOGIN (No match found)
     // =========================================================
     $_SESSION['login_attempts']++;
     $error_msg = "Invalid email or password.";
