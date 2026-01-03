@@ -1,24 +1,25 @@
 <?php
-session_start(); // <--- MUST BE LINE 1. Starts the session before any HTML loads.
+session_start();
 
 include '../config/db.php';
 $db = new Database();
 $pdo = $db->getConnection();
 
-// --- 1. VERIFY CLIENT LOGIN STATUS ---
-// Check if user is logged in to decide where the buttons go
-$is_logged_in = isset($_SESSION['user_id']); 
+// Check if user is logged in
+$is_logged_in = isset($_SESSION['client_id']);
 
-// Auto-update missed appointments
-$update = $pdo->prepare("
-    UPDATE appointments
-    SET status_id = 4
-    WHERE status_id = 1 
-    AND CONCAT(appointment_date, ' ', appointment_time) < NOW()
-");
-$update->execute();
+// Auto-update missed appointments (only if logged in)
+if ($is_logged_in) {
+    $update = $pdo->prepare("
+        UPDATE appointments
+        SET status_id = 4
+        WHERE status_id = 1 
+        AND CONCAT(appointment_date, ' ', appointment_time) < NOW()
+    ");
+    $update->execute();
+}
 
-// ... (Rest of your fetch logic for services and particulars remains the same) ...
+// Fetch services and particulars
 $stmt = $pdo->prepare("SELECT * FROM services ORDER BY service_id ASC");
 $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -58,7 +59,6 @@ $bookingLinks = [
     <link rel="stylesheet" href="../assets/book_appointment.css">
     
     <style>
-        /* --- CAROUSEL SPECIFIC STYLES --- */
         body {
             display: flex;
             flex-direction: column;
@@ -68,7 +68,7 @@ $bookingLinks = [
             background-size: cover;
             background-repeat: no-repeat;
             background-attachment: fixed;
-            overflow-x: hidden; /* Prevent horizontal scroll on body */
+            overflow-x: hidden;
         }
         
         .content-wrapper {
@@ -79,21 +79,21 @@ $bookingLinks = [
             align-items: center;
             width: 100%;
             padding: 40px 20px;
-            max-width: 1400px; /* Limit max width of the whole section */
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         .carousel-container {
             position: relative;
             width: 100%;
-            padding: 0 50px; /* Space for buttons */
+            padding: 0 50px;
             box-sizing: border-box;
         }
 
         .carousel-track-container {
-            overflow: hidden; /* Hide cards that are off-screen */
+            overflow: hidden;
             width: 100%;
-            padding: 10px 0 20px 0; /* Space for shadows */
+            padding: 10px 0 20px 0;
         }
 
         .carousel-track {
@@ -106,13 +106,11 @@ $bookingLinks = [
         }
 
         .carousel-slide {
-            /* Default: 3 cards per view on large screens */
             min-width: calc((100% / 3) - 14px); 
             box-sizing: border-box;
-            display: flex; /* Ensures card stretches height */
+            display: flex;
         }
 
-        /* --- CARD STYLES (Adapted from your CSS) --- */
         .appointment-wrapper {
             background: #ffffff;
             border-radius: 16px;
@@ -120,8 +118,8 @@ $bookingLinks = [
             display: flex;
             flex-direction: column;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-            width: 100%; /* Fill the slide */
-            height: 100%; /* Fill height */
+            width: 100%;
+            height: 100%;
             transition: transform 0.3s ease;
         }
         
@@ -129,7 +127,6 @@ $bookingLinks = [
             transform: translateY(-5px);
         }
 
-        /* --- BUTTONS --- */
         .carousel-btn {
             position: absolute;
             top: 50%;
@@ -165,7 +162,6 @@ $bookingLinks = [
         .prev-btn { left: 0; }
         .next-btn { right: 0; }
 
-        /* --- INTERNAL ELEMENT STYLES --- */
         .brand-name { font-size: 2rem; font-weight: 800; margin: 0 0 10px 0; color: #111; line-height: 1.1; }
         .brand-name .highlight { color: #e63946; }
         .service-description { font-size: 0.9rem; color: #666; margin-bottom: 20px; min-height: 40px; }
@@ -178,17 +174,28 @@ $bookingLinks = [
         .disease-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
         .appointment-btn {
-            margin-top: auto; /* Push to bottom */
-            background: #111; color: white; padding: 15px; text-align: center; border-radius: 8px; text-decoration: none; font-weight: 700; text-transform: uppercase; font-size: 0.9rem; display: block;
+            margin-top: auto;
+            background: #111;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            display: block;
+            cursor: pointer;
+            border: none;
+            width: 100%;
         }
         .appointment-btn:hover { background: #e63946; }
 
-        /* --- RESPONSIVE BREAKPOINTS --- */
         @media (max-width: 1024px) {
-            .carousel-slide { min-width: calc((100% / 2) - 10px); } /* Show 2 cards */
+            .carousel-slide { min-width: calc((100% / 2) - 10px); }
         }
         @media (max-width: 700px) {
-            .carousel-slide { min-width: 100%; } /* Show 1 card */
+            .carousel-slide { min-width: 100%; }
             .content-wrapper { padding: 20px 10px; }
             .carousel-container { padding: 0 40px; }
         }
@@ -198,12 +205,11 @@ $bookingLinks = [
     <?php include '../includes/navbar.php'; ?>
     
     <div class="content-wrapper">
-        
         <h1 style="color: white; text-align: center; margin-bottom: 30px; text-shadow: 0 2px 4px rgba(0,0,0,0.5);">Select Your Appointment</h1>
 
         <div class="carousel-container">
-            <button class="carousel-btn prev-btn" id="prevBtn">❮</button>
-            <button class="carousel-btn next-btn" id="nextBtn">❯</button>
+            <button class="carousel-btn prev-btn" id="prevBtn">◄</button>
+            <button class="carousel-btn next-btn" id="nextBtn">►</button>
             
             <div class="carousel-track-container">
                 <ul class="carousel-track" id="track">
@@ -268,12 +274,18 @@ $bookingLinks = [
                                 </div>
                                 <?php endif; ?>
                                 
-                                <a class="appointment-btn" href="<?= $link ?>">BOOK NOW</a>
+                                <?php if ($is_logged_in): ?>
+                                    <!-- User is logged in, go directly to booking page -->
+                                    <a class="appointment-btn" href="<?= $link ?>">BOOK NOW</a>
+                                <?php else: ?>
+                                    <!-- User not logged in, redirect to login with return URL -->
+                                    <a class="appointment-btn" href="../public/login.php?redirect=<?= urlencode($link) ?>">BOOK NOW</a>
+                                <?php endif; ?>
                             </div>
                         </li>
 
                     <?php endforeach; ?>
-                    </ul>
+                </ul>
             </div>
         </div>
     </div>
@@ -286,11 +298,9 @@ $bookingLinks = [
             const prevBtn = document.getElementById('prevBtn');
             const nextBtn = document.getElementById('nextBtn');
             
-            // Get all slides
             const slides = Array.from(track.children);
             if(slides.length === 0) return;
 
-            // 1. Calculate how many slides fit in the view
             const getSlidesPerView = () => {
                 const width = window.innerWidth;
                 if (width <= 700) return 1;
@@ -300,16 +310,13 @@ $bookingLinks = [
 
             let currentIndex = 0;
             let slideWidth = slides[0].getBoundingClientRect().width;
-            let gap = 20; // Must match CSS gap
+            let gap = 20;
 
-            // 2. Move Logic
             const updateCarousel = () => {
-                // Update slide width on resize
                 slideWidth = slides[0].getBoundingClientRect().width;
                 const amountToMove = (slideWidth + gap) * currentIndex;
                 track.style.transform = `translateX(-${amountToMove}px)`;
                 
-                // Update Buttons
                 const slidesPerView = getSlidesPerView();
                 const maxIndex = slides.length - slidesPerView;
 
@@ -317,7 +324,6 @@ $bookingLinks = [
                 nextBtn.disabled = (currentIndex >= maxIndex);
             };
 
-            // 3. Button Listeners
             nextBtn.addEventListener('click', () => {
                 const slidesPerView = getSlidesPerView();
                 const maxIndex = slides.length - slidesPerView;
@@ -334,15 +340,11 @@ $bookingLinks = [
                 }
             });
 
-            // 4. Handle Window Resize
             window.addEventListener('resize', () => {
-                // Reset to 0 to avoid layout breaking on fast resize
                 currentIndex = 0; 
                 updateCarousel();
             });
 
-            // Initialize
-            // Wait slightly for layout to settle
             setTimeout(updateCarousel, 100);
         });
     </script>

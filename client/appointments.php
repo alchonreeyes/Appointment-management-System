@@ -3,12 +3,12 @@ session_start();
 
 // 1. DATABASE & MAIL SETUP
 require_once '../config/db.php'; 
-require_once '../vendor/autoload.php'; // Load PHPMailer
+require_once '../vendor/autoload.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// 2. SECURITY CHECK (Session Segmentation)
+// 2. SECURITY CHECK
 if (!isset($_SESSION['client_id'])) {
     header("Location: ../public/login.php");
     exit();
@@ -31,17 +31,14 @@ if (!$client) {
 $client_id = $client['client_id'];
 
 // ==========================================
-// A. HANDLE APPOINTMENT UPDATE (Edit Modal)
+// A. HANDLE APPOINTMENT UPDATE
 // ==========================================
 if (isset($_POST['update_appointment'])) {
     $appointment_id = $_POST['appointment_id'];
     
-    // Medical Fields
     $symptoms = trim($_POST['symptoms'] ?? '');
     $wear_glasses = $_POST['wear_glasses'] ?? '';
     $concern = trim($_POST['concern'] ?? '');
-
-    // Personal Fields
     $full_name = trim($_POST['full_name'] ?? '');
     $phone_number = trim($_POST['phone_number'] ?? '');
     $age = intval($_POST['age'] ?? 0);
@@ -51,7 +48,6 @@ if (isset($_POST['update_appointment'])) {
     try {
         $pdo->beginTransaction();
 
-        // 1. Update Appointment Table
         $update_appt = $pdo->prepare("
             UPDATE appointments 
             SET symptoms = ?, wear_glasses = ?, concern = ?, 
@@ -64,11 +60,9 @@ if (isset($_POST['update_appointment'])) {
             $appointment_id, $client_id
         ]);
 
-        // 2. Update Users Table
         $update_user = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ? WHERE id = ?");
         $update_user->execute([$full_name, $phone_number, $user_id]);
 
-        // 3. Update Clients Table
         $update_client = $pdo->prepare("UPDATE clients SET age = ?, gender = ?, occupation = ? WHERE user_id = ?");
         $update_client->execute([$age, $gender, $occupation, $user_id]);
 
@@ -84,13 +78,12 @@ if (isset($_POST['update_appointment'])) {
 }
 
 // ==========================================
-// B. HANDLE CANCELLATION (With PHPMailer)
+// B. HANDLE CANCELLATION
 // ==========================================
 if (isset($_POST['cancel_appointment'])) {
     $appointment_id = $_POST['appointment_id'];
     $cancellation_reason = trim($_POST['cancellation_reason']);
     
-    // Fetch details first to send email
     $appt_query = "SELECT a.*, s.service_name 
                    FROM appointments a
                    LEFT JOIN services s ON a.service_id = s.service_id
@@ -103,39 +96,7 @@ if (isset($_POST['cancel_appointment'])) {
         $cancel_stmt = $pdo->prepare("UPDATE appointments SET status_id = 5, reason_cancel = ? WHERE appointment_id = ?");
         
         if ($cancel_stmt->execute([$cancellation_reason, $appointment_id])) {
-            
-            // --- START EMAIL LOGIC ---
-            $patient_name = htmlspecialchars($appt_data['full_name']);
-            $service_name = htmlspecialchars($appt_data['service_name']);
-            $appt_date = date('F d, Y', strtotime($appt_data['appointment_date']));
-            
-            // Fetch Admin Email
-            $admin_email = $pdo->query("SELECT email FROM admin LIMIT 1")->fetchColumn();
-            
-            $mail = new PHPMailer(true);
-            try {
-                $mail->isSMTP();
-                $mail->Host = 'smtp.gmail.com';
-                $mail->SMTPAuth = true;
-                $mail->Username = 'alchonreyez@gmail.com'; 
-                $mail->Password = 'fojwnzlcxrkqquhs'; // Consider moving to config!
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port = 587;
-                
-                $mail->setFrom('alchonreyez@gmail.com', 'Eye Master System');
-                $mail->addAddress($admin_email); // Send to Admin
-                
-                $mail->isHTML(true);
-                $mail->Subject = 'Appointment Cancelled - ID #' . $appointment_id;
-                $mail->Body = "Patient <b>$patient_name</b> cancelled appointment #$appointment_id for $service_name on $appt_date.<br>Reason: $cancellation_reason";
-                
-                $mail->send();
-                $_SESSION['success'] = "Appointment cancelled. Notification sent to clinic.";
-            } catch (Exception $e) {
-                $_SESSION['success'] = "Cancelled (Note: Email notification failed).";
-            }
-            // --- END EMAIL LOGIC ---
-
+            $_SESSION['success'] = "Appointment cancelled successfully.";
         } else {
             $_SESSION['error'] = "Failed to cancel appointment.";
         }
@@ -147,13 +108,50 @@ if (isset($_POST['cancel_appointment'])) {
 }
 
 // ==========================================
-// C. FETCH APPOINTMENTS LIST
+// C. FETCH APPOINTMENTS WITH FILTERING
 // ==========================================
+$filter = $_GET['filter'] ?? 'recent';
+
 $sql = "SELECT a.*, s.status_name, srv.service_name 
         FROM appointments a 
         JOIN appointmentstatus s ON a.status_id = s.status_id
         JOIN services srv ON a.service_id = srv.service_id
-        WHERE a.client_id = ? ORDER BY a.appointment_date DESC";
+        WHERE a.client_id = ?";
+
+// Add status filter
+switch($filter) {
+    case 'pending':
+        $sql .= " AND a.status_id = 1";
+        break;
+    case 'completed':
+        $sql .= " AND a.status_id = 3";
+        break;
+    case 'cancelled':
+        $sql .= " AND a.status_id = 5";
+        break;
+    case 'confirmed':
+        $sql .= " AND a.status_id = 2";
+        break;
+}
+
+// Add sorting
+switch($filter) {
+    case 'recent':
+        $sql .= " ORDER BY a.appointment_date DESC, a.appointment_time DESC";
+        break;
+    case 'oldest':
+        $sql .= " ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+        break;
+    case 'alphabetical_asc':
+        $sql .= " ORDER BY srv.service_name ASC";
+        break;
+    case 'alphabetical_desc':
+        $sql .= " ORDER BY srv.service_name DESC";
+        break;
+    default:
+        $sql .= " ORDER BY a.appointment_date DESC";
+}
+
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$client_id]);
 $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -166,9 +164,158 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <title>My Appointments | Eye Master</title>
     <link rel="stylesheet" href="../assets/ojo-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Filter Dropdown Styles */
+        .filter-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 8px;
+        }
+
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .filter-btn {
+            background: #004aad;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #003a8c;
+        }
+
+        .filter-btn i {
+            font-size: 14px;
+        }
+
+        .filter-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            min-width: 220px;
+            z-index: 1000;
+        }
+
+        .filter-menu.show {
+            display: block;
+        }
+
+        .filter-section {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .filter-section:last-child {
+            border-bottom: none;
+        }
+
+        .filter-section-title {
+            padding: 8px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .filter-option:hover {
+            background: #f9fafb;
+        }
+
+        .filter-option.active {
+            background: #eff6ff;
+            color: #004aad;
+            font-weight: 600;
+        }
+
+        .filter-option i {
+            width: 16px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .filter-option.active i {
+            color: #004aad;
+        }
+
+        /* Notification Styles */
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification-toast.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-toast.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification-toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 <body>
     <?php include '../includes/navbar.php' ?>
+
+    <!-- Notification Toast -->
+    <div id="notificationToast" class="notification-toast">
+        <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px;"></i>
+        <span id="toastMessage"></span>
+    </div>
 
     <div class="ojo-container">
         
@@ -188,14 +335,62 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             <main class="account-content">
                 
-                <h3>My Appointments</h3>
-
-                <?php if (isset($_SESSION['success'])): ?>
-                    <p style="color: green; margin-bottom: 20px; font-size: 0.9rem;"><?= $_SESSION['success']; unset($_SESSION['success']); ?></p>
-                <?php endif; ?>
-                <?php if (isset($_SESSION['error'])): ?>
-                    <p style="color: red; margin-bottom: 20px; font-size: 0.9rem;"><?= $_SESSION['error']; unset($_SESSION['error']); ?></p>
-                <?php endif; ?>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">My Appointments</h3>
+                    
+                    <!-- Filter Dropdown -->
+                    <div class="filter-container">
+                        <div class="filter-dropdown">
+                            <button class="filter-btn" onclick="toggleFilter()">
+                                <i class="fas fa-filter"></i>
+                                <span>Filter</span>
+                                <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                            </button>
+                            
+                            <div class="filter-menu" id="filterMenu">
+                                <div class="filter-section">
+                                    <div class="filter-section-title">Sort By</div>
+                                    <a href="?filter=recent" class="filter-option <?= $filter == 'recent' ? 'active' : '' ?>">
+                                        <i class="fas fa-clock"></i>
+                                        <span>Most Recent</span>
+                                    </a>
+                                    <a href="?filter=oldest" class="filter-option <?= $filter == 'oldest' ? 'active' : '' ?>">
+                                        <i class="fas fa-history"></i>
+                                        <span>Oldest First</span>
+                                    </a>
+                                    <a href="?filter=alphabetical_asc" class="filter-option <?= $filter == 'alphabetical_asc' ? 'active' : '' ?>">
+                                        <i class="fas fa-sort-alpha-down"></i>
+                                        <span>A to Z</span>
+                                    </a>
+                                    <a href="?filter=alphabetical_desc" class="filter-option <?= $filter == 'alphabetical_desc' ? 'active' : '' ?>">
+                                        <i class="fas fa-sort-alpha-up"></i>
+                                        <span>Z to A</span>
+                                    </a>
+                                </div>
+                                
+                                <div class="filter-section">
+                                    <div class="filter-section-title">Status</div>
+                                    <a href="?filter=pending" class="filter-option <?= $filter == 'pending' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #f59e0b;"></i>
+                                        <span>Pending Only</span>
+                                    </a>
+                                    <a href="?filter=confirmed" class="filter-option <?= $filter == 'confirmed' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #10b981;"></i>
+                                        <span>Confirmed Only</span>
+                                    </a>
+                                    <a href="?filter=completed" class="filter-option <?= $filter == 'completed' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #3b82f6;"></i>
+                                        <span>Completed Only</span>
+                                    </a>
+                                    <a href="?filter=cancelled" class="filter-option <?= $filter == 'cancelled' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #ef4444;"></i>
+                                        <span>Cancelled Only</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <?php if (count($result) > 0): ?>
                     <table class="ojo-table">
@@ -238,8 +433,9 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </table>
                 <?php else: ?>
                     <div style="padding: 40px; text-align: center; color: #999; border-top: 1px solid #eee;">
-                        <p>No appointments found.</p>
-                        <a href="../public/appointment.php" class="btn-ojo">Book Appointment</a>
+                        <i class="fas fa-calendar-times" style="font-size: 48px; color: #ddd; margin-bottom: 16px;"></i>
+                        <p>No appointments found with the selected filter.</p>
+                        <a href="appointments.php" class="btn-ojo" style="margin-top: 12px;">Clear Filter</a>
                     </div>
                 <?php endif; ?>
 
@@ -247,14 +443,16 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- View Modal -->
     <div id="viewModal" class="ojo-modal-overlay">
         <div class="ojo-modal">
             <button class="close-modal" onclick="closeModal('viewModal')">&times;</button>
-            <h2>Details</h2>
+            <h2>Appointment Details</h2>
             <div id="viewContent"></div>
         </div>
     </div>
 
+    <!-- Edit Modal -->
     <div id="editModal" class="ojo-modal-overlay">
         <div class="ojo-modal">
             <button class="close-modal" onclick="closeModal('editModal')">&times;</button>
@@ -267,7 +465,7 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <div class="ojo-form-grid">
                     <div class="ojo-group"><label>Full Name</label><input type="text" name="full_name" id="edit_fullname" required></div>
                     <div class="ojo-group"><label>Phone</label><input type="text" name="phone_number" id="edit_phone" required></div>
-                    <div class="ojo-group"><label>Age</label><input type="number" name="age" id="edit_age" required></div>
+                    <div class="ojo-group"><label>Age</label><input type="number" name="age" id="edit_age" min="1" max="120" required></div>
                     <div class="ojo-group"><label>Gender</label><select name="gender" id="edit_gender"><option value="Male">Male</option><option value="Female">Female</option></select></div>
                     <div class="ojo-group full-width"><label>Occupation</label><input type="text" name="occupation" id="edit_occupation"></div>
                 </div>
@@ -284,6 +482,7 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
+    <!-- Cancel Modal -->
     <div id="cancelModal" class="ojo-modal-overlay">
         <div class="ojo-modal" style="max-width: 450px;">
             <button class="close-modal" onclick="closeModal('cancelModal')">&times;</button>
@@ -301,16 +500,68 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script>
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        // Show notification on page load
+        <?php if (isset($_SESSION['success'])): ?>
+            showToast('<?= addslashes($_SESSION['success']) ?>', 'success');
+            <?php unset($_SESSION['success']); ?>
+        <?php endif; ?>
+
+        <?php if (isset($_SESSION['error'])): ?>
+            showToast('<?= addslashes($_SESSION['error']) ?>', 'error');
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
+
+        function showToast(message, type) {
+            const toast = document.getElementById('notificationToast');
+            const toastMessage = document.getElementById('toastMessage');
+            const icon = toast.querySelector('i');
+            
+            toastMessage.textContent = message;
+            toast.className = 'notification-toast show ' + type;
+            
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = '#10b981';
+            } else {
+                icon.className = 'fas fa-exclamation-circle';
+                icon.style.color = '#ef4444';
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function toggleFilter() {
+            const menu = document.getElementById('filterMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close filter when clicking outside
+        window.onclick = function(e) {
+            const filterMenu = document.getElementById('filterMenu');
+            const filterBtn = document.querySelector('.filter-btn');
+            
+            if (!e.target.closest('.filter-dropdown')) {
+                filterMenu.classList.remove('show');
+            }
+            
+            if (e.target.classList.contains('ojo-modal-overlay')) {
+                e.target.style.display = 'none';
+            }
+        }
+
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
+        }
         
         function openViewModal(data) {
-            let formattedTime = data.appointment_time; // Add formatting logic if needed
             let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
             
             let content = `
                 <div class="detail-list">
                     <div class="detail-item"><label>Date</label> <span>${formattedDate}</span></div>
-                    <div class="detail-item"><label>Time</label> <span>${formattedTime}</span></div>
+                    <div class="detail-item"><label>Time</label> <span>${data.appointment_time}</span></div>
                     <div class="detail-item"><label>Service</label> <span>${data.service_name}</span></div>
                     <div class="detail-item"><label>Status</label> <span>${data.status_name}</span></div>
                     <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
@@ -337,10 +588,6 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function openCancelModal(id) {
             document.getElementById('cancel_id').value = id;
             document.getElementById('cancelModal').style.display = 'flex';
-        }
-        
-        window.onclick = function(e) {
-            if (e.target.classList.contains('ojo-modal-overlay')) e.target.style.display = 'none';
         }
     </script>
     

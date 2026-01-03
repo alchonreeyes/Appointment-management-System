@@ -43,6 +43,12 @@
         addBtn.style.display = 'inline-block';
         appointments[index].date = "";
         appointments[index].time = "";
+        
+        // Update all displays after removing
+        for (let i = 0; i < appointments.length; i++) {
+          updateSlotDisplay(i);
+        }
+        updateHiddenField();
     };
 
     /* =========================================
@@ -54,20 +60,16 @@
     const progressSteps = Array.from(document.querySelectorAll('.progress-step'));
     const progressLines = Array.from(document.querySelectorAll('.progress-line'));
     const hiddenField = document.getElementById("appointment_dates_json");
-    const summaryDiv = document.getElementById("appointmentSummary");
-    const summaryContent = document.getElementById("summaryContent");
     const form = document.getElementById("appointmentForm");
 
     let formStepIndex = 0;
     
-    // We removed 'remaining' tracking since we assume everything is open
     let appointments = [
       { date: "", time: "" },
       { date: "", time: "" },
       { date: "", time: "" }
     ];
     
-
     /* =========================================
        2. NAVIGATION & VALIDATION LOGIC
        ========================================= */
@@ -174,6 +176,35 @@
       updateProgress(index);
     }
 
+    /* =========================================
+       DUPLICATE DETECTION FUNCTION
+       ========================================= */
+    function checkDuplicateAppointment(currentIndex) {
+      const currentAppt = appointments[currentIndex];
+      
+      // Skip if current appointment is not complete
+      if (!currentAppt.date || !currentAppt.time) {
+        return false;
+      }
+
+      // Check against all other appointments
+      for (let i = 0; i < appointments.length; i++) {
+        if (i === currentIndex) continue; // Skip checking against itself
+        
+        const otherAppt = appointments[i];
+        
+        // Check if date and time match
+        if (otherAppt.date === currentAppt.date && otherAppt.time === currentAppt.time) {
+          return true; // Duplicate found
+        }
+      }
+      
+      return false; // No duplicate
+    }
+
+    /* =========================================
+       VALIDATION WITH DUPLICATE CHECK
+       ========================================= */
     function validateStep(stepElement) {
         let isValid = true;
         
@@ -203,13 +234,25 @@
                 }
             });
 
-            // C. SPECIAL CHECK: Date & Time (SIMPLIFIED - Just check if selected)
+            // C. APPOINTMENT VALIDATION WITH DUPLICATE CHECK
             if (stepElement.querySelector('.date-input')) {
                 const validSlots = appointments.filter(a => a.date && a.time);
                 
                 if (validSlots.length === 0) {
                     isValid = false;
                     alert("⚠️ Please select at least one appointment date and time.");
+                    return false;
+                }
+
+                // Check for duplicates among selected appointments
+                for (let i = 0; i < appointments.length; i++) {
+                    if (appointments[i].date && appointments[i].time) {
+                        if (checkDuplicateAppointment(i)) {
+                            isValid = false;
+                            alert("⚠️ You have duplicate appointments selected. Please choose different dates or times for each appointment.");
+                            return false;
+                        }
+                    }
                 }
             }
 
@@ -247,11 +290,9 @@
     // Initialize
     showStep(formStepIndex);
 
-
     /* =========================================
-       3. SLOT LOGIC (NO DB CHECK)
+       SLOT DISPLAY WITH DUPLICATE CHECK
        ========================================= */
-
     function updateSlotDisplay(index) {
       const appt = appointments[index];
       const badge = document.getElementById(`slot-badge-${index}`);
@@ -267,11 +308,26 @@
         return;
       }
 
-      // ALWAYS AVAILABLE
+      // Check for duplicates
+      if (checkDuplicateAppointment(index)) {
+        badge.style.background = '#fee2e2';
+        badge.style.color = '#991b1b';
+        badge.textContent = 'Duplicate!';
+        message.style.display = 'block';
+        message.style.background = '#fef2f2';
+        message.style.color = '#991b1b';
+        message.style.border = '1px solid #fecaca';
+        message.style.padding = '8px';
+        message.style.borderRadius = '4px';
+        message.textContent = '⚠️ This date and time is already selected in another appointment. Please choose a different slot.';
+        return;
+      }
+
+      // No duplicate - show available
       badge.style.background = '#d1fae5';
       badge.style.color = '#065f46';
-      badge.textContent = `Available`;
-      message.style.display = 'none'; // Hide message to keep it clean
+      badge.textContent = 'Available';
+      message.style.display = 'none';
     }
 
     function updateHiddenField() {
@@ -286,7 +342,7 @@
     }
 
     /* =========================================
-       4. INPUT LISTENERS
+       INPUT LISTENERS WITH DUPLICATE CHECK
        ========================================= */
     const dateInputs = document.querySelectorAll(".date-input");
     const timeSelects = document.querySelectorAll(".time-select");
@@ -295,7 +351,12 @@
       input.addEventListener("change", (e) => {
         const index = parseInt(e.target.dataset.index);
         appointments[index].date = e.target.value;
-        updateSlotDisplay(index);
+        
+        // Update all slot displays (to check for duplicates across all)
+        for (let i = 0; i < appointments.length; i++) {
+          updateSlotDisplay(i);
+        }
+        
         updateHiddenField();
       });
     });
@@ -304,35 +365,39 @@
       select.addEventListener("change", (e) => {
         const index = parseInt(e.target.dataset.index);
         appointments[index].time = e.target.value;
-        updateSlotDisplay(index);
+        
+        // Update all slot displays (to check for duplicates across all)
+        for (let i = 0; i < appointments.length; i++) {
+          updateSlotDisplay(i);
+        }
+        
         updateHiddenField();
       });
     });
 
     /* =========================================
-       0. RESTRICT DATE RANGE
+       DATE RESTRICTION - TOMORROW ONWARDS (NO MAX LIMIT)
        ========================================= */
     const today = new Date();
-    const yyyy = today.getFullYear();
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    const dd = String(today.getDate()).padStart(2, '0');
+    
+    // Set to TOMORROW (not today)
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
     const minDate = `${yyyy}-${mm}-${dd}`;
 
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 30); 
-    const f_yyyy = futureDate.getFullYear();
-    const f_mm = String(futureDate.getMonth() + 1).padStart(2, '0');
-    const f_dd = String(futureDate.getDate()).padStart(2, '0');
-    const maxDate = `${f_yyyy}-${f_mm}-${f_dd}`;
-
+    // NO MAX DATE RESTRICTION - Clients can book years in advance
     dateInputs.forEach(input => {
-        input.setAttribute("min", minDate);
-        input.setAttribute("max", maxDate);
+        input.setAttribute("min", minDate); // Set to tomorrow
+        // Removed max attribute - no upper limit
         input.addEventListener('keydown', (e) => e.preventDefault()); 
     });
 
     /* =========================================
-       5. FORM SUBMISSION
+       FORM SUBMISSION WITH DUPLICATE CHECK
        ========================================= */
     if (form) {
       form.addEventListener("submit", async function(e) {
@@ -343,6 +408,16 @@
         if (validAppointments.length === 0) {
           alert("⚠️ Please select at least one appointment date and time.");
           return false;
+        }
+
+        // Final duplicate check before submission
+        for (let i = 0; i < appointments.length; i++) {
+            if (appointments[i].date && appointments[i].time) {
+                if (checkDuplicateAppointment(i)) {
+                    alert("⚠️ You have duplicate appointments selected. Please choose different dates or times for each appointment.");
+                    return false;
+                }
+            }
         }
 
         const formData = new FormData(form);
@@ -377,5 +452,5 @@
       });
     }
 
-  }); 
-})();
+  }); // End DOMContentLoaded
+})(); // End IIFE

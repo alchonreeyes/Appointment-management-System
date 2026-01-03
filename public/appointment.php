@@ -1,6 +1,10 @@
 <?php
 session_start();
 
+header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
+header("Pragma: no-cache"); // HTTP 1.0
+header("Expires: 0"); // Proxies
+
 // 1. UNAHIN ANG MGA REQUIRES (Dapat nandito ang mga "tools" mo)
 require_once '../config/db.php';
 require_once '../config/encryption_util.php'; // <--- SIGURADUHIN NA TAMA ANG PATH NA ITO
@@ -10,6 +14,8 @@ if (!isset($_SESSION['client_id'])) {
     header("Location: login.php");
     exit;
 }
+
+
 
 $db = new Database();
 $pdo = $db->getConnection();
