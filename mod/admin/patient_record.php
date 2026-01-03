@@ -17,6 +17,7 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     exit;
 }
 
+
 // =======================================================
 // 2. SERVER-SIDE ACTION HANDLING
 // =======================================================
@@ -126,18 +127,18 @@ if ($viewFilter === 'eye_exam') {
     $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 1";
+    $whereClauses[] = "a.service_id = 11";  // ✅ FIXED
 } elseif ($viewFilter === 'ishihara') {
     $selectClauses[] = "a.ishihara_test_type";
     $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 2";
+    $whereClauses[] = "a.service_id = 13";  // ✅ FIXED
 } elseif ($viewFilter === 'medical') {
     $selectClauses[] = "a.certificate_purpose";
     $extraHeaders = "<th>Purpose</th>";
     $extraColumnNames = ['certificate_purpose'];
-    $whereClauses[] = "a.service_id = 3";
+    $whereClauses[] = "a.service_id = 12";  // ✅ FIXED
 }
 
 // --- I-apply ang iba pang Filters ---
@@ -197,10 +198,16 @@ $countSql = "SELECT
 $countParams = [];
 $countParamTypes = "";
 
-// I-apply din ang filters sa stats
-if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 1"; }
-if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 2"; }
-if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 3"; }
+// ✅ FIXED: Correct service IDs based on database
+if ($viewFilter === 'eye_exam') { 
+    $countSql .= " AND a.service_id = 11";  // Eye-Frame Eye Appointment
+}
+if ($viewFilter === 'ishihara') { 
+    $countSql .= " AND a.service_id = 13";  // ✅ FIXED: Was 12, should be 13
+}
+if ($viewFilter === 'medical') { 
+    $countSql .= " AND a.service_id = 12";  // ✅ FIXED: Was 3, should be 12
+}
 
 if ($statusFilter === 'All') {
     $countSql .= " AND s.status_name IN ('Completed', 'Cancel')";
@@ -215,7 +222,7 @@ if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $countParams[] = $dateFilter;
     $countParamTypes .= "s";
 }
-// *** FIX: Pinalitan ang a.appointment_id ng a.client_id sa search (para sa stats) ***
+
 if ($search !== '') {
     $countSql .= " AND (a.full_name LIKE ? OR a.client_id LIKE ?)";
     $q = "%{$search}%";
@@ -238,7 +245,6 @@ try {
 
 $completedCount = (int)($stats['completed'] ?? 0);
 $cancelledCount = (int)($stats['cancelled'] ?? 0);
-
 // =======================================================
 // BAGO: Kunin ang lahat ng araw na may records para i-highlight
 // =======================================================
@@ -736,32 +742,37 @@ select, input[type="date"], input[type="text"] {
     
       <form id="filtersForm" method="get" class="filters">
 
-        <div>
-            <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
-            <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
-        </div>
-        
-        <select name="status" id="statusFilter" title="Filter by status">
-            <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Records (Completed/Cancel)</option>
-            <option value="Completed" <?= $statusFilter==='Completed'?'selected':'' ?>>Completed</option>
-            <option value="Cancel" <?= $statusFilter==='Cancel'?'selected':'' ?>>Cancel</option>
-        </select>
-        
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select id="dateMode" title="Filter by date">
-            <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
-            <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
-          </select>
-          <input type="date" id="dateVisible" title="Select date"
-               placeholder="Pick a date..."
-               value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
-          <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
-        </div>
-        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
+      <div>
+        <!-- ✅ BAGONG BUTTON: All Records -->
+        <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" id="clearViewFilter">
+            All Records
+        </button>
+        <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
+        <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
+        <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
+        <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
+    </div>
     
-      </form>
+    <select name="status" id="statusFilter" title="Filter by status">
+        <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Records (Completed/Cancel)</option>
+        <option value="Completed" <?= $statusFilter==='Completed'?'selected':'' ?>>Completed</option>
+        <option value="Cancel" <?= $statusFilter==='Cancel'?'selected':'' ?>>Cancel</option>
+    </select>
+    
+    <div style="display:flex;gap:8px;align-items:center;">
+      <select id="dateMode" title="Filter by date">
+        <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
+        <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
+      </select>
+      <input type="date" id="dateVisible" title="Select date"
+           placeholder="Pick a date..."
+           value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
+      <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
+    </div>
+    
+    <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
+
+</form>
     
       <div class="stats">
         <div class="stat-card"><h3><?= $completedCount ?></h3><p>Completed</p></div>
@@ -1154,78 +1165,114 @@ select, input[type="date"], input[type="text"] {
       }
     });
     
-    // Auto-submit filters logic
-    (function(){
-      const form = document.getElementById('filtersForm');
-      const status = document.getElementById('statusFilter');
-      const dateMode = document.getElementById('dateMode');
-      const dateVisible = document.getElementById('dateVisible'); // Ito yung original <input>
-      const dateHidden = document.getElementById('dateHidden');
-      const search = document.getElementById('searchInput');
-      const viewInput = document.getElementById('viewFilterInput');
-      const viewButtons = document.querySelectorAll('.btn-filter');
-    
-      // BAGO: Initialize flatpickr
-      const fpInstance = flatpickr(dateVisible, {
-          dateFormat: "Y-m-d", // Format na kailangan ng database
-          onDayCreate: function(dObj, dStr, fp, dayElem){
-              // i-format ang date ng cell na "YYYY-MM-DD"
-              const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
-              // Check kung ang date na ito ay kasama sa listahan galing sa PHP
-              if (datesWithAppointments.includes(dateStr)) {
-                  dayElem.classList.add('has-appointments'); // Lagyan ng custom class
-                  dayElem.setAttribute('title', 'May records sa araw na ito');
-              }
-          },
-          onChange: function(selectedDates, dateStr, instance) {
-              // Kapag pumili ng date, ito ang mag-trigger
-              if (dateHidden) dateHidden.value = dateStr;
-              if (dateMode) dateMode.value = 'pick'; // Siguraduhin na 'pick' ang mode
-              form.submit(); // I-submit ang form
-          }
-      });
+// ✅ FIXED: Auto-submit filters logic
+(function(){
+  const form = document.getElementById('filtersForm');
+  const status = document.getElementById('statusFilter');
+  const dateMode = document.getElementById('dateMode');
+  const dateVisible = document.getElementById('dateVisible');
+  const dateHidden = document.getElementById('dateHidden');
+  const search = document.getElementById('searchInput');
+  const viewInput = document.getElementById('viewFilterInput');
+  const viewButtons = document.querySelectorAll('.btn-filter');
 
-      // BAGO: Kunin ang bagong ginawang input field ng flatpickr
-      const flatpickrInput = fpInstance.input;
-      flatpickrInput.classList.add('flatpickr-input'); // Para ma-style
-      
-      // BAGO: I-control ang visibility ng flatpickr input batay sa default value
-      if (dateMode.value === 'all') {
+  // Initialize flatpickr
+  const fpInstance = flatpickr(dateVisible, {
+      dateFormat: "Y-m-d",
+      onDayCreate: function(dObj, dStr, fp, dayElem){
+          const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
+          if (datesWithAppointments.includes(dateStr)) {
+              dayElem.classList.add('has-appointments');
+              dayElem.setAttribute('title', 'May records sa araw na ito');
+          }
+      },
+      onChange: function(selectedDates, dateStr, instance) {
+          if (dateHidden) dateHidden.value = dateStr;
+          if (dateMode) dateMode.value = 'pick';
+          form.submit();
+      }
+  });
+
+  const flatpickrInput = fpInstance.input;
+  flatpickrInput.classList.add('flatpickr-input');
+  
+  if (dateMode.value === 'all') {
+      flatpickrInput.style.display = 'none';
+  } else {
+      flatpickrInput.style.display = 'inline-block';
+  }
+
+  dateMode?.addEventListener('change', function(){
+      if (this.value === 'all') {
           flatpickrInput.style.display = 'none';
+          if (dateHidden) dateHidden.value = 'All';
+          form.submit();
       } else {
           flatpickrInput.style.display = 'inline-block';
+          fpInstance.open();
       }
+  });
+  
+  status?.addEventListener('change', ()=> form.submit());
+  
+  let timer = null;
+  search?.addEventListener('input', function(){
+    clearTimeout(timer);
+    timer = setTimeout(()=> form.submit(), 600);
+  });
 
-      // BAGO: Baguhin ang event listener ng dateMode
-      dateMode?.addEventListener('change', function(){
-          if (this.value === 'all') {
-              flatpickrInput.style.display = 'none'; // Itago ang flatpickr
-              if (dateHidden) dateHidden.value = 'All';
-              form.submit();
-          } else {
-              flatpickrInput.style.display = 'inline-block'; // Ipakita ang flatpickr
-              fpInstance.open(); // Awtomatikong buksan ang calendar
-          }
-      });
-      
-      // Ipagpatuloy ang iba pang listeners
-      status?.addEventListener('change', ()=> form.submit());
-      
-      let timer = null;
-      search?.addEventListener('input', function(){
-        clearTimeout(timer);
-        timer = setTimeout(()=> form.submit(), 600); // 600ms delay para hindi mag-submit sa bawat type
-      });
-    
-      viewButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const viewValue = this.getAttribute('data-view');
-            viewInput.value = viewValue;
-            form.submit();
-        });
-      });
-    
-    })();
+  // ✅ FIXED: View Filter Buttons - Force Hard Refresh
+  viewButtons.forEach(button => {
+    button.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        const viewValue = this.getAttribute('data-view');
+        const isAllButton = this.id === 'clearViewFilter';
+        
+        // Build clean URL
+        const params = new URLSearchParams();
+        
+        // Add view parameter (kung hindi "All Records" button)
+        if (!isAllButton && viewValue) {
+            params.set('view', viewValue);
+        }
+        
+        // Keep other filters
+        const statusValue = status?.value;
+        if (statusValue && statusValue !== 'All') {
+            params.set('status', statusValue);
+        }
+        
+        const dateValue = dateHidden?.value;
+        if (dateValue && dateValue !== 'All') {
+            params.set('date', dateValue);
+        }
+        
+        const searchValue = search?.value;
+        if (searchValue && searchValue.trim() !== '') {
+            params.set('search', searchValue.trim());
+        }
+        
+        // Build target URL
+        const newUrl = params.toString() 
+            ? window.location.pathname + '?' + params.toString()
+            : window.location.pathname;
+        
+        // ✅ HARD REFRESH: Para siguradong fresh ang data
+        if (newUrl !== window.location.href) {
+            // May change sa URL, redirect then hard reload
+            window.location.href = newUrl;
+            setTimeout(() => {
+                window.location.reload(true); // Force reload from server
+            }, 100);
+        } else {
+            // Same URL, just force refresh
+            window.location.reload(true);
+        }
+    });
+  });
+
+})();
     </script>
 
 <script>
@@ -1275,7 +1322,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (content) {
             content.style.display = 'block';
-            content.style.animation = 'fadeInContent 0.5s ease';
+            content.style.animation = 'fadeInContent 0.2s ease';
         }
     }
 
@@ -1289,11 +1336,32 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-    history.replaceState(null, null, location.href);
-    history.pushState(null, null, location.href);
-    window.onpopstate = function () {
-        history.go(1);
-    };
+document.addEventListener('DOMContentLoaded', function() {
+    // List of pages na gusto mo i-prevent ang back button
+    const preventBackPages = [
+        'appointment.php',
+        'admin_dashboard.php',
+        // Add more pages here kung saan kailangan
+    ];
+    
+    // Get current page filename
+    const currentPage = window.location.pathname.split('/').pop();
+    
+    // Check if current page should prevent back button
+    const shouldPrevent = preventBackPages.includes(currentPage);
+    
+    if (shouldPrevent) {
+        // Enable back button prevention
+        history.replaceState(null, null, location.href);
+        history.pushState(null, null, location.href);
+        window.onpopstate = function () {
+            history.go(1);
+        };
+        console.log('Back button prevention: ENABLED');
+    } else {
+        console.log('Back button prevention: DISABLED (normal navigation allowed)');
+    }
+});
 </script>
 
 
