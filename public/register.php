@@ -188,21 +188,17 @@ if (isset($_SESSION['client_id'])) {
 
                     <!-- Terms and Conditions -->
                     <div class="terms-section">
-                        <div class="terms-title">📋 Terms & Agreement</div>
-                        
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="terms" name="terms" required>
-                            <label for="terms">
-                                I agree to the <a href="terms.php" target="_blank">Terms & Conditions</a> and <a href="privacy.php" target="_blank">Privacy Policy</a>
-                            </label>
-                        </div>
+                       <label class="checkbox-container">
+    <input type="checkbox" id="terms" required>
+    <span class="checkmark"></span>
+    I agree to the <a href="#" class="link" onclick="openModal(event, 'termsModal')">Terms and Conditions</a>
+</label>
 
-                        <div class="checkbox-group">
-                            <input type="checkbox" id="policy" name="policy" required>
-                            <label for="policy">
-                                I accept the General Use of Services and understand the clinic's policies
-                            </label>
-                        </div>
+<label class="checkbox-container">
+    <input type="checkbox" id="policy" required>
+    <span class="checkmark"></span>
+    I accept the <a href="#" class="link" onclick="openModal(event, 'privacyModal')">Privacy Policy</a>
+</label>
                     </div>
 
                     <!-- Submit Button -->
@@ -326,5 +322,78 @@ phoneInput.addEventListener('input', function() {
 
 // ... rest of your existing script code ...
     </script>
+    <div id="termsModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Terms and Conditions</h2>
+            <span class="close-modal" onclick="closeModal('termsModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p><strong>1. Acceptance of Terms</strong><br>
+            By accessing and using this appointment system, you accept and agree to be bound by the terms and provision of this agreement.</p>
+            
+            <p><strong>2. Appointment Booking</strong><br>
+            Appointments are subject to availability. The clinic reserves the right to reschedule appointments due to unforeseen circumstances.</p>
+
+            <p><strong>3. User Responsibilities</strong><br>
+            You agree to provide accurate and complete information during registration. False information may result in the cancellation of your appointment.</p>
+            
+            <p><strong>4. Cancellations</strong><br>
+            Please notify us at least 24 hours in advance if you wish to cancel or reschedule your appointment.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-close-modal" onclick="acceptAndClose('terms', 'termsModal')">I Agree</button>
+        </div>
+    </div>
+</div>
+
+<div id="privacyModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Privacy Policy</h2>
+            <span class="close-modal" onclick="closeModal('privacyModal')">&times;</span>
+        </div>
+        <div class="modal-body">
+            <p><strong>1. Data Collection</strong><br>
+            We collect personal information such as your name, contact details, and age for the purpose of medical record-keeping and appointment scheduling.</p>
+            
+            <p><strong>2. Data Privacy Act of 2012</strong><br>
+            Your data is protected under the Data Privacy Act of 2012 (Republic Act No. 10173). We are committed to protecting your personal information.</p>
+
+            <p><strong>3. Use of Information</strong><br>
+            Your information will only be used for clinic operations and will not be shared with third parties without your consent.</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-close-modal" onclick="acceptAndClose('policy', 'privacyModal')">I Accept</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Buksan ang Modal
+    function openModal(event, modalId) {
+        event.preventDefault(); // Pigilan ang pag-jump ng link
+        document.getElementById(modalId).style.display = "block";
+    }
+
+    // Isara ang Modal
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+    }
+
+    // 'Short-cut' function: Pag-click ng button sa loob ng modal, 
+    // automatic naiche-check yung checkbox at sasara ang modal.
+    function acceptAndClose(checkboxId, modalId) {
+        document.getElementById(checkboxId).checked = true;
+        closeModal(modalId);
+    }
+
+    // Isara ang modal kapag kinlick ang background (dark area)
+    window.onclick = function(event) {
+        if (event.target.classList.contains('modal-overlay')) {
+            event.target.style.display = "none";
+        }
+    }
+</script>
 </body>
 </html>
