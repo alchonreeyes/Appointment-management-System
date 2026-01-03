@@ -2,9 +2,37 @@
 // includes/navbar.php
 
 // TRICK: Only start a session if one isn't active yet.
-// This prevents the "Headers already sent" error.
 if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_start();
+}
+
+// Include database connection
+require_once __DIR__ . '/../config/db.php';
+$db = new Database();
+$pdo = $db->getConnection();
+
+// Fetch unique brands from products table
+try {
+    $brandStmt = $pdo->query("SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand ASC");
+    $brands = $brandStmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $brands = [];
+}
+
+// Fetch unique frame types from products table
+try {
+    $frameStmt = $pdo->query("SELECT DISTINCT frame_type FROM products WHERE frame_type IS NOT NULL ORDER BY frame_type ASC");
+    $frameTypes = $frameStmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $frameTypes = [];
+}
+
+// Fetch unique lens types from products table
+try {
+    $lensStmt = $pdo->query("SELECT DISTINCT lens_type FROM products WHERE lens_type IS NOT NULL AND lens_type != '' ORDER BY lens_type ASC");
+    $lensTypes = $lensStmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $lensTypes = [];
 }
 ?>
 
@@ -37,56 +65,63 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                     <img src="../mod/photo/LOGO.jpg" alt="Logo">
                 </div>
                 
-                <!-- Dropdown for desktop only -->
+                <!-- Dynamic Dropdown for desktop only -->
                 <div class="dropdown">
                     <div class="dropdown-content">
+                        <!-- BRANDS Column -->
                         <ul>
                             <h4>BRANDS</h4>
-                            <li><a href="#">Coach</a></li>
-                            <li><a href="#">Armani Exchange</a></li>
-                            <li><a href="#">ARNETTE</a></li>
-                            <li><a href="#">Celine</a></li> 
-                            <li><a href="#">Roman King</a></li> 
-                            <li><a href="#">C. Lindbergh</a></li>
-                            <br>
+                            <?php if (!empty($brands)): ?>
+                                <?php 
+                                // Split brands into two columns (first half)
+                                $halfCount = ceil(count($brands) / 2);
+                                $firstHalf = array_slice($brands, 0, $halfCount);
+                                foreach ($firstHalf as $brand): 
+                                ?>
+                                    <li><a href="../public/browse.php?brand=<?= urlencode($brand) ?>"><?= htmlspecialchars($brand) ?></a></li>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li><a href="#">No brands available</a></li>
+                            <?php endif; ?>
                         </ul>
+                        
+                        <!-- BRANDS Column 2 (Second Half) -->
                         <ul>
-                            <li><a href="">Memoflex</a></li>
-                            <li><a href="">Kate Spade New York</a></li>
-                            <li><a href="">Herman Miller</a></li>
-                            <li><a href="">Hushpuppies</a></li>
-                            <li><a href="">Jiashie eyes</a></li>
-                            <li><a href="#">Airflex</a></li>    
+                            <li style="visibility: hidden;"><h4>&nbsp;</h4></li> <!-- Spacer to align with first column header -->
+                            <?php if (!empty($brands) && count($brands) > $halfCount): ?>
+                                <?php 
+                                // Second half of brands
+                                $secondHalf = array_slice($brands, $halfCount);
+                                foreach ($secondHalf as $brand): 
+                                ?>
+                                    <li><a href="../public/browse.php?brand=<?= urlencode($brand) ?>"><?= htmlspecialchars($brand) ?></a></li>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </ul>
+                        
+                        <!-- EYEWEAR FRAMES Column -->
                         <ul>
                             <h4>EYEWEAR FRAMES</h4>
-                            <li><a href="#">Acetate</a></li>
-                            <li><a href="#">B Titanium</a></li>
-                            <li><a href="#">Metal</a></li>
-                            <li><a href="#">Plastic</a></li>    
-                            <li><a href="#">Plastic/Metal</a></li>    
-                            <li><a href="#">Rubber</a></li>    
-                            <br>
+                            <?php if (!empty($frameTypes)): ?>
+                                <?php foreach ($frameTypes as $frameType): ?>
+                                    <li><a href="../public/browse.php?frame_type=<?= urlencode($frameType) ?>"><?= htmlspecialchars($frameType) ?></a></li>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li><a href="#">No frames available</a></li>
+                            <?php endif; ?>
                         </ul>
-                        <ul>
-                            <li><a href="#">Rubber/Metal</a></li>
-                            <li><a href="#">Rubber/Plastic</a></li>
-                            <li><a href="#">Titanium</a></li>
-                            <li><a href="#">Titanium/Acatate</a></li>
-                            <li><a href="#">Titanium/Wood</a></li>
-                            <li><a href="#">Wood</a></li>
-                        </ul>
+                        
+                        <!-- LENSES Column -->
                         <ul>
                             <h4>LENSES</h4>
-                            <li><a href="#">Apollo Lenses</a></li>
-                            <li><a href="#">Essilor Lenses</a></li>
-                            <li><a href="#">Hoya Lenses</a></li>
-                            <br>
-                            <br>
-                            <br>
-                            <br>
-                            <br>
-                        </ul>    
+                            <?php if (!empty($lensTypes)): ?>
+                                <?php foreach ($lensTypes as $lensType): ?>
+                                    <li><a href="../public/browse.php?lens_type=<?= urlencode($lensType) ?>"><?= htmlspecialchars($lensType) ?></a></li>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <li><a href="#">No lenses available</a></li>
+                            <?php endif; ?>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -113,7 +148,6 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                 ?>
                     <i class="fa-regular fa-user"></i>
                     <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
-                    <!-- CHANGED: Always link to book_appointment.php, not appointment.php -->
                     <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
                      
                 <?php else: ?>
@@ -123,7 +157,6 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                             <span style="display:inline-block; margin-left:8px; font-size:14px; font-weight:600; line-height:1; vertical-align:middle; color: #004aad;">Profile</span>
                         </a>
                     </div>
-                    <!-- CHANGED: Link to book_appointment.php for logged-in users too -->
                     <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
                 <?php endif; ?>
             </div>
@@ -146,6 +179,46 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                 <li><a href="../public/store.php">Store</a></li>
                 <li><a href="../public/about.php">About</a></li>
             </ul>
+            
+            <!-- Mobile Filters Section -->
+            <div class="mobile-nav-section">
+                <h4>Brands</h4>
+                <ul class="mobile-filter-list">
+                    <?php if (!empty($brands)): ?>
+                        <?php foreach ($brands as $brand): ?>
+                            <li><a href="../public/browse.php?brand=<?= urlencode($brand) ?>"><?= htmlspecialchars($brand) ?></a></li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>No brands available</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+            
+            <div class="mobile-nav-section">
+                <h4>Frame Types</h4>
+                <ul class="mobile-filter-list">
+                    <?php if (!empty($frameTypes)): ?>
+                        <?php foreach ($frameTypes as $frameType): ?>
+                            <li><a href="../public/browse.php?frame_type=<?= urlencode($frameType) ?>"><?= htmlspecialchars($frameType) ?></a></li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>No frame types available</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
+            
+            <div class="mobile-nav-section">
+                <h4>Lens Types</h4>
+                <ul class="mobile-filter-list">
+                    <?php if (!empty($lensTypes)): ?>
+                        <?php foreach ($lensTypes as $lensType): ?>
+                            <li><a href="../public/browse.php?lens_type=<?= urlencode($lensType) ?>"><?= htmlspecialchars($lensType) ?></a></li>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <li>No lens types available</li>
+                    <?php endif; ?>
+                </ul>
+            </div>
                
             <!-- Mobile Search -->
             <div class="mobile-nav-search">
@@ -173,7 +246,6 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
                     </a>
                 <?php endif; ?>
                 
-                <!-- CHANGED: Always link to book_appointment.php -->
                 <a href="../public/book_appointment.php" class="mobile-nav-book-btn">
                     Book Appointment
                 </a>

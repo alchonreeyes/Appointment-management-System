@@ -1,6 +1,146 @@
-body{
+    body{
      font-family: Arial, sans-serif;
 }
+ body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.9)), url("../assets/src/eyewear-share.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            overflow-x: hidden;
+        }
+        
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 40px 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            padding: 0 50px;
+            box-sizing: border-box;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            width: 100%;
+            padding: 10px 0 20px 0;
+        }
+
+        .carousel-track {
+            display: flex;
+            gap: 20px;
+            transition: transform 0.4s ease-in-out;
+            padding: 0;
+            margin: 0;
+            list-style: none;
+        }
+
+        .carousel-slide {
+            min-width: calc((100% / 3) - 14px); 
+            box-sizing: border-box;
+            display: flex;
+        }
+
+        .appointment-wrapper {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            height: 100%;
+            transition: transform 0.3s ease;
+        }
+        
+        .appointment-wrapper:hover {
+            transform: translateY(-5px);
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .carousel-btn:hover {
+            background: white;
+            color: black;
+        }
+        
+        .carousel-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            background: transparent;
+            color: #aaa;
+            border-color: #aaa;
+        }
+
+        .prev-btn { left: 0; }
+        .next-btn { right: 0; }
+
+        .brand-name { font-size: 2rem; font-weight: 800; margin: 0 0 10px 0; color: #111; line-height: 1.1; }
+        .brand-name .highlight { color: #e63946; }
+        .service-description { font-size: 0.9rem; color: #666; margin-bottom: 20px; min-height: 40px; }
+        
+        .benefits-list, .extra-benefits, .health-screening { margin-bottom: 15px; border-top: 1px solid #eee; padding-top: 15px; }
+        .benefit-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .benefit-item, .extra-item, .disease-item { display: flex; align-items: flex-start; gap: 8px; font-size: 0.85rem; color: #444; }
+        .check-icon { width: 18px; height: 18px; stroke: #e63946; background: #ffebeb; border-radius: 50%; padding: 3px; flex-shrink: 0; }
+        .icon { width: 18px; height: 18px; stroke: #555; flex-shrink: 0; }
+        .disease-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .appointment-btn {
+            margin-top: auto;
+            background: #111;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            display: block;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+        }
+        .appointment-btn:hover { background: #e63946; }
+
+        @media (max-width: 1024px) {
+            .carousel-slide { min-width: calc((100% / 2) - 10px); }
+        }
+        @media (max-width: 700px) {
+            .carousel-slide { min-width: 100%; }
+            .content-wrapper { padding: 20px 10px; }
+            .carousel-container { padding: 0 40px; }
+        }
 
 .nav-links ul li a{
     font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;

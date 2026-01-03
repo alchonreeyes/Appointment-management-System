@@ -181,7 +181,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 
         <h5>Ishihara Test Type</h5>
         <div class="radio-group-horizontal">
-            <label><input type="radio" name="ishihara_test_type" value="Basic Screening" required> Basic Screening</label>
+            <label><input type="radio" name="ishihara_test_type" value="Basic Screening"> Basic Screening</label>
             <label><input type="radio" name="ishihara_test_type" value="Complete Assessment"> Complete Assessment</label>
             <label><input type="radio" name="ishihara_test_type" value="Follow-up"> Follow-up</label>
         </div>
@@ -192,7 +192,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="radio-group-horizontal">
              <label><input type="radio" name="previous_color_issues" value="Yes"> Yes</label>
              <label><input type="radio" name="previous_color_issues" value="No"> No</label>
-             <label><input type="radio" name="previous_color_issues" value="Unknown" checked> Unknown</label>
+             <label style="display: none;"><input type="radio" name="previous_color_issues" value="Unknown"  checked> Unknown</label>
         </div>
 
         <input type="text" name="ishihara_notes" placeholder="Additional notes (optional)" class="compact-input">

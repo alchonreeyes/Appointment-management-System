@@ -19,11 +19,12 @@ if ($is_logged_in) {
     $update->execute();
 }
 
-// Fetch services and particulars
+// Fetch services with booking_page (SCALABLE - NO HARDCODING!)
 $stmt = $pdo->prepare("SELECT * FROM services ORDER BY service_id ASC");
 $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Fetch particulars
 $stmtPart = $pdo->prepare("SELECT * FROM particulars ORDER BY particular_id ASC");
 $stmtPart->execute();
 $allParticulars = $stmtPart->fetchAll(PDO::FETCH_ASSOC);
@@ -42,12 +43,6 @@ function formatServiceTitle($title) {
     return $title;
 }
 
-// Map Service IDs to specific booking pages
-$bookingLinks = [
-    11 => '../public/appointment.php',
-    12 => '../public/medical.php',
-    13 => '../public/ishihara.php'
-];
 ?>
 
 <!DOCTYPE html>
@@ -220,11 +215,13 @@ $bookingLinks = [
                             $name = $service['service_name'];
                             $desc = $service['description'];
                             
+                            // ✅ GET BOOKING PAGE FROM DATABASE (SCALABLE!)
+                            $link = $service['booking_page'] ?? '../public/appointment.php';
+                            
                             $myParticulars = $groupedParticulars[$sId] ?? [];
                             $benefits = array_filter($myParticulars, fn($p) => $p['category'] === 'benefit');
                             $diseases = array_filter($myParticulars, fn($p) => $p['category'] === 'disease');
                             $extras   = array_filter($myParticulars, fn($p) => $p['category'] === 'extra');
-                            $link = $bookingLinks[$sId] ?? '../public/appointment.php';
                         ?>
 
                         <li class="carousel-slide">
@@ -276,7 +273,7 @@ $bookingLinks = [
                                 
                                 <?php if ($is_logged_in): ?>
                                     <!-- User is logged in, go directly to booking page -->
-                                    <a class="appointment-btn" href="<?= $link ?>">BOOK NOW</a>
+                                    <a class="appointment-btn" href="<?= htmlspecialchars($link) ?>">BOOK NOW</a>
                                 <?php else: ?>
                                     <!-- User not logged in, redirect to login with return URL -->
                                     <a class="appointment-btn" href="../public/login.php?redirect=<?= urlencode($link) ?>">BOOK NOW</a>

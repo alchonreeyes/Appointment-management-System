@@ -239,7 +239,7 @@ nav {
     left: 0;
     background: #f3f3f3;
     width: 100vw;
-    height: 48vh;
+    height: 35vh;
     border-top: 1px solid #ccc;
     z-index: 1000;
     opacity: 0;
@@ -339,6 +339,62 @@ nav {
     display: block;
 }
 
+/* Add these styles to your existing navbar.css file */
+
+/* Mobile Navigation Sections */
+.mobile-nav-section {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.mobile-nav-section h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #004aad;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    letter-spacing: 0.5px;
+}
+
+.mobile-filter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mobile-filter-list li {
+    margin-bottom: 8px;
+}
+
+.mobile-filter-list li a {
+    display: block;
+    padding: 8px 12px;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.mobile-filter-list li a:hover {
+    background-color: #f0f0f0;
+    color: #004aad;
+    transform: translateX(5px);
+}
+
+/* Adjust mobile nav content to accommodate filters */
+.mobile-nav-content {
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+/* Style for empty states */
+.mobile-filter-list li:not(:has(a)) {
+    color: #999;
+    font-style: italic;
+    padding: 8px 12px;
+    font-size: 14px;
+}
 /* ============================================
    MOBILE NAVIGATION MENU STYLES
    ============================================ */
