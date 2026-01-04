@@ -146,7 +146,7 @@ try {
                 <?php 
                 if (!isset($_SESSION['client_id'])): 
                 ?>
-                    <i class="fa-regular fa-user"></i>
+                    <a href="../public/login.php"><i class="fa-regular fa-user"></i></a>
                     <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
                     <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
                      

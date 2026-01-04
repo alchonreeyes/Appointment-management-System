@@ -134,7 +134,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
           <div class="form-step active">
               <h2>Let's get you scheduled</h2>
 
-             <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
+             <p style="color:black;">Please fill-up these forms with your personal details</p>
             
             <div class="form-row name-row">
     <input type="text" placeholder="Enter Your Name..." name="full_name" required

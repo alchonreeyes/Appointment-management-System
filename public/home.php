@@ -106,7 +106,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <h2 class="section-title">Your Journey to Clearer Vision</h2>
         <p class="section-subtitle">Three simple steps to better eye health and style.</p>
     </div>
-    
+           <a href="../public/book_appointment.php" style="text-decoration: none;">
     <div class="steps-grid">
         <div class="step-card text-center">
             <span class="step-number">01</span>
@@ -114,18 +114,25 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <h3>Book Appointment</h3>
             <p style="color:#666; font-size: 0.9rem;">Schedule a comprehensive eye exam with our certified doctors at your convenience.</p>
         </div>
+    </a>
+
+               <a href="../public/browse.php" style="text-decoration: none;">
         <div class="step-card text-center">
             <span class="step-number">02</span>
-            <div class="step-icon"><i class="fa-solid fa-eye"></i></div>
-            <h3>Get Tested</h3>
-            <p style="color:#666; font-size: 0.9rem;">We use state-of-the-art technology to assess your vision and eye health precisely.</p>
-        </div>
-        <div class="step-card text-center">
-            <span class="step-number">03</span>
             <div class="step-icon"><i class="fa-solid fa-glasses"></i></div>
             <h3>Choose Your Style</h3>
             <p style="color:#666; font-size: 0.9rem;">Browse our vast collection of designer frames and get fitted perfectly.</p>
         </div>
+    </a>
+        <a href="../public/about.php" style="text-decoration: none;">
+            <div class="step-card text-center">
+                <span class="step-number">02</span>
+                <div class="step-icon"><i class="fa-solid fa-eye"></i></div>
+                <h3>About Us</h3>
+                <p style="color:#666; font-size: 0.9rem;">Our clinic uses advanced diagnostic technology to deliver precise, personalized eye exams.</p>
+            </div>
+        </a>
+            
     </div>
 </section>
 
@@ -250,20 +257,6 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <p>Anti-Radiation Lenses available now.</p>
             <img src="../assets/src/hero-img(2).jpg" alt="Glasses">
         </div>
-    </div>
-</section>
-<section class="newsletter-section">
-    <div class="newsletter-container">
-        <div class="newsletter-content">
-            <h2>Get the Latest Updates</h2>
-            <p>Enter your email to receive news on our new eyewear, latest promotions, and marketing campaigns.</p>
-        </div>
-        <form class="newsletter-form" action="subscribe.php" method="POST">
-            <input type="email" name="email" placeholder="Your email address" required>
-            <button type="submit">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M13.025 1l-2.847 2.828 6.176 6.176h-16.354v3.992h16.354l-6.176 6.176 2.847 2.828 10.975-11z"/></svg>
-            </button>
-        </form>
     </div>
 </section>
 

@@ -44,9 +44,8 @@ session_start();
 
                 <div class="info-icon"><i class="fa-solid fa-envelope"></i></div>
                 <div class="info-text">
-                    <h4>Email Us</h4>
-                    
-                    <p>Email: eyemaster@gmail.com</p>
+                    <h4>Email us at</h4>
+                    <p> <a href="mailto:eyemasteropticalclinic@gmail.com?subject=Appointment%20Inquiry">eyemasteropticalclinic@gmail.com</a></p>
                 </div>
             </div>
 

@@ -4,6 +4,7 @@ session_start();
 // 1. DATABASE & MAIL SETUP
 require_once '../config/db.php'; 
 require_once '../vendor/autoload.php';
+require_once '../config/encryption_util.php'; 
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -31,11 +32,166 @@ if (!$client) {
 $client_id = $client['client_id'];
 
 // ==========================================
+// HELPER FUNCTION: Send Email Notification
+// ==========================================
+function sendAppointmentEmail($recipient_email, $recipient_name, $subject, $appointment_data, $email_type = 'update') {
+    $mail = new PHPMailer(true);
+    
+    try {
+        // SMTP Configuration
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'alchonreyez@gmail.com'; // Your Gmail
+        $mail->Password = 'fdyk vxfe ofyy ufjh';         // Your App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
+
+        // Recipients
+        $mail->setFrom('rogerjuancito0621@gmail.com', 'Eye Master Optical Clinic');
+        $mail->addAddress($recipient_email, $recipient_name);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        
+        // Format date and time
+        $formatted_date = date('F j, Y', strtotime($appointment_data['appointment_date']));
+        $formatted_time = date('g:i A', strtotime($appointment_data['appointment_time']));
+        
+        // Build email body based on type
+        if ($email_type === 'cancelled') {
+            $mail->Body = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545; }
+                    .detail-row { margin: 10px 0; }
+                    .label { font-weight: bold; color: #666; }
+                    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+                    .reason-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>Eye Master Optical Clinic</h1>
+                    </div>
+                    <div class='content'>
+                        <h2 style='color: #dc3545;'>Appointment Cancelled</h2>
+                        <p>Hi, <strong>{$recipient_name}</strong></p>
+                        <p>Your appointment at <strong>Eye Master Optical Clinic</strong> has been cancelled.</p>
+                        
+                        <div class='details'>
+                            <h3>Appointment Details</h3>
+                            <div class='detail-row'>
+                                <span class='label'>Appointment ID:</span> #{$appointment_data['appointment_id']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Service:</span> {$appointment_data['service_name']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Date:</span> {$formatted_date}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Time:</span> {$formatted_time}
+                            </div>
+                        </div>
+                        
+                        <div class='reason-box'>
+                            <strong>Cancellation Reason:</strong><br>
+                            {$appointment_data['reason_cancel']}
+                        </div>
+                        
+                        <p>If you wish to reschedule, please <a href='http://localhost/appointment-management-system/public/appointment.php' style='color: #991010; font-weight: bold;'>book a new appointment</a>.</p>
+                        
+                        <p>If you have any questions, please contact us.</p>
+                    </div>
+                    <div class='footer'>
+                        <p>&copy; 2026 Eye Master Optical Clinic. All rights reserved.</p>
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+        } else {
+            // Update email (existing code)
+            $mail->Body = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #27ae60; }
+                    .detail-row { margin: 10px 0; }
+                    .label { font-weight: bold; color: #666; }
+                    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>Eye Master Optical Clinic</h1>
+                    </div>
+                    <div class='content'>
+                        <h2 style='color: #27ae60;'>Appointment Updated</h2>
+                        <p>Hi, <strong>{$recipient_name}</strong></p>
+                        <p>Your appointment details have been updated successfully.</p>
+                        
+                        <div class='details'>
+                            <h3>Updated Appointment Details</h3>
+                            <div class='detail-row'>
+                                <span class='label'>Appointment ID:</span> #{$appointment_data['appointment_id']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Service:</span> {$appointment_data['service_name']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Date:</span> {$formatted_date}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Time:</span> {$formatted_time}
+                            </div>
+                        </div>
+                        
+                        <p>If you have any questions, please contact us.</p>
+                    </div>
+                    <div class='footer'>
+                        <p>&copy; 2026 Eye Master Optical Clinic. All rights reserved.</p>
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+        }
+        
+        $mail->AltBody = strip_tags($mail->Body);
+        $mail->send();
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Email Error: " . $mail->ErrorInfo);
+        return false;
+    }
+}
+
+// ==========================================
 // A. HANDLE APPOINTMENT UPDATE
 // ==========================================
 if (isset($_POST['update_appointment'])) {
     $appointment_id = $_POST['appointment_id'];
     
+    // Get raw data from form
     $symptoms = trim($_POST['symptoms'] ?? '');
     $wear_glasses = $_POST['wear_glasses'] ?? '';
     $concern = trim($_POST['concern'] ?? '');
@@ -44,10 +200,18 @@ if (isset($_POST['update_appointment'])) {
     $age = intval($_POST['age'] ?? 0);
     $gender = $_POST['gender'] ?? '';
     $occupation = trim($_POST['occupation'] ?? '');
+    
+    // Encrypt data
+    $encrypted_full_name = encrypt_data($full_name);
+    $encrypted_phone_number = encrypt_data($phone_number);
+    $encrypted_occupation = encrypt_data($occupation);
+    $encrypted_symptoms = !empty($symptoms) ? encrypt_data($symptoms) : '';
+    $encrypted_concern = !empty($concern) ? encrypt_data($concern) : '';
 
     try {
         $pdo->beginTransaction();
 
+        // Update appointment
         $update_appt = $pdo->prepare("
             UPDATE appointments 
             SET symptoms = ?, wear_glasses = ?, concern = ?, 
@@ -55,18 +219,46 @@ if (isset($_POST['update_appointment'])) {
             WHERE appointment_id = ? AND client_id = ? AND status_id = 1
         ");
         $update_appt->execute([
-            $symptoms, $wear_glasses, $concern, 
-            $full_name, $phone_number, $age, $gender, $occupation,
+            $encrypted_symptoms, $wear_glasses, $encrypted_concern, 
+            $encrypted_full_name, $encrypted_phone_number, $age, $gender, $encrypted_occupation,
             $appointment_id, $client_id
         ]);
 
+        // Update user table
         $update_user = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ? WHERE id = ?");
-        $update_user->execute([$full_name, $phone_number, $user_id]);
+        $update_user->execute([$encrypted_full_name, $encrypted_phone_number, $user_id]);
 
+        // Update client table
         $update_client = $pdo->prepare("UPDATE clients SET age = ?, gender = ?, occupation = ? WHERE user_id = ?");
-        $update_client->execute([$age, $gender, $occupation, $user_id]);
+        $update_client->execute([$age, $gender, $encrypted_occupation, $user_id]);
+
+        // Get appointment details for email
+        $appt_stmt = $pdo->prepare("
+            SELECT a.*, s.service_name, u.email 
+            FROM appointments a
+            JOIN services s ON a.service_id = s.service_id
+            JOIN users u ON u.id = ?
+            WHERE a.appointment_id = ?
+        ");
+        $appt_stmt->execute([$user_id, $appointment_id]);
+        $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
 
         $pdo->commit();
+
+        // Send email notification
+        if ($appt_data) {
+            $user_email_encrypted = $appt_data['email'];
+            $user_email = decrypt_data($user_email_encrypted);
+            
+            sendAppointmentEmail(
+                $user_email,
+                $full_name,
+                'Appointment Updated - Eye Master Optical Clinic',
+                $appt_data,
+                'update'
+            );
+        }
+
         $_SESSION['success'] = "Appointment details updated successfully.";
 
     } catch (Exception $e) {
@@ -78,31 +270,58 @@ if (isset($_POST['update_appointment'])) {
 }
 
 // ==========================================
-// B. HANDLE CANCELLATION
+// B. HANDLE CANCELLATION (FIXED)
 // ==========================================
 if (isset($_POST['cancel_appointment'])) {
     $appointment_id = $_POST['appointment_id'];
     $cancellation_reason = trim($_POST['cancellation_reason']);
     
-    $appt_query = "SELECT a.*, s.service_name 
-                   FROM appointments a
-                   LEFT JOIN services s ON a.service_id = s.service_id
-                   WHERE a.appointment_id = ? AND a.client_id = ?";
-    $appt_stmt = $pdo->prepare($appt_query);
-    $appt_stmt->execute([$appointment_id, $client_id]);
-    $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if ($appt_data) {
-        $cancel_stmt = $pdo->prepare("UPDATE appointments SET status_id = 5, reason_cancel = ? WHERE appointment_id = ?");
+    try {
+        // Get appointment details BEFORE canceling
+        $appt_query = "
+            SELECT a.*, s.service_name, u.email, u.full_name
+            FROM appointments a
+            LEFT JOIN services s ON a.service_id = s.service_id
+            LEFT JOIN users u ON u.id = ?
+            WHERE a.appointment_id = ? AND a.client_id = ?
+        ";
+        $appt_stmt = $pdo->prepare($appt_query);
+        $appt_stmt->execute([$user_id, $appointment_id, $client_id]);
+        $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
         
-        if ($cancel_stmt->execute([$cancellation_reason, $appointment_id])) {
-            $_SESSION['success'] = "Appointment cancelled successfully.";
+        if ($appt_data) {
+            // Update to cancelled status
+            $cancel_stmt = $pdo->prepare("UPDATE appointments SET status_id = 5, reason_cancel = ? WHERE appointment_id = ?");
+            
+            if ($cancel_stmt->execute([$cancellation_reason, $appointment_id])) {
+                
+                // Decrypt email and name for sending
+                $user_email = decrypt_data($appt_data['email']);
+                $user_full_name = decrypt_data($appt_data['full_name']);
+                
+                // Add reason to appointment data for email
+                $appt_data['reason_cancel'] = $cancellation_reason;
+                
+                // Send cancellation email
+                sendAppointmentEmail(
+                    $user_email,
+                    $user_full_name,
+                    'Appointment Cancelled - Eye Master Optical Clinic',
+                    $appt_data,
+                    'cancelled'
+                );
+                
+                $_SESSION['success'] = "Appointment cancelled successfully. A confirmation email has been sent.";
+            } else {
+                $_SESSION['error'] = "Failed to cancel appointment.";
+            }
         } else {
-            $_SESSION['error'] = "Failed to cancel appointment.";
+            $_SESSION['error'] = "Appointment not found.";
         }
-    } else {
-        $_SESSION['error'] = "Appointment not found.";
+    } catch (Exception $e) {
+        $_SESSION['error'] = "Cancellation failed: " . $e->getMessage();
     }
+    
     header("Location: appointments.php");
     exit();
 }
@@ -154,8 +373,26 @@ switch($filter) {
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$client_id]);
-$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$result_encrypted = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Decrypt all appointments
+$result = [];
+foreach ($result_encrypted as $row) {
+    $row['full_name'] = decrypt_data($row['full_name']);
+    $row['phone_number'] = decrypt_data($row['phone_number']);
+    $row['occupation'] = decrypt_data($row['occupation']);
+    
+    if (!empty($row['symptoms'])) {
+        $row['symptoms'] = decrypt_data($row['symptoms']);
+    }
+    if (!empty($row['concern'])) {
+        $row['concern'] = decrypt_data($row['concern']);
+    }
+    
+    $result[] = $row;
+}
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -592,5 +829,6 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </script>
     
     <?php include '../includes/footer.php' ?>
-</body>
+</
+>
 </html>

@@ -40,12 +40,16 @@ include '../config/db.php';
             <div class="story-text">
                 <span class="section-tag">Our Mission</span>
                 <h2>Clear Vision for Everyone</h2>
-                <p>For over 30 years, Eye Master Optical Clinic has been a trusted leader in eye care, combining expert clinical diagnostics with personalized service. Our appointment management system streamlines scheduling and patient records, making it simple to book visits, manage prescriptions, and receive timely reminders so you always get the right care when you need it.</p>
-                <p>We believe that a pair of glasses isn't just a medical necessity—it's a part of your identity. That's why we stock the world's best brands alongside our affordable house lines.</p>
+                <p style="text-align:justify; text-justify:inter-word;">
+                    For over 30 years, Eye Master Optical Clinic has been a trusted leader in eye care, combining expert clinical diagnostics with personalized service. Our appointment management system streamlines scheduling and patient records, making it simple to book visits, manage prescriptions, and receive timely reminders so you always get the right care when you need it.
+                </p>
+                <p style="text-align:justify; text-justify:inter-word;">
+                    We believe that a pair of glasses isn't just a medical necessity — it's a part of your identity. That's why we stock the world's best brands alongside our affordable house lines.
+                </p>
             </div>
             <div class="story-img-container">
                 <img src="../assets/src/hero-img(1).jpg" alt="Clinic Interior">
-                <div class="img-badge">Est. 2012</div>
+                <div class="img-badge">Est. 1960</div>
                 <!-- image container cards layout -->
             </div>
         </div>
