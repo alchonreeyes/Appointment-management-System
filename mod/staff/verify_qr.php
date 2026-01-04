@@ -1,7 +1,7 @@
 <?php
 session_start();
-// TAMA NA ITO: Umaakyat ng isang folder
 require_once __DIR__ . '/../database.php'; 
+require_once __DIR__ . '/../../config/encryption_util.php'; // IDAGDAG ITO!
 
 header('Content-Type: application/json');
 
@@ -23,32 +23,26 @@ if (!$qr_code_data) {
 // ===== PARSE APPOINTMENT ID =====
 $appointment_id = null;
 
-// Handle numeric-only QR codes
 if (is_numeric($qr_code_data)) {
     $appointment_id = filter_var($qr_code_data, FILTER_SANITIZE_NUMBER_INT);
 } 
-// Handle multi-line QR codes with "APPOINTMENT ID: 123"
 elseif (preg_match('/APPOINTMENT ID:\s*(\d+)/i', $qr_code_data, $matches)) {
     $appointment_id = filter_var($matches[1], FILTER_SANITIZE_NUMBER_INT);
 }
 
 if (!$appointment_id) {
-    // Log suspicious QR code attempt
     error_log(sprintf(
         "Invalid QR Code Scanned by User #%d: %s",
         $_SESSION['user_id'],
-        substr($qr_code_data, 0, 100) // Only log first 100 chars
+        substr($qr_code_data, 0, 100)
     ));
     
-    echo json_encode(['success' => false, 'message' => 'Invalid QR code format. Please scan a valid appointment QR code.']);
+    echo json_encode(['success' => false, 'message' => 'Invalid QR code format.']);
     exit;
 }
 
 // ===== DATABASE QUERY =====
 try {
-    // ======================================================================
-    // BAGO: (Request #2) Kinukuha na natin ang LAHAT ng data (a.*)
-    // ======================================================================
     $sql = "SELECT 
                 a.*, 
                 st.status_name, 
@@ -72,13 +66,9 @@ try {
     $appointment = $result->fetch_assoc();
 
     if ($appointment) {
-        // ===== APPOINTMENT NATAGPUAN =====
-        
         $status = $appointment['status_name'];
 
-        // ======================================================================
-        // BAGO: (Request #1) I-check muna ang status
-        // ======================================================================
+        // ===== STATUS VALIDATION =====
         if ($status === 'Cancelled' || $status === 'Cancel') {
             echo json_encode(['success' => false, 'message' => 'This appointment is already CANCELLED.']);
             exit;
@@ -88,16 +78,38 @@ try {
             exit;
         }
         if ($status === 'Pending') {
-            echo json_encode(['success' => false, 'message' => 'This appointment is still PENDING. Please confirm it first in the Appointments page.']);
+            echo json_encode(['success' => false, 'message' => 'This appointment is still PENDING.']);
             exit;
         }
         
-        // ======================================================================
-        // Kung 'Confirmed' o 'Missed' ang status, ituloy at ipakita ang data
-        // ======================================================================
+        // ===== CONFIRMED or MISSED - PROCEED =====
         if ($status === 'Confirmed' || $status === 'Missed') {
             
-            // Log successful scan for audit trail
+            // ============================================
+            // **BAGO: I-DECRYPT ANG SENSITIVE DATA**
+            // ============================================
+            $appointment['full_name'] = decrypt_data($appointment['full_name']);
+            $appointment['phone_number'] = decrypt_data($appointment['phone_number']);
+            $appointment['occupation'] = decrypt_data($appointment['occupation']);
+            
+            // Decrypt other encrypted fields if any
+            if (!empty($appointment['symptoms'])) {
+                $appointment['symptoms'] = decrypt_data($appointment['symptoms']);
+            }
+            if (!empty($appointment['concern'])) {
+                $appointment['concern'] = decrypt_data($appointment['concern']);
+            }
+            if (!empty($appointment['notes'])) {
+                $appointment['notes'] = decrypt_data($appointment['notes']);
+            }
+            if (!empty($appointment['previous_color_issues'])) {
+                $appointment['previous_color_issues'] = decrypt_data($appointment['previous_color_issues']);
+            }
+            if (!empty($appointment['ishihara_notes'])) {
+                $appointment['ishihara_notes'] = decrypt_data($appointment['ishihara_notes']);
+            }
+            
+            // Log successful scan
             error_log(sprintf(
                 "QR Scan SUCCESS: Appointment #%d (%s) by User #%d (%s) at %s",
                 $appointment['appointment_id'],
@@ -107,16 +119,14 @@ try {
                 date('Y-m-d H:i:s')
             ));
             
-            // Format response para sa JavaScript
+            // Format dates
             $formatted_date = date('F j, Y', strtotime($appointment['appointment_date']));
             $formatted_time = date('g:i A', strtotime($appointment['appointment_time']));
             
-            // Ipadala ang BUONG data object
+            // Return decrypted data
             echo json_encode([
                 'success'           => true,
-                'data'              => $appointment, // Ito ang LAHAT ng columns
-                
-                // Ito ay para sa backward compatibility at madaling access
+                'data'              => $appointment, // NOW DECRYPTED!
                 'id'                => $appointment['appointment_id'], 
                 'patient_name'      => $appointment['full_name'],
                 'service_type'      => $appointment['service_name'] ?? 'N/A',
@@ -126,15 +136,11 @@ try {
             ]);
 
         } else {
-            // Para sa ibang status (e.g., 'Rescheduled', etc.)
-            echo json_encode(['success' => false, 'message' => "This appointment has an unhandled status: {$status}"]);
+            echo json_encode(['success' => false, 'message' => "Unhandled status: {$status}"]);
             exit;
         }
 
     } else {
-        // ===== APPOINTMENT NOT FOUND =====
-        
-        // Log failed lookup (might be deleted or fake QR)
         error_log(sprintf(
             "QR Scan FAILED: Appointment #%d not found. Scanned by User #%d",
             $appointment_id,
@@ -143,19 +149,16 @@ try {
         
         echo json_encode([
             'success' => false, 
-            'message' => 'Appointment not found. It may have been deleted or the QR code is invalid.'
+            'message' => 'Appointment not found.'
         ]);
     }
 
 } catch (Exception $e) {
-    // ===== DATABASE ERROR =====
-    
     error_log("Database Error (verify_qr.php): " . $e->getMessage());
     
-    // Generic error message for security (don't expose DB structure)
     echo json_encode([
         'success' => false, 
-        'message' => 'Unable to verify QR code at this time. Please try again or contact support.'
+        'message' => 'Unable to verify QR code. Please try again.'
     ]);
 }
 

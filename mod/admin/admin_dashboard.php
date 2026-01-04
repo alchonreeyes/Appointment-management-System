@@ -1,8 +1,10 @@
 <?php
 
-
 // Include backend logic located in the same directory as this file
 $actionFile = __DIR__ . '/admin_dashboard-action.php';
+
+require_once __DIR__ . '/../../config/encryption_util.php';
+
 if (file_exists($actionFile)) {
     require_once $actionFile;
 } else {
@@ -198,6 +200,17 @@ if (file_exists($actionFile)) {
         </div>
     </div>
 </div>
+<!-- TEMPORARY TEST BUTTON -->
+<button onclick="testQRCode()">Test QR Code 148</button>
+
+<script>
+function testQRCode() {
+    // Test with the ID we know exists
+    const testData = "148";
+    console.log('Testing with:', testData);
+    processScannedData(testData);
+}
+</script>
 
 <div id="popup">
     <div id="popup-header"><h3>Confirmation</h3></div>
@@ -459,19 +472,18 @@ let html5QrCode = null;
 // BAGO: Dalawang klase ng Toast
 // ===================================
 
-// Ito yung lilitaw sa gitna ng screen, sa ibabaw ng LAHAT
+// ===================================
+// Global Toast Function
+// ===================================
 function showGlobalToast(msg, type = 'success') {
-    // 1. Hanapin muna kung may existing overlay
     let overlay = document.getElementById('toast-overlay-global');
     if (!overlay) {
-        // Kung wala, create
         overlay = document.createElement('div');
         overlay.id = 'toast-overlay-global';
         overlay.className = 'toast-overlay';
         document.body.appendChild(overlay);
     }
     
-    // 2. Create toast box
     const toast = document.createElement('div');
     toast.className = `toast ${type}`; 
     toast.innerHTML = `
@@ -479,22 +491,20 @@ function showGlobalToast(msg, type = 'success') {
         <div class="toast-message">${msg}</div>
     `;
     
-    // 3. Append to overlay
-    overlay.innerHTML = ''; // Linisin muna kung may luma
+    overlay.innerHTML = '';
     overlay.appendChild(toast);
     overlay.classList.add('show');
     
-    // 4. Auto-remove after 2.5 seconds
     const timer = setTimeout(() => {
         if(overlay) overlay.classList.remove('show');
     }, 2500);
     
-    // 5. Allow click-to-close
     overlay.addEventListener('click', () => {
-        clearTimeout(timer); // Stop auto-remove if clicked
+        clearTimeout(timer);
         if(overlay) overlay.classList.remove('show');
     }, { once: true });
 }
+
 
 // Popup Functions
 function openPopup(header, content, isConfirmation = false, callback = null) {
@@ -602,31 +612,38 @@ function closeStore() {
 function stopScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (qrModal) {
-        qrModal.style.display = 'none'; // Itago ang modal
+        qrModal.style.display = 'none';
     }
 
     if (html5QrCode) {
         try {
-             html5QrCode.stop().then(() => {
+            html5QrCode.stop().then(() => {
                 console.log("QR Scanner stopped.");
                 const qrReader = document.getElementById('qr-reader');
                 if(qrReader) qrReader.innerHTML = '';
-             }).catch(err => {
-                console.warn('QR scanner stop failed, likely already stopped.', err);
+            }).catch(err => {
+                console.warn('QR scanner stop failed:', err);
                 const qrReader = document.getElementById('qr-reader');
                 if(qrReader) qrReader.innerHTML = '';
-             });
+            });
         } catch (e) {
-            console.warn('Error trying to stop QR scanner:', e);
+            console.warn('Error stopping scanner:', e);
             const qrReader = document.getElementById('qr-reader');
             if(qrReader) qrReader.innerHTML = '';
         }
     }
 }
 
-
+// ===================================
+// *** IMPORTANT: Define processScannedData FIRST ***
+// ===================================
 function processScannedData(qrCodeMessage) {
-    stopScan(); 
+    console.log('========== PROCESSING QR CODE ==========');
+    console.log('Raw QR Data:', qrCodeMessage);
+    console.log('Type:', typeof qrCodeMessage);
+    console.log('Length:', qrCodeMessage.length);
+    console.log('========================================');
+    
     showLoader('Verifying QR Code...');
     
     fetch('verify_qr.php', {
@@ -634,23 +651,38 @@ function processScannedData(qrCodeMessage) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ qr_code: qrCodeMessage })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Response Status:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP error ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
+        console.log('========== SERVER RESPONSE ==========');
+        console.log(JSON.stringify(data, null, 2));
+        console.log('====================================');
+        
         hideLoader();
+        
         if (data.success && data.data) {
             openAppointmentDetailModal(data); 
         } else {
-            showGlobalToast(data.message || 'Patient or appointment not found', 'error');
+            showGlobalToast(data.message || 'Appointment not found', 'error');
         }
     })
     .catch(error => {
         hideLoader();
-        console.error('Fetch Error:', error);
-        showGlobalToast('Error verifying QR code.', 'error');
+        console.error('========== FETCH ERROR ==========');
+        console.error(error);
+        console.error('=================================');
+        showGlobalToast('Error: ' + error.message, 'error');
     });
 }
 
-
+// ===================================
+// *** NOW define startScan AFTER processScannedData ***
+// ===================================
 function startScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (!qrModal) {
@@ -660,25 +692,73 @@ function startScan() {
     qrModal.style.display = 'flex'; 
 
     const qrReaderId = "qr-reader";
+    
+    // Clear previous instance
+    const qrReaderElement = document.getElementById(qrReaderId);
+    if (qrReaderElement) {
+        qrReaderElement.innerHTML = '';
+    }
+    
     html5QrCode = new Html5Qrcode(qrReaderId);
 
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } }, 
+    console.log('Starting QR scanner...');
+
+    Html5Qrcode.getCameras().then(cameras => {
+        console.log('Available cameras:', cameras);
         
-        qrCodeMessage => {
-            processScannedData(qrCodeMessage);
-        },
-        errorMessage => {
-            // silent
+        if (cameras && cameras.length) {
+            const cameraId = cameras[cameras.length - 1].id;
+            console.log('Using camera:', cameraId);
+            
+            html5QrCode.start(
+                cameraId,
+                { 
+                    fps: 10, 
+                    qrbox: { width: 250, height: 250 }
+                }, 
+                // SUCCESS CALLBACK - Now processScannedData is already defined!
+                qrCodeMessage => {
+                    console.log('✅ QR Code SCANNED!');
+                    console.log('Raw value:', qrCodeMessage);
+                    
+                    // Stop scanner first
+                    if (html5QrCode) {
+                        html5QrCode.stop().then(() => {
+                            console.log('Scanner stopped');
+                            // Close modal
+                            qrModal.style.display = 'none';
+                            // Process the data
+                            processScannedData(qrCodeMessage);
+                        }).catch(err => {
+                            console.warn('Error stopping scanner:', err);
+                            qrModal.style.display = 'none';
+                            processScannedData(qrCodeMessage);
+                        });
+                    } else {
+                        qrModal.style.display = 'none';
+                        processScannedData(qrCodeMessage);
+                    }
+                },
+                // ERROR CALLBACK
+                errorMessage => {
+                    if (!errorMessage.includes('NotFoundException')) {
+                        console.warn('Scan error:', errorMessage);
+                    }
+                }
+            ).catch(err => {
+                console.error('Unable to start scanner:', err);
+                stopScan(); 
+                showGlobalToast('Unable to start camera: ' + err, 'error');
+            });
+        } else {
+            console.error('No cameras found');
+            showGlobalToast('No cameras found on this device.', 'error');
         }
-    ).catch(err => {
-        console.error('Unable to start scanner:', err);
-        stopScan(); 
-        showGlobalToast('Unable to access camera. Please check permissions or select the correct one.', 'error');
+    }).catch(err => {
+        console.error('Unable to get cameras:', err);
+        showGlobalToast('Camera access denied. Please check permissions.', 'error');
     });
 }
-
 
 // ======================================================================
 // (Request #2 & #3) IN-UPDATE ANG FUNCTION NA ITO
