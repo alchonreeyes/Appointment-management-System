@@ -140,7 +140,7 @@ if (isset($_POST['action'])) {
             $service_id = $current_appt['service_id'];
             $appointment_date = $current_appt['appointment_date'];
             
-            $client_name = $current_appt['full_name'];
+    $client_name = decrypt_data($current_appt['full_name']);
             $client_email = $current_appt['email']; // Ito ay galing na sa JOIN
             $service_name = $current_appt['service_name'];
             $appointment_time = $current_appt['appointment_time'];
@@ -487,7 +487,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                     <h1>Appointment Completed</h1>
                 </div>
                 <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . ",</p>
+                    <p class='greeting'>Hi, " . htmlspecialchars(decrypt_data($current_appt['full_name'] ?? $client_name)) . ",</p>
                     <p>This email serves as confirmation that you have successfully completed your appointment at <b>Eye Master Optical Clinic</b>. We hope you had a pleasant experience.</p>
                     
                     <div class='details'>

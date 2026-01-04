@@ -7,6 +7,9 @@ require_once __DIR__ . '/../database.php';
 // BAGO: I-load ang PHPMailer gamit ang Composer autoload
 require_once __DIR__ . '/../vendor/autoload.php';
 
+// BAGO: I-load ang PHPMailer gamit ang Composer autoload
+require_once __DIR__ . '/../../config/encryption_util.php';
+
 // BAGO: Idagdag ang PHPMailer classes
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
@@ -138,10 +141,12 @@ if (isset($_POST['action'])) {
             $service_id = $current_appt['service_id'];
             $appointment_date = $current_appt['appointment_date'];
             
-            $client_name = $current_appt['full_name'];
+
+            $client_name = decrypt_data($current_appt['full_name']);
             $client_email = $current_appt['email']; // Ito ay galing na sa JOIN
             $service_name = $current_appt['service_name'];
             $appointment_time = $current_appt['appointment_time'];
+            
 
             $stmt_old_status = $conn->prepare("SELECT status_name FROM appointmentstatus WHERE status_id = ?");
             if (!$stmt_old_status) {
@@ -248,7 +253,6 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
 
                         $mail->setFrom('no-reply@eyecareclinic.com', 'Eye Master Optical Clinic');
                         $mail->addAddress($client_email, $client_name); 
-
                         $mail->isHTML(true);
                         $mail->Subject = 'Appointment Confirmed - Eye Master Optical Clinic (ID: #' . $id . ')'; 
                         
@@ -485,7 +489,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                     <h1>Appointment Completed</h1>
                 </div>
                 <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . ",</p>
+                    <p class='greeting'>Hi, " . htmlspecialchars(decrypt_data($current_appt['full_name'] ?? $client_name)) . ",</p>
                     <p>This email serves as confirmation that you have successfully completed your appointment at <b>Eye Master Optical Clinic</b>. We hope you had a pleasant experience.</p>
                     
                     <div class='details'>

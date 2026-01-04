@@ -725,3 +725,39 @@ p {
     border-radius: 8px;
     margin-top: 20px;
 }
+/* =========================================
+   ZOOM EFFECT SA MGA IMAGES (FRAMES)
+   ========================================= */
+
+/* 1. Base Style (Normal state) */
+.preference-option-image img,       /* Images sa step 4 selection */
+.product-card img,                  /* Images sa loob ng "See More" modal */
+.modal-body img {                   /* General images sa modal */
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth na bouncy effect */
+    transform-origin: center center;
+    position: relative;
+    z-index: 1; /* Mababang layer */
+    cursor: zoom-in; /* Magiging magnifying glass ang cursor */
+}
+
+/* 2. Hover State (Pag tinapat ang mouse) */
+.preference-option-image:hover img,
+.product-card:hover img,
+.modal-body img:hover {
+    transform: scale(2.5); /* PALAKIHIN NG 2.5x (Adjust mo kung sobrang laki) */
+    z-index: 9999;         /* Siguraduhing nasa ibabaw siya ng lahat ng text/divs */
+    box-shadow: 0 15px 30px rgba(0,0,0,0.4); /* Lagyan ng shadow para umangat */
+    border-radius: 8px;    /* Pakinisin ang kanto */
+    background-color: #fff; /* White background para hindi transparent */
+    border: 1px solid #ccc;
+}
+
+/* 3. Special fix para sa "See More" Modal Grid */
+/* Sisiguraduhin natin na hindi matatakpan ng border ng modal ang lumaking image */
+.product-modal-content {
+    overflow: visible !important; /* Payagan lumampas ang image sa box */
+}
+
+.product-grid {
+    overflow: visible !important;
+}

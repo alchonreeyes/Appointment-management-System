@@ -133,7 +133,7 @@ $brandsCol2 = array_slice($allBrands, 5, 5);
         <div class="footer-about">
             <h3>Eye Master</h3>
             <p>
-                Providing quality eye care services and products since 2024. 
+                Providing quality eye care services and products since 1960. 
                 Your vision is our priority. Visit our clinic for a comprehensive 
                 eye examination and a wide range of eyewear.
             </p>

@@ -16,7 +16,6 @@ if (!isset($_SESSION['client_id'])) {
 }
 
 
-
 $db = new Database();
 $pdo = $db->getConnection();
 

@@ -123,7 +123,7 @@ if (isset($_SESSION['client_id'])) {
                 type="number" 
                 name="age" 
                 placeholder="Enter Age" 
-                min="1"
+                min="18"
                 max="120"
                 required
             >
@@ -193,6 +193,9 @@ if (isset($_SESSION['client_id'])) {
     <span class="checkmark"></span>
     I agree to the <a href="#" class="link" onclick="openModal(event, 'termsModal')">Terms and Conditions</a>
 </label>
+<br>
+<br>
+
 
 <label class="checkbox-container">
     <input type="checkbox" id="policy" required>

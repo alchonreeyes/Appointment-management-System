@@ -61,12 +61,12 @@ include '../config/db.php';
                     <div class="avatar-placeholder">Dr</div>
                 </div>
                 <div class="doc-info">
-                    <h3>Dr. Aliyah Cruz</h3>
+                    <h3>Dr. Dorothy Koa</h3>
                     <span class="role">Chief Optometrist</span>
-                    <p>With over a decade of clinical experience, Dr. Cruz specializes in pediatric optometry and progressive lens fitting. She ensures every patient leaves with 20/20 confidence.</p>
-                    <div class="doc-socials">
+                    <p>With over a decade of clinical experience, Dr. Koa specializes in pediatric optometry and progressive lens fitting. She ensures every patient leaves with 20/20 confidence.</p>
+                    <!-- <div class="doc-socials">
                         <i class="fa-solid fa-user-doctor"></i> Lic. #0012345
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>
@@ -81,7 +81,7 @@ include '../config/db.php';
                 <div class="value-card">
                     <div class="icon-box"><i class="fa-solid fa-shield-halved"></i></div>
                     <h3>Data Privacy</h3>
-                    <p>Your medical records and eye grade history are stored in an encrypted database. We strictly follow data privacy laws.</p>
+                    <p>We keep your records safe and private — only our clinic staff can access them.</p>
                 </div>
 
                 <div class="value-card">
