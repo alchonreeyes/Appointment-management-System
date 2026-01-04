@@ -193,26 +193,57 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="text-center" style="margin-bottom: 30px;">
         <h3 style="font-size: 1.2rem; color: #999; text-transform: uppercase; letter-spacing: 2px;">Our Premium Partners</h3>
     </div>
-    <div class="marquee-container">
-        <div class="marquee-content">
-            <span class="brand-item">RAY-BAN</span>
-            <span class="brand-item">OAKLEY</span>
-            <span class="brand-item">GUCCI</span>
-            <span class="brand-item">PRADA</span>
-            <span class="brand-item">TOM FORD</span>
-            <span class="brand-item">VERSACE</span>
-            <span class="brand-item">BURBERRY</span>
-            <span class="brand-item">COACH</span>
-            <span class="brand-item">RAY-BAN</span>
-            <span class="brand-item">OAKLEY</span>
-            <span class="brand-item">GUCCI</span>
-            <span class="brand-item">PRADA</span>
-            <span class="brand-item">TOM FORD</span>
-            <span class="brand-item">VERSACE</span>
-            <span class="brand-item">BURBERRY</span>
-            <span class="brand-item">COACH</span>
+    <?php
+    // Fetch distinct brands from products table and render marquee
+    $brandStmt = $pdo->prepare("
+        SELECT DISTINCT brand 
+        FROM products 
+        WHERE brand IS NOT NULL AND TRIM(brand) <> '' 
+        ORDER BY brand ASC
+    ");
+    $brandStmt->execute();
+    $brands = $brandStmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $brandCount = count($brands);
+    // Minimum visible items to create a continuous feel; adjust as needed
+    $minItems = 8;
+
+    if ($brandCount > 0):
+        // Determine repeats so even a few brands will loop continuously
+        $repeats = 1;
+        if ($brandCount < $minItems) {
+            $repeats = (int) ceil($minItems / $brandCount) + 1; // +1 to ensure overlap for smoothness
+        } else {
+            // still repeat at least twice for continuous animation
+            $repeats = 2;
+        }
+    ?>
+        <div class="marquee-container" style="overflow: hidden; white-space: nowrap;">
+            <div class="marquee-content" style="display: inline-block; animation: marquee 20s linear infinite;">
+                <?php
+                for ($r = 0; $r < $repeats; $r++):
+                    foreach ($brands as $brand): ?>
+                        <span class="brand-item" style="display: inline-block; padding: 0 24px; color:#555; font-weight:600;">
+                            <?= htmlspecialchars($brand, ENT_QUOTES, 'UTF-8') ?>
+                        </span>
+                    <?php
+                    endforeach;
+                endfor;
+                ?>
+            </div>
         </div>
-    </div>
+
+        <style>
+            /* Simple marquee keyframes; adjust duration as needed */
+            @keyframes marquee {
+                0% { transform: translateX(0); }
+                100% { transform: translateX(-50%); } /* -50% works because content is duplicated/long enough */
+            }
+            /* If you prefer slower/faster scrolling, change duration on .marquee-content animation */
+        </style>
+    <?php else: ?>
+        <p class="text-center">No partner brands found.</p>
+    <?php endif; ?>
 </section>
 
 <section class="section-padding" style="background: #f4f4f4;">
