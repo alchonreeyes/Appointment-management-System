@@ -86,75 +86,56 @@
     }
 
     /* =========================================
-       GENERATE SUMMARY FUNCTION
-       ========================================= */
-    function updateSummaryView() {
-        console.log("Generating Summary..."); 
+   IMPROVED SUMMARY FUNCTION - MULTI-TYPE SUPPORT
+   ========================================= */
+function updateSummaryView() {
+    console.log("Generating Summary..."); 
 
-        const summaryBox = document.getElementById('finalSummary');
-        if (!summaryBox) return;
+    const summaryBox = document.getElementById('finalSummary');
+    if (!summaryBox) return;
 
-        // 1. Get Personal Info
-        const name = document.querySelector('input[name="full_name"]')?.value || "N/A";
-        const age = document.querySelector('input[name="age"]')?.value || "N/A";
-        const gender = document.querySelector('select[name="gender"]')?.value || "N/A";
-        const phone = document.querySelector('input[name="contact_number"]')?.value || "N/A";
+    // 1. Get Personal Info (Common to all)
+    const name = document.querySelector('input[name="full_name"]')?.value || "N/A";
+    const age = document.querySelector('input[name="age"]')?.value || "N/A";
+    const gender = document.querySelector('select[name="gender"]')?.value || "N/A";
+    const phone = document.querySelector('input[name="contact_number"]')?.value || "N/A";
+    const occupation = document.querySelector('input[name="occupation"]')?.value || "N/A";
 
-        // 2. Get Selected Products
+    // 2. Detect Appointment Type by checking which fields exist
+    const isNormalExam = document.querySelector('input[name="wear_glasses"]') !== null;
+    const isMedicalCert = document.querySelector('input[name="certificate_purpose"]') !== null;
+    const isIshihara = document.querySelector('input[name="ishihara_test_type"]') !== null;
+
+    let specificContent = '';
+
+    // ========================================
+    // TYPE 1: NORMAL EYE EXAM
+    // ========================================
+    if (isNormalExam) {
         const productChecks = Array.from(document.querySelectorAll('input[name="selected_products[]"]:checked'));
         const productsList = productChecks.length > 0 
             ? productChecks.map(cb => cb.value).join('<br>') 
             : "None selected";
 
-        // 3. Get Eye History
         const glassesEl = document.querySelector('input[name="wear_glasses"]:checked');
         const glasses = glassesEl ? glassesEl.value : "No";
 
         const contactsEl = document.querySelector('input[name="wear_contact_lenses"]:checked');
         const contacts = contactsEl ? contactsEl.value : "No";
 
-        // Inject HTML
-        summaryBox.innerHTML = `
-        <style>
-          .ams-review-summary { font-family: system-ui, sans-serif; color: #0f172a; max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e6edf3; border-radius: 12px; overflow: hidden; }
-          .ams-review-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #eef2f7; }
-          .ams-review-title { font-size: 16px; font-weight: 600; color: #0b1220; }
-          .ams-summary-body { padding: 18px 22px; display: grid; grid-template-columns: 1fr; gap: 14px; }
-          .ams-summary-section { background: #fbfdff; border: 1px solid #eef6fa; padding: 12px 14px; border-radius: 10px; }
-          .ams-summary-section--wide { grid-column: 1 / -1; }
-          .ams-summary-title { font-size: 13px; font-weight: 700; color: #0b3a4a; margin-bottom: 8px; }
-          .ams-summary-row { display: flex; gap: 10px; justify-content: space-between; padding: 6px 0; border-top: 1px dashed transparent; }
-          .ams-summary-row + .ams-summary-row { border-top-color: #eef3f6; }
-          .ams-summary-label { font-size: 13px; color: #334155; font-weight: 600; }
-          .ams-summary-value { font-size: 13px; color: #0f172a; text-align: right; }
-          .ams-summary-footer { padding: 12px 22px; background: #ffffff; border-top: 1px solid #eef2f7; text-align: right; }
-          .ams-muted { color:#64748b; font-size:12px; }
-          @media (min-width:700px) { .ams-summary-body { grid-template-columns: 1fr 1fr; } }
-        </style>
-
-        <div class="ams-review-summary">
-          <div class="ams-review-header">
-            <div class="ams-review-title">Review & Confirm</div>
-            <div class="ams-muted">Final Step</div>
-          </div>
-
-          <div class="ams-summary-body">
-            <!-- SECTION 1: PATIENT DETAILS -->
-            <div class="ams-summary-section ams-summary-section--wide">
-              <div class="ams-summary-title">Patient Details</div>
-              <div class="ams-summary-row"><div class="ams-summary-label">Name</div><div class="ams-summary-value">${name}</div></div>
-              <div class="ams-summary-row"><div class="ams-summary-label">Age / Gender</div><div class="ams-summary-value">${age} / ${gender}</div></div>
-              <div class="ams-summary-row"><div class="ams-summary-label">Phone</div><div class="ams-summary-value">${phone}</div></div>
-            </div>
-
-            <!-- SECTION 2: EYE HISTORY -->
+        specificContent = `
             <div class="ams-summary-section ams-summary-section--wide">
               <div class="ams-summary-title">Eye History</div>
-              <div class="ams-summary-row"><div class="ams-summary-label">Wears Glasses?</div><div class="ams-summary-value">${glasses}</div></div>
-              <div class="ams-summary-row"><div class="ams-summary-label">Wears Contacts?</div><div class="ams-summary-value">${contacts}</div></div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Wears Glasses?</div>
+                <div class="ams-summary-value">${glasses}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Wears Contacts?</div>
+                <div class="ams-summary-value">${contacts}</div>
+              </div>
             </div>
 
-            <!-- SECTION 3: SELECTED GLASSES -->
             <div class="ams-summary-section ams-summary-section--wide">
               <div class="ams-summary-title">Selected Eye Glasses</div>
               <div class="ams-summary-row">
@@ -162,14 +143,128 @@
                 <div class="ams-summary-value" style="text-align: right;">${productsList}</div>
               </div>
             </div>
-          </div>
-
-          <div class="ams-summary-footer">
-            <span class="ams-muted">Make sure all information is correct.</span>
-          </div>
-        </div>
         `;
     }
+
+    // ========================================
+    // TYPE 2: MEDICAL CERTIFICATE
+    // ========================================
+    else if (isMedicalCert) {
+        const certPurposeEl = document.querySelector('input[name="certificate_purpose"]:checked');
+        const certPurpose = certPurposeEl ? certPurposeEl.value : "Not specified";
+        
+        const certOther = document.querySelector('input[name="certificate_other"]')?.value || "";
+        const purposeDisplay = certPurpose === "Other" && certOther ? certOther : certPurpose;
+
+        specificContent = `
+            <div class="ams-summary-section ams-summary-section--wide">
+              <div class="ams-summary-title">Certificate Details</div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Purpose</div>
+                <div class="ams-summary-value">${purposeDisplay}</div>
+              </div>
+            </div>
+        `;
+    }
+
+    // ========================================
+    // TYPE 3: ISHIHARA TEST
+    // ========================================
+    else if (isIshihara) {
+        const testTypeEl = document.querySelector('input[name="ishihara_test_type"]:checked');
+        const testType = testTypeEl ? testTypeEl.value : "Not specified";
+
+        const reasonEl = document.querySelector('input[name="ishihara_reason"]');
+        const reason = reasonEl?.value || "Not provided";
+
+        const prevIssuesEl = document.querySelector('input[name="previous_color_issues"]:checked');
+        const prevIssues = prevIssuesEl ? prevIssuesEl.value : "Not specified";
+
+        const notesEl = document.querySelector('textarea[name="ishihara_notes"]');
+        const notes = notesEl?.value || "None";
+
+        specificContent = `
+            <div class="ams-summary-section ams-summary-section--wide">
+              <div class="ams-summary-title">Ishihara Test Details</div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Test Type</div>
+                <div class="ams-summary-value">${testType}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Reason for Test</div>
+                <div class="ams-summary-value">${reason}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Previous Color Issues?</div>
+                <div class="ams-summary-value">${prevIssues}</div>
+              </div>
+              ${notes !== "None" ? `
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Additional Notes</div>
+                <div class="ams-summary-value">${notes}</div>
+              </div>
+              ` : ''}
+            </div>
+        `;
+    }
+
+    // 3. Build Complete Summary
+    summaryBox.innerHTML = `
+    <style>
+      .ams-review-summary { font-family: system-ui, sans-serif; color: #0f172a; max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e6edf3; border-radius: 12px; overflow: hidden; }
+      .ams-review-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #eef2f7; }
+      .ams-review-title { font-size: 16px; font-weight: 600; color: #0b1220; }
+      .ams-summary-body { padding: 18px 22px; display: grid; grid-template-columns: 1fr; gap: 14px; }
+      .ams-summary-section { background: #fbfdff; border: 1px solid #eef6fa; padding: 12px 14px; border-radius: 10px; }
+      .ams-summary-section--wide { grid-column: 1 / -1; }
+      .ams-summary-title { font-size: 13px; font-weight: 700; color: #0b3a4a; margin-bottom: 8px; }
+      .ams-summary-row { display: flex; gap: 10px; justify-content: space-between; padding: 6px 0; border-top: 1px dashed transparent; }
+      .ams-summary-row + .ams-summary-row { border-top-color: #eef3f6; }
+      .ams-summary-label { font-size: 13px; color: #334155; font-weight: 600; }
+      .ams-summary-value { font-size: 13px; color: #0f172a; text-align: right; word-break: break-word; }
+      .ams-summary-footer { padding: 12px 22px; background: #ffffff; border-top: 1px solid #eef2f7; text-align: right; }
+      .ams-muted { color:#64748b; font-size:12px; }
+      @media (min-width:700px) { .ams-summary-body { grid-template-columns: 1fr 1fr; } }
+    </style>
+
+    <div class="ams-review-summary">
+      <div class="ams-review-header">
+        <div class="ams-review-title">Review & Confirm</div>
+        <div class="ams-muted">Final Step</div>
+      </div>
+
+      <div class="ams-summary-body">
+        <!-- SECTION: PATIENT DETAILS (Common to All) -->
+        <div class="ams-summary-section ams-summary-section--wide">
+          <div class="ams-summary-title">Patient Details</div>
+          <div class="ams-summary-row">
+            <div class="ams-summary-label">Name</div>
+            <div class="ams-summary-value">${name}</div>
+          </div>
+          <div class="ams-summary-row">
+            <div class="ams-summary-label">Age / Gender</div>
+            <div class="ams-summary-value">${age} / ${gender}</div>
+          </div>
+          <div class="ams-summary-row">
+            <div class="ams-summary-label">Phone</div>
+            <div class="ams-summary-value">${phone}</div>
+          </div>
+          <div class="ams-summary-row">
+            <div class="ams-summary-label">Occupation</div>
+            <div class="ams-summary-value">${occupation}</div>
+          </div>
+        </div>
+
+        <!-- TYPE-SPECIFIC CONTENT -->
+        ${specificContent}
+      </div>
+
+      <div class="ams-summary-footer">
+        <span class="ams-muted">Make sure all information is correct.</span>
+      </div>
+    </div>
+    `;
+}
 
     function showStep(index) {
       steps.forEach((s, i) => s.classList.toggle('active', i === index));

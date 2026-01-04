@@ -416,24 +416,22 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         </p>
     </div>
 </div>
-
 <div id="modal-terms" class="legal-modal">
     <div class="legal-modal-content">
         <button type="button" class="close-legal" onclick="closeLegalModal('modal-terms')">&times;</button>
-        <h3 style="margin-top:0; color:#004aad;">Terms & Privacy Policy</h3>
-        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6;">
-            <p><strong>1. Data Privacy</strong><br>
-            Your records are kept strictly confidential in compliance with the Data Privacy Act of 2012.</p>
+        <h3 style="margin-top:0; color:#004aad;">Ishihara Test Disclaimer</h3>
+        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6; text-align: left;">
+            <p><strong>1. Screen Calibration Disclaimer</strong><br>
+            Online color blindness screening may vary based on your device's screen brightness, blue light filter, or color settings.</p>
             
-            <p><strong>2. Cancellations</strong><br>
-            Please notify us at least 24 hours in advance for cancellations.</p>
+            <p><strong>2. Not a Final Diagnosis</strong><br>
+            The results of any online interaction are preliminary. A final, official diagnosis of color vision deficiency must be conducted in-clinic using physical Ishihara plates.</p>
             
-            <p><strong>3. Accuracy</strong><br>
-            You certify that the information provided is accurate to ensure proper medical assessment.</p>
+            <p><strong>3. Clinic Visit</strong><br>
+            By booking this service, you agree to undergo a controlled lighting examination at Eye Master Optical for accurate results.</p>
         </div>
     </div>
 </div>
-
 <script>
     function openLegalModal(event, modalId) {
         // THIS LINE STOPS THE CHECKBOX FROM CHECKING WHEN CLICKING THE LINK

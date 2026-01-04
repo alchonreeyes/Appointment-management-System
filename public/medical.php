@@ -422,16 +422,19 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 <div id="modal-terms" class="legal-modal">
     <div class="legal-modal-content">
         <button type="button" class="close-legal" onclick="closeLegalModal('modal-terms')">&times;</button>
-        <h3 style="margin-top:0; color:#004aad;">Terms & Privacy Policy</h3>
-        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6;">
-            <p><strong>1. Data Privacy</strong><br>
-            Your records are kept strictly confidential in compliance with the Data Privacy Act of 2012.</p>
+        <h3 style="margin-top:0; color:#004aad;">Medical Certificate Terms</h3>
+        <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6; text-align: left;">
+            <p><strong>1. Physical Examination Requirement</strong><br>
+            A medical certificate will only be issued after a thorough physical eye examination by our licensed optometrist/ophthalmologist.</p>
             
-            <p><strong>2. Cancellations</strong><br>
-            Please notify us at least 24 hours in advance for cancellations.</p>
+            <p><strong>2. Purpose of Certificate</strong><br>
+            The certificate is issued for specific purposes (e.g., LTO, Employment, School). Please ensure you provide the correct purpose during your visit.</p>
             
-            <p><strong>3. Accuracy</strong><br>
-            You certify that the information provided is accurate to ensure proper medical assessment.</p>
+            <p><strong>3. Validity</strong><br>
+            The findings stated in the medical certificate are based on the client's condition on the day of the exam. Validity periods may vary depending on the requiring agency.</p>
+            
+            <p><strong>4. Confidentiality</strong><br>
+            In compliance with the Data Privacy Act of 2012, your medical records used for this certificate are kept strictly confidential.</p>
         </div>
     </div>
 </div>
