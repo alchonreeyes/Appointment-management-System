@@ -44,9 +44,6 @@ if (file_exists($actionFile)) {
     </div>
 
 
-<div class="vertical-bar">
-    <div class="circle"></div>
-</div>
 
 <div class="popup-overlay" onclick="closePopup()"></div>
 
@@ -200,9 +197,6 @@ if (file_exists($actionFile)) {
         </div>
     </div>
 </div>
-<!-- TEMPORARY TEST BUTTON -->
-<button onclick="testQRCode()">Test QR Code 148</button>
-
 <script>
 function testQRCode() {
     // Test with the ID we know exists

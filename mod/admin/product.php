@@ -866,7 +866,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <p id="actionLoaderText">Processing...</p>
         </div>
     </div>
-    <div class="vertical-bar"><div class="circle"></div></div>
+
     <header>
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo">

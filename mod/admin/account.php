@@ -565,7 +565,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 </div> -->
 <div id="main-content" style="display: none;">
 
-    <div class="vertical-bar"><div class="circle"></div></div>
     <header>
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>

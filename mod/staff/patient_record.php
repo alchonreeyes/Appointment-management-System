@@ -713,7 +713,6 @@ select, input[type="date"], input[type="text"] {
 </div>
 
 <div id="main-content" style="display: none;"> 
-    <div class="vertical-bar"><div class="circle"></div></div>
     
     <header>
       <div class="logo-section">

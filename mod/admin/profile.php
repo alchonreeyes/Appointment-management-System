@@ -423,7 +423,6 @@ nav a.active { background:#dc3545; color:#fff; }
 </div>
 <div id="main-content" style="display: none;">
 
-    <div class="vertical-bar"><div class="circle"></div></div>
     <header>
       <div class="logo-section">
         <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
@@ -682,8 +681,8 @@ nav a.active { background:#dc3545; color:#fff; }
            setTimeout(() => { window.location.href = '../../public/login.php'; }, 1000); // Correct redirect
          } else { showToast('Logout failed.', 'error'); }
        })
-       .catch(err => { console.error(err); showToast('Logout network error.', 'error'); setTimeout(() => { window.location.href = '../login.php'; }, 1500); }); // Correct redirect
-    }
+       .catch(err => { console.error(err); showToast('Logout network error.', 'error'); setTimeout(() => { window.location.href = '../../public/login.php'; }, 1500); }); // Correct redirect
+    }   
     
     // --- Modal closing listeners remain the same ---
     document.addEventListener('click', function(e){
@@ -763,13 +762,26 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <script>
-    history.replaceState(null, null, location.href);
-    history.pushState(null, null, location.href);
-    window.onpopstate = function () {
-        history.go(1);
-    };
+    // Prevent going back to profile after logout
+    window.addEventListener('pageshow', function(event) {
+        // If page is loaded from cache (back button pressed after logout)
+        if (event.persisted) {
+            // Check if user is still logged in
+            fetch('check_session.php')
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.logged_in) {
+                        // Redirect to login if session expired
+                        window.location.href = '../../public/login.php';
+                    }
+                })
+                .catch(() => {
+                    // On error, assume logged out
+                    window.location.href = '../../public/login.php';
+                });
+        }
+    });
 </script>
-
 
 </body>
 </html>
