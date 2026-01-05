@@ -3,6 +3,81 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     /* =========================================
+       CLOSURE DATES - FETCH FROM ADMIN
+       ========================================= */
+    let closedDates = [];
+    
+    async function fetchClosedDates() {
+      try {
+        const response = await fetch('../actions/get-closed-dates.php');
+        const data = await response.json();
+        
+        if (data.success) {
+          closedDates = data.closed_dates;
+          console.log('✅ Loaded closed dates:', closedDates);
+          
+          // Apply restrictions to all date inputs
+          applyClosedDatesRestriction();
+        }
+      } catch (error) {
+        console.error('❌ Failed to fetch closed dates:', error);
+      }
+    }
+    
+    function applyClosedDatesRestriction() {
+      const dateInputs = document.querySelectorAll(".date-input");
+      
+      dateInputs.forEach(input => {
+        // Listen for date changes
+        input.addEventListener('input', function(e) {
+          const selectedDate = e.target.value;
+          
+          if (closedDates.includes(selectedDate)) {
+            const index = parseInt(e.target.dataset.index);
+            
+            // Clear the invalid date
+            e.target.value = '';
+            appointments[index].date = '';
+            
+            // Show error message
+            const message = document.getElementById(`slot-message-${index}`);
+            const badge = document.getElementById(`slot-badge-${index}`);
+            
+            if (message && badge) {
+              badge.style.background = '#fee2e2';
+              badge.style.color = '#991b1b';
+              badge.textContent = 'Clinic Closed';
+              
+              message.style.display = 'block';
+              message.style.background = '#fef2f2';
+              message.style.color = '#991b1b';
+              message.style.border = '1px solid #fecaca';
+              message.style.padding = '8px';
+              message.style.borderRadius = '4px';
+              message.textContent = '❌ Sorry, the clinic is closed on this date. Please choose another day.';
+            }
+            
+            alert('⚠️ The clinic is closed on ' + formatDate(selectedDate) + '. Please select another date.');
+            updateSlotDisplay(index);
+          }
+        });
+      });
+    }
+    
+    function formatDate(dateStr) {
+      const date = new Date(dateStr + 'T00:00:00');
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Initialize - fetch closed dates on page load
+    fetchClosedDates();
+
+    /* =========================================
        DYNAMIC APPOINTMENT ROWS
        ========================================= */
     const addBtn = document.getElementById('add-appt-btn');
@@ -44,7 +119,6 @@
         appointments[index].date = "";
         appointments[index].time = "";
         
-        // Update all displays after removing
         for (let i = 0; i < appointments.length; i++) {
           updateSlotDisplay(i);
         }
@@ -52,7 +126,7 @@
     };
 
     /* =========================================
-       1. INITIALIZATION & VARIABLES
+       INITIALIZATION & VARIABLES
        ========================================= */
     const steps = Array.from(document.querySelectorAll('.form-step'));
     const nextBtns = Array.from(document.querySelectorAll('.next-btn'));
@@ -71,7 +145,7 @@
     ];
     
     /* =========================================
-       2. NAVIGATION & VALIDATION LOGIC
+       NAVIGATION & VALIDATION LOGIC
        ========================================= */
     
     function updateProgress(stepIndex) {
@@ -85,226 +159,195 @@
       });
     }
 
-    /* =========================================
-   IMPROVED SUMMARY FUNCTION - MULTI-TYPE SUPPORT
-   ========================================= */
-function updateSummaryView() {
-    console.log("Generating Summary..."); 
+    function updateSummaryView() {
+        console.log("Generating Summary..."); 
 
-    const summaryBox = document.getElementById('finalSummary');
-    if (!summaryBox) return;
+        const summaryBox = document.getElementById('finalSummary');
+        if (!summaryBox) return;
 
-    // 1. Get Personal Info (Common to all)
-    const name = document.querySelector('input[name="full_name"]')?.value || "N/A";
-    const age = document.querySelector('input[name="age"]')?.value || "N/A";
-    const gender = document.querySelector('select[name="gender"]')?.value || "N/A";
-    const phone = document.querySelector('input[name="contact_number"]')?.value || "N/A";
-    const occupation = document.querySelector('input[name="occupation"]')?.value || "N/A";
+        const name = document.querySelector('input[name="full_name"]')?.value || "N/A";
+        const age = document.querySelector('input[name="age"]')?.value || "N/A";
+        const gender = document.querySelector('select[name="gender"]')?.value || "N/A";
+        const phone = document.querySelector('input[name="contact_number"]')?.value || "N/A";
+        const occupation = document.querySelector('input[name="occupation"]')?.value || "N/A";
 
-    // 2. Detect Appointment Type by checking which fields exist
-    const isNormalExam = document.querySelector('input[name="wear_glasses"]') !== null;
-    const isMedicalCert = document.querySelector('input[name="certificate_purpose"]') !== null;
-    const isIshihara = document.querySelector('input[name="ishihara_test_type"]') !== null;
+        const isNormalExam = document.querySelector('input[name="wear_glasses"]') !== null;
+        const isMedicalCert = document.querySelector('input[name="certificate_purpose"]') !== null;
+        const isIshihara = document.querySelector('input[name="ishihara_test_type"]') !== null;
 
-    let specificContent = '';
+        let specificContent = '';
 
-    // ========================================
-    // TYPE 1: NORMAL EYE EXAM
-    // ========================================
-    if (isNormalExam) {
-        const productChecks = Array.from(document.querySelectorAll('input[name="selected_products[]"]:checked'));
-        const productsList = productChecks.length > 0 
-            ? productChecks.map(cb => cb.value).join('<br>') 
-            : "None selected";
+        if (isNormalExam) {
+            const productChecks = Array.from(document.querySelectorAll('input[name="selected_products[]"]:checked'));
+            const productsList = productChecks.length > 0 
+                ? productChecks.map(cb => cb.value).join('<br>') 
+                : "None selected";
 
-        const glassesEl = document.querySelector('input[name="wear_glasses"]:checked');
-        const glasses = glassesEl ? glassesEl.value : "No";
+            const glassesEl = document.querySelector('input[name="wear_glasses"]:checked');
+            const glasses = glassesEl ? glassesEl.value : "No";
 
-        const contactsEl = document.querySelector('input[name="wear_contact_lenses"]:checked');
-        const contacts = contactsEl ? contactsEl.value : "No";
+            const contactsEl = document.querySelector('input[name="wear_contact_lenses"]:checked');
+            const contacts = contactsEl ? contactsEl.value : "No";
 
-        specificContent = `
-            <div class="ams-summary-section ams-summary-section--wide">
-              <div class="ams-summary-title">Eye History</div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Wears Glasses?</div>
-                <div class="ams-summary-value">${glasses}</div>
-              </div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Wears Contacts?</div>
-                <div class="ams-summary-value">${contacts}</div>
-              </div>
-            </div>
+            specificContent = `
+                <div class="ams-summary-section ams-summary-section--wide">
+                  <div class="ams-summary-title">Eye History</div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Wears Glasses?</div>
+                    <div class="ams-summary-value">${glasses}</div>
+                  </div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Wears Contacts?</div>
+                    <div class="ams-summary-value">${contacts}</div>
+                  </div>
+                </div>
 
-            <div class="ams-summary-section ams-summary-section--wide">
-              <div class="ams-summary-title">Selected Eye Glasses</div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label" style="align-self: flex-start;">Frames to Try:</div>
-                <div class="ams-summary-value" style="text-align: right;">${productsList}</div>
-              </div>
-            </div>
-        `;
-    }
+                <div class="ams-summary-section ams-summary-section--wide">
+                  <div class="ams-summary-title">Selected Eye Glasses</div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label" style="align-self: flex-start;">Frames to Try:</div>
+                    <div class="ams-summary-value" style="text-align: right;">${productsList}</div>
+                  </div>
+                </div>
+            `;
+        } else if (isMedicalCert) {
+            const certPurposeEl = document.querySelector('input[name="certificate_purpose"]:checked');
+            const certPurpose = certPurposeEl ? certPurposeEl.value : "Not specified";
+            
+            const certOther = document.querySelector('input[name="certificate_other"]')?.value || "";
+            const purposeDisplay = certPurpose === "Other" && certOther ? certOther : certPurpose;
 
-    // ========================================
-    // TYPE 2: MEDICAL CERTIFICATE
-    // ========================================
-    else if (isMedicalCert) {
-        const certPurposeEl = document.querySelector('input[name="certificate_purpose"]:checked');
-        const certPurpose = certPurposeEl ? certPurposeEl.value : "Not specified";
-        
-        const certOther = document.querySelector('input[name="certificate_other"]')?.value || "";
-        const purposeDisplay = certPurpose === "Other" && certOther ? certOther : certPurpose;
+            specificContent = `
+                <div class="ams-summary-section ams-summary-section--wide">
+                  <div class="ams-summary-title">Certificate Details</div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Purpose</div>
+                    <div class="ams-summary-value">${purposeDisplay}</div>
+                  </div>
+                </div>
+            `;
+        } else if (isIshihara) {
+            const testTypeEl = document.querySelector('input[name="ishihara_test_type"]:checked');
+            const testType = testTypeEl ? testTypeEl.value : "Not specified";
 
-        specificContent = `
-            <div class="ams-summary-section ams-summary-section--wide">
-              <div class="ams-summary-title">Certificate Details</div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Purpose</div>
-                <div class="ams-summary-value">${purposeDisplay}</div>
-              </div>
-            </div>
-        `;
-    }
+            const reasonEl = document.querySelector('input[name="ishihara_reason"]');
+            const reason = reasonEl?.value || "Not provided";
 
-    // ========================================
-    // TYPE 3: ISHIHARA TEST
-    // ========================================
-    else if (isIshihara) {
-        const testTypeEl = document.querySelector('input[name="ishihara_test_type"]:checked');
-        const testType = testTypeEl ? testTypeEl.value : "Not specified";
+            const prevIssuesEl = document.querySelector('input[name="previous_color_issues"]:checked');
+            const prevIssues = prevIssuesEl ? prevIssuesEl.value : "Not specified";
 
-        const reasonEl = document.querySelector('input[name="ishihara_reason"]');
-        const reason = reasonEl?.value || "Not provided";
+            const notesEl = document.querySelector('textarea[name="ishihara_notes"]');
+            const notes = notesEl?.value || "None";
 
-        const prevIssuesEl = document.querySelector('input[name="previous_color_issues"]:checked');
-        const prevIssues = prevIssuesEl ? prevIssuesEl.value : "Not specified";
+            specificContent = `
+                <div class="ams-summary-section ams-summary-section--wide">
+                  <div class="ams-summary-title">Ishihara Test Details</div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Test Type</div>
+                    <div class="ams-summary-value">${testType}</div>
+                  </div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Reason for Test</div>
+                    <div class="ams-summary-value">${reason}</div>
+                  </div>
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Previous Color Issues?</div>
+                    <div class="ams-summary-value">${prevIssues}</div>
+                  </div>
+                  ${notes !== "None" ? `
+                  <div class="ams-summary-row">
+                    <div class="ams-summary-label">Additional Notes</div>
+                    <div class="ams-summary-value">${notes}</div>
+                  </div>
+                  ` : ''}
+                </div>
+            `;
+        }
 
-        const notesEl = document.querySelector('textarea[name="ishihara_notes"]');
-        const notes = notesEl?.value || "None";
+        summaryBox.innerHTML = `
+        <style>
+          .ams-review-summary { font-family: system-ui, sans-serif; color: #0f172a; max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e6edf3; border-radius: 12px; overflow: hidden; }
+          .ams-review-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #eef2f7; }
+          .ams-review-title { font-size: 16px; font-weight: 600; color: #0b1220; }
+          .ams-summary-body { padding: 18px 22px; display: grid; grid-template-columns: 1fr; gap: 14px; }
+          .ams-summary-section { background: #fbfdff; border: 1px solid #eef6fa; padding: 12px 14px; border-radius: 10px; }
+          .ams-summary-section--wide { grid-column: 1 / -1; }
+          .ams-summary-title { font-size: 13px; font-weight: 700; color: #0b3a4a; margin-bottom: 8px; }
+          .ams-summary-row { display: flex; gap: 10px; justify-content: space-between; padding: 6px 0; border-top: 1px dashed transparent; }
+          .ams-summary-row + .ams-summary-row { border-top-color: #eef3f6; }
+          .ams-summary-label { font-size: 13px; color: #334155; font-weight: 600; }
+          .ams-summary-value { font-size: 13px; color: #0f172a; text-align: right; word-break: break-word; }
+          .ams-summary-footer { padding: 12px 22px; background: #ffffff; border-top: 1px solid #eef2f7; text-align: right; }
+          .ams-muted { color:#64748b; font-size:12px; }
+          @media (min-width:700px) { .ams-summary-body { grid-template-columns: 1fr 1fr; } }
+        </style>
 
-        specificContent = `
-            <div class="ams-summary-section ams-summary-section--wide">
-              <div class="ams-summary-title">Ishihara Test Details</div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Test Type</div>
-                <div class="ams-summary-value">${testType}</div>
-              </div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Reason for Test</div>
-                <div class="ams-summary-value">${reason}</div>
-              </div>
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Previous Color Issues?</div>
-                <div class="ams-summary-value">${prevIssues}</div>
-              </div>
-              ${notes !== "None" ? `
-              <div class="ams-summary-row">
-                <div class="ams-summary-label">Additional Notes</div>
-                <div class="ams-summary-value">${notes}</div>
-              </div>
-              ` : ''}
-            </div>
-        `;
-    }
-
-    // 3. Build Complete Summary
-    summaryBox.innerHTML = `
-    <style>
-      .ams-review-summary { font-family: system-ui, sans-serif; color: #0f172a; max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e6edf3; border-radius: 12px; overflow: hidden; }
-      .ams-review-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #eef2f7; }
-      .ams-review-title { font-size: 16px; font-weight: 600; color: #0b1220; }
-      .ams-summary-body { padding: 18px 22px; display: grid; grid-template-columns: 1fr; gap: 14px; }
-      .ams-summary-section { background: #fbfdff; border: 1px solid #eef6fa; padding: 12px 14px; border-radius: 10px; }
-      .ams-summary-section--wide { grid-column: 1 / -1; }
-      .ams-summary-title { font-size: 13px; font-weight: 700; color: #0b3a4a; margin-bottom: 8px; }
-      .ams-summary-row { display: flex; gap: 10px; justify-content: space-between; padding: 6px 0; border-top: 1px dashed transparent; }
-      .ams-summary-row + .ams-summary-row { border-top-color: #eef3f6; }
-      .ams-summary-label { font-size: 13px; color: #334155; font-weight: 600; }
-      .ams-summary-value { font-size: 13px; color: #0f172a; text-align: right; word-break: break-word; }
-      .ams-summary-footer { padding: 12px 22px; background: #ffffff; border-top: 1px solid #eef2f7; text-align: right; }
-      .ams-muted { color:#64748b; font-size:12px; }
-      @media (min-width:700px) { .ams-summary-body { grid-template-columns: 1fr 1fr; } }
-    </style>
-
-    <div class="ams-review-summary">
-      <div class="ams-review-header">
-        <div class="ams-review-title">Review & Confirm</div>
-        <div class="ams-muted">Final Step</div>
-      </div>
-
-      <div class="ams-summary-body">
-        <!-- SECTION: PATIENT DETAILS (Common to All) -->
-        <div class="ams-summary-section ams-summary-section--wide">
-          <div class="ams-summary-title">Patient Details</div>
-          <div class="ams-summary-row">
-            <div class="ams-summary-label">Name</div>
-            <div class="ams-summary-value">${name}</div>
+        <div class="ams-review-summary">
+          <div class="ams-review-header">
+            <div class="ams-review-title">Review & Confirm</div>
+            <div class="ams-muted">Final Step</div>
           </div>
-          <div class="ams-summary-row">
-            <div class="ams-summary-label">Age / Gender</div>
-            <div class="ams-summary-value">${age} / ${gender}</div>
+
+          <div class="ams-summary-body">
+            <div class="ams-summary-section ams-summary-section--wide">
+              <div class="ams-summary-title">Patient Details</div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Name</div>
+                <div class="ams-summary-value">${name}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Age / Gender</div>
+                <div class="ams-summary-value">${age} / ${gender}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Phone</div>
+                <div class="ams-summary-value">${phone}</div>
+              </div>
+              <div class="ams-summary-row">
+                <div class="ams-summary-label">Occupation</div>
+                <div class="ams-summary-value">${occupation}</div>
+              </div>
+            </div>
+
+            ${specificContent}
           </div>
-          <div class="ams-summary-row">
-            <div class="ams-summary-label">Phone</div>
-            <div class="ams-summary-value">${phone}</div>
-          </div>
-          <div class="ams-summary-row">
-            <div class="ams-summary-label">Occupation</div>
-            <div class="ams-summary-value">${occupation}</div>
+
+          <div class="ams-summary-footer">
+            <span class="ams-muted">Make sure all information is correct.</span>
           </div>
         </div>
-
-        <!-- TYPE-SPECIFIC CONTENT -->
-        ${specificContent}
-      </div>
-
-      <div class="ams-summary-footer">
-        <span class="ams-muted">Make sure all information is correct.</span>
-      </div>
-    </div>
-    `;
-}
+        `;
+    }
 
     function showStep(index) {
       steps.forEach((s, i) => s.classList.toggle('active', i === index));
       updateProgress(index);
     }
 
-    /* =========================================
-       DUPLICATE DETECTION FUNCTION
-       ========================================= */
     function checkDuplicateAppointment(currentIndex) {
       const currentAppt = appointments[currentIndex];
       
-      // Skip if current appointment is not complete
       if (!currentAppt.date || !currentAppt.time) {
         return false;
       }
 
-      // Check against all other appointments
       for (let i = 0; i < appointments.length; i++) {
-        if (i === currentIndex) continue; // Skip checking against itself
+        if (i === currentIndex) continue;
         
         const otherAppt = appointments[i];
         
-        // Check if date and time match
         if (otherAppt.date === currentAppt.date && otherAppt.time === currentAppt.time) {
-          return true; // Duplicate found
+          return true;
         }
       }
       
-      return false; // No duplicate
+      return false;
     }
 
-    /* =========================================
-       VALIDATION WITH DUPLICATE CHECK
-       ========================================= */
     function validateStep(stepElement) {
         let isValid = true;
         
         try {
-            // A. Check Standard Inputs
             const inputs = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
             inputs.forEach(input => {
                 if (!input.value.trim()) {
@@ -316,7 +359,6 @@ function updateSummaryView() {
                 }
             });
 
-            // B. Check Radio Buttons
             const radioGroups = new Set();
             stepElement.querySelectorAll('input[type="radio"][required]').forEach(r => radioGroups.add(r.name));
             
@@ -329,7 +371,6 @@ function updateSummaryView() {
                 }
             });
 
-            // C. APPOINTMENT VALIDATION WITH DUPLICATE CHECK
             if (stepElement.querySelector('.date-input')) {
                 const validSlots = appointments.filter(a => a.date && a.time);
                 
@@ -339,12 +380,20 @@ function updateSummaryView() {
                     return false;
                 }
 
-                // Check for duplicates among selected appointments
+                // CHECK FOR CLOSED DATES
                 for (let i = 0; i < appointments.length; i++) {
                     if (appointments[i].date && appointments[i].time) {
+                        // Check if date is closed
+                        if (closedDates.includes(appointments[i].date)) {
+                            isValid = false;
+                            alert("⚠️ One of your selected dates is a clinic closure date (" + formatDate(appointments[i].date) + "). Please choose a different date.");
+                            return false;
+                        }
+                        
+                        // Check for duplicates
                         if (checkDuplicateAppointment(i)) {
                             isValid = false;
-                            alert("⚠️ You have duplicate appointments selected. Please choose different dates or times for each appointment.");
+                            alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
                             return false;
                         }
                     }
@@ -359,7 +408,6 @@ function updateSummaryView() {
         return isValid;
     }
 
-   // BUTTON LISTENERS
     nextBtns.forEach(btn => btn.addEventListener('click', () => {
       const currentStepElement = steps[formStepIndex];
       
@@ -382,12 +430,8 @@ function updateSummaryView() {
       }
     }));
     
-    // Initialize
     showStep(formStepIndex);
 
-    /* =========================================
-       SLOT DISPLAY WITH DUPLICATE CHECK
-       ========================================= */
     function updateSlotDisplay(index) {
       const appt = appointments[index];
       const badge = document.getElementById(`slot-badge-${index}`);
@@ -403,7 +447,6 @@ function updateSummaryView() {
         return;
       }
 
-      // Check for duplicates
       if (checkDuplicateAppointment(index)) {
         badge.style.background = '#fee2e2';
         badge.style.color = '#991b1b';
@@ -418,7 +461,6 @@ function updateSummaryView() {
         return;
       }
 
-      // No duplicate - show available
       badge.style.background = '#d1fae5';
       badge.style.color = '#065f46';
       badge.textContent = 'Available';
@@ -436,9 +478,6 @@ function updateSummaryView() {
       field.value = JSON.stringify(validAppointments);
     }
 
-    /* =========================================
-       INPUT LISTENERS WITH DUPLICATE CHECK
-       ========================================= */
     const dateInputs = document.querySelectorAll(".date-input");
     const timeSelects = document.querySelectorAll(".time-select");
 
@@ -447,7 +486,6 @@ function updateSummaryView() {
         const index = parseInt(e.target.dataset.index);
         appointments[index].date = e.target.value;
         
-        // Update all slot displays (to check for duplicates across all)
         for (let i = 0; i < appointments.length; i++) {
           updateSlotDisplay(i);
         }
@@ -461,7 +499,6 @@ function updateSummaryView() {
         const index = parseInt(e.target.dataset.index);
         appointments[index].time = e.target.value;
         
-        // Update all slot displays (to check for duplicates across all)
         for (let i = 0; i < appointments.length; i++) {
           updateSlotDisplay(i);
         }
@@ -470,12 +507,7 @@ function updateSummaryView() {
       });
     });
 
-    /* =========================================
-       DATE RESTRICTION - TOMORROW ONWARDS (NO MAX LIMIT)
-       ========================================= */
     const today = new Date();
-    
-    // Set to TOMORROW (not today)
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
@@ -484,16 +516,11 @@ function updateSummaryView() {
     const dd = String(tomorrow.getDate()).padStart(2, '0');
     const minDate = `${yyyy}-${mm}-${dd}`;
 
-    // NO MAX DATE RESTRICTION - Clients can book years in advance
     dateInputs.forEach(input => {
-        input.setAttribute("min", minDate); // Set to tomorrow
-        // Removed max attribute - no upper limit
+        input.setAttribute("min", minDate);
         input.addEventListener('keydown', (e) => e.preventDefault()); 
     });
 
-    /* =========================================
-       FORM SUBMISSION WITH DUPLICATE CHECK
-       ========================================= */
     if (form) {
       form.addEventListener("submit", async function(e) {
         e.preventDefault();
@@ -505,11 +532,10 @@ function updateSummaryView() {
           return false;
         }
 
-        // Final duplicate check before submission
         for (let i = 0; i < appointments.length; i++) {
             if (appointments[i].date && appointments[i].time) {
                 if (checkDuplicateAppointment(i)) {
-                    alert("⚠️ You have duplicate appointments selected. Please choose different dates or times for each appointment.");
+                    alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
                     return false;
                 }
             }
@@ -547,5 +573,5 @@ function updateSummaryView() {
       });
     }
 
-  }); // End DOMContentLoaded
-})(); // End IIFE
+  });
+})();

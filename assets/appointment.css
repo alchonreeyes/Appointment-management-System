@@ -211,28 +211,34 @@ body {
 /* =========================================
    8. Step 4: Style Preference Grid
    ========================================= */
+
+
+/* Main Grid Container - INCREASED minimum card size */
 .preference-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 15px;
+    /* OLD: minmax(140px, 1fr) */
+    /* NEW: Increased from 140px to 250px for larger cards */
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px; /* Increased gap for better spacing */
     margin-bottom: 20px;
 }
 
-.preference-option {
+/* Individual Card Container - INCREASED padding and height */
+.preference-option-image {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
+    border: 2px solid #e0e0e0; /* Slightly thicker border */
+    border-radius: 12px; /* More rounded corners */
+    padding: 20px; /* Increased from 10px to 20px */
     cursor: pointer;
-    transition: all 0.2s ease;
     background: #fff;
-    text-align: center;
+    transition: all 0.3s ease;
     height: 100%;
+    position: relative;
+    min-height: 280px; /* ADDED: Ensure minimum height */
 }
-
 .preference-option:hover {
     border-color: #004aad;
     background-color: #f0f9ff;
@@ -641,79 +647,105 @@ p {
     width: 0;
 }
 
-/* Container to fix image size and aspect ratio */
+/* Image Container - INCREASED size */
 .shape-image-container {
     width: 100%;
-    height: 60px; /* Fixed height for image area */
+    /* OLD: height: 60px */
+    /* NEW: Increased to 150px for much larger images */
+    height: 150px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 8px;
+    margin-bottom: 15px; /* Increased spacing */
 }
 
-/* Styling for the image itself */
+    
+/* Image Styling - LARGER */
 .shape-image-container img {
     max-width: 100%;
     max-height: 100%;
-    object-fit: contain; /* Ensures any image fits nicely without distortion */
-    /* Gray placeholder style as requested */
-    filter: grayscale(100%) opacity(0.6);
-    transition: all 0.2s;
+    object-fit: contain;
+    filter: grayscale(100%) opacity(0.7); /* Slightly less gray */
+    transition: all 0.3s ease;
 }
 
-
-/* Styling for the text label below the image */
+/* Text Label - LARGER font */
 .shape-label-text {
-    font-size: 12px;
-    font-weight: 500;
-    color: #555;
+    font-size: 16px; /* Increased from 12px */
+    font-weight: 600; /* Bolder */
+    color: #333;
     text-align: center;
+    line-height: 1.4;
 }
 
-/* --- STATE STYLES (Hover & Selected) --- */
-
-/* Hover State */
+/* --- HOVER STATE --- */
 .preference-option-image:hover {
     border-color: #004aad;
     background-color: #f0f9ff;
+    transform: translateY(-5px); /* More pronounced lift */
+    box-shadow: 0 8px 20px rgba(0, 74, 173, 0.15); /* Added shadow */
 }
+
 .preference-option-image:hover img {
-    opacity: 0.9; /* Slightly darker on hover */
+    filter: grayscale(0%) opacity(1); /* Full color on hover */
+    transform: scale(1.05); /* Slight zoom on hover */
 }
+
 .preference-option-image:hover .shape-label-text {
     color: #004aad;
 }
 
-/* Selected State (using :has() selector for modern browsers) */
-/* When the hidden checkbox inside is checked, style the parent label */
+/* --- SELECTED STATE --- */
 .preference-option-image:has(input:checked) {
     border-color: #004aad;
+    border-width: 3px; /* Thicker border when selected */
     background-color: #e6f0ff;
-    box-shadow: 0 0 0 2px rgba(0, 74, 173, 0.2); /* Subtle outer ring */
+    box-shadow: 0 0 0 4px rgba(0, 74, 173, 0.2);
 }
 
-/* "Turn on" the image when selected */
 .preference-option-image:has(input:checked) img {
-    filter: grayscale(0%) opacity(1); /* Full color and opacity */
+    filter: grayscale(0%) opacity(1);
 }
 
-/* Bold the text when selected */
 .preference-option-image:has(input:checked) .shape-label-text {
     color: #004aad;
     font-weight: 700;
 }
-@media (min-width: 768px) {
-    .appointment-container button {
-        width: auto; /* Desktop: Auto width */
-        min-width: 140px;
+
+/* --- RESPONSIVE: Mobile adjustments --- */
+@media (max-width: 768px) {
+    .preference-grid {
+        /* On mobile, show 2 columns instead of auto-fill */
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
     }
     
-    /* Align buttons to ends if needed, or keep left */
-    .form-step button {
-        display: inline-block;
-        margin-right: 10px;
+    .shape-image-container {
+        height: 120px; /* Slightly smaller on mobile */
+    }
+    
+    .preference-option-image {
+        padding: 15px;
+        min-height: 220px;
+    }
+    
+    .shape-label-text {
+        font-size: 14px;
     }
 }
+
+@media (max-width: 480px) {
+    .preference-grid {
+        /* On very small screens, show 1 column */
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .shape-image-container {
+        height: 140px;
+    }
+}
+
 
 /* =========================================
    7. Summary Box
