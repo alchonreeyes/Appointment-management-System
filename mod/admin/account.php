@@ -3,7 +3,7 @@
 session_start();
 // Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
 require_once __DIR__ . '/../database.php';
-
+require_once __DIR__ . '/../../config/encryption_util.php'; // <--- Siguraduhing tama ang path
 // =======================================================
 // 1. INAYOS NA SECURITY CHECK (Tugma na sa login.php)
 // =======================================================
@@ -24,169 +24,146 @@ if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
-    if ($action === 'viewDetails') {
-        $id = $_POST['id'] ?? '';
-        if (!$id) {
-            echo json_encode(['success' => false, 'message' => 'Missing ID']);
+    // ============================================
+// 3. VIEW DETAILS (WITH DECRYPTION)
+// ============================================
+if ($action === 'viewDetails') {
+    $id = $_POST['id'] ?? '';
+    if (!$id) {
+        echo json_encode(['success' => false, 'message' => 'Missing ID']);
+        exit;
+    }
+    
+    try {
+        $stmt = $conn->prepare("SELECT staff_id, full_name, email, role, status FROM staff WHERE staff_id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $staff = $stmt->get_result()->fetch_assoc();
+
+        if (!$staff) {
+            echo json_encode(['success' => false, 'message' => 'Staff not found']);
             exit;
         }
-        try {
-            // FIX: Ginamit ang $conn at 'full_name'
-            $stmt = $conn->prepare("SELECT staff_id, full_name, email, role, status FROM staff WHERE staff_id = ?");
-            $stmt->bind_param("i", $id);
-            $stmt->execute();
-            $staff = $stmt->get_result()->fetch_assoc();
+        
+        // ✅ DECRYPT before sending to frontend
+        $staff['full_name'] = decrypt_data($staff['full_name']);
+        $staff['email'] = decrypt_data($staff['email']);
+        $staff['password_placeholder'] = '********';
+        
+        echo json_encode(['success' => true, 'data' => $staff]);
+    } catch (Exception $e) {
+        error_log("ViewDetails error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
+    }
+    exit;
+}
 
-            if (!$staff) {
-                echo json_encode(['success' => false, 'message' => 'Staff not found']);
-                exit;
-            }
-            $staff['password_placeholder'] = '********';
-            echo json_encode(['success' => true, 'data' => $staff]);
-        } catch (Exception $e) {
-            error_log("ViewDetails error (account.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
-        }
+
+   // ============================================
+// 1. ADD STAFF (WITH ENCRYPTION)
+// ============================================
+if ($action === 'addStaff') {
+    $name = trim($_POST['full_name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $role = trim($_POST['role'] ?? 'staff');
+
+    // Validation
+    if (!$name || !$email || !$password) {
+        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
         exit;
     }
 
-    if ($action === 'addStaff') {
-        $name = trim($_POST['full_name'] ?? ''); // FIX: Pinalitan ng 'full_name'
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $status = $_POST['status'] ?? 'Active';
-        $role = 'staff';
+    try {
+        // ✅ ENCRYPT sensitive data
+        $encryptedName = encrypt_data($name);
+        $encryptedEmail = encrypt_data($email);
+        
+        // ✅ HASH password (NOT encrypt)
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
-        // --- Validation ---
-        if (!$name || !$email || !$password) {
-            echo json_encode(['success' => false, 'message' => 'Please fill in all required fields (Name, Email, Password).']);
-            exit;
+        // ✅ INSERT into STAFF table (not admin)
+        $stmt = $conn->prepare("INSERT INTO staff (full_name, email, password, role, status) VALUES (?, ?, ?, ?, 'Active')");
+        $stmt->bind_param("ssss", $encryptedName, $encryptedEmail, $hashedPassword, $role);
+        
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Staff account created successfully!']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to save staff account.']);
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            echo json_encode(['success' => false, 'message' => 'Please enter a valid email address.']);
-            exit;
-        }
-        // TINANGGAL: @gmail.com check
-        if (strlen($password) < 6) {
-             echo json_encode(['success' => false, 'message' => 'Password must be at least 6 characters long.']);
-             exit;
-        }
-        // --- End Validation ---
+    } catch (Exception $e) {
+        error_log("AddStaff error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+    }
+    exit;
+}
 
-        try {
-            // Check for duplicate email across admin and staff
-            $stmt_check_admin = $conn->prepare("SELECT 1 FROM admin WHERE email = ? LIMIT 1");
-            $stmt_check_admin->bind_param("s", $email);
-            $stmt_check_admin->execute();
-            if ($stmt_check_admin->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Email already exists for an admin account.']);
-                exit;
-            }
-            $stmt_check_staff = $conn->prepare("SELECT 1 FROM staff WHERE email = ? LIMIT 1");
-            $stmt_check_staff->bind_param("s", $email);
-            $stmt_check_staff->execute();
-            if ($stmt_check_staff->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Email already exists for another staff account.']);
-                exit;
-            }
-            // Check for duplicate name within staff
-            $stmt_check_name = $conn->prepare("SELECT 1 FROM staff WHERE full_name = ? LIMIT 1"); // FIX: 'full_name'
-            $stmt_check_name->bind_param("s", $name);
-            $stmt_check_name->execute();
-            if ($stmt_check_name->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Staff name already exists.']);
-                exit;
-            }
 
-            // REMOVED HASHING
-            // $hashed_password = password_hash($password, PASSWORD_BCRYPT); 
+   // ============================================
+// 2. EDIT STAFF (WITH ENCRYPTION)
+// ============================================
+if ($action === 'editStaff') {
+    $id = $_POST['staff_id'] ?? '';
+    $name = trim($_POST['full_name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $status = $_POST['status'] ?? 'Active';
 
-            // FIX: Inalis ang 'staff_id' (dahil auto-increment) at ginamit ang 'full_name'
-            $stmt = $conn->prepare("INSERT INTO staff (full_name, email, password, status, role) VALUES (?, ?, ?, ?, ?)");
-            // MODIFIED: $hashed_password changed to $password
-            $stmt->bind_param("sssss", $name, $email, $password, $status, $role);
-            $stmt->execute();
-
-            echo json_encode(['success' => true, 'message' => 'Staff added successfully']);
-        } catch (Exception $e) {
-            error_log("AddStaff error (account.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error during add. Check logs.']);
-        }
+    // Validation
+    if (!$id || !$name || !$email) {
+        echo json_encode(['success' => false, 'message' => 'Missing required fields.']);
+        exit;
+    }
+    
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
+        exit;
+    }
+    
+    if (!empty($password) && strlen($password) < 6) {
+        echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters.']);
         exit;
     }
 
-    if ($action === 'editStaff') {
-        $id = $_POST['staff_id'] ?? '';
-        $name = trim($_POST['full_name'] ?? ''); // FIX: Pinalitan ng 'full_name'
-        $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $status = $_POST['status'] ?? 'Active';
-
-        // --- Validation ---
-        if (!$id || !$name || !$email) {
-            echo json_encode(['success' => false, 'message' => 'Missing required fields (ID, Name, Email).']);
+    try {
+        // ✅ Check for duplicate email in STAFF table
+        $stmt_check = $conn->prepare("SELECT staff_id FROM staff WHERE email = ? AND staff_id != ? LIMIT 1");
+        $encryptedEmailToCheck = encrypt_data($email);
+        $stmt_check->bind_param("si", $encryptedEmailToCheck, $id);
+        $stmt_check->execute();
+        
+        if ($stmt_check->get_result()->num_rows > 0) {
+            echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
             exit;
         }
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
-            exit;
-        }
-        // TINANGGAL: @gmail.com check
-        if (!empty($password) && strlen($password) < 6) {
-             echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters.']);
-             exit;
-        }
-        // --- End Validation ---
 
-        try {
-            // Check for duplicate email
-            $stmt_check_admin = $conn->prepare("SELECT 1 FROM admin WHERE email = ? LIMIT 1");
-            $stmt_check_admin->bind_param("s", $email);
-            $stmt_check_admin->execute();
-            if ($stmt_check_admin->get_result()->num_rows > 0) {
-                // Check kung admin account ba ito ng current user (na-allow dapat)
-                // Pero sa staff page, mas safe na i-block na lang
-                echo json_encode(['success' => false, 'message' => 'Email exists for an admin account.']);
-                exit;
-            }
-            $stmt_check_staff = $conn->prepare("SELECT 1 FROM staff WHERE email = ? AND staff_id != ? LIMIT 1");
-            $stmt_check_staff->bind_param("si", $email, $id);
-            $stmt_check_staff->execute();
-            if ($stmt_check_staff->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
-                exit;
-            }
-            // Check for duplicate name
-            $stmt_check_name = $conn->prepare("SELECT 1 FROM staff WHERE full_name = ? AND staff_id != ? LIMIT 1"); // FIX: 'full_name'
-            $stmt_check_name->bind_param("si", $name, $id);
-            $stmt_check_name->execute();
-            if ($stmt_check_name->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Another staff member has this name.']);
-                exit;
-            }
+        // ✅ ENCRYPT the new data
+        $encryptedName = encrypt_data($name);
+        $encryptedEmail = encrypt_data($email);
 
-            // Handle password update
-            if (!empty($password)) {
-                // REMOVED HASHING
-                // $hashed_password = password_hash($password, PASSWORD_BCRYPT);
-                
-                $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, password=?, status=? WHERE staff_id=?");
-                // MODIFIED: $hashed_password changed to $password
-                $stmt->bind_param("ssssi", $name, $email, $password, $status, $id);
-            } else {
-                // No password update
-                $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, status=? WHERE staff_id=?");
-                $stmt->bind_param("sssi", $name, $email, $status, $id);
-            }
-            $stmt->execute();
-
-            echo json_encode(['success' => true, 'message' => 'Staff updated successfully']);
-        } catch (Exception $e) {
-            error_log("EditStaff error (account.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error during update. Check logs.']);
+        // Handle password update
+        if (!empty($password)) {
+            // ✅ HASH new password
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            
+            $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, password=?, status=? WHERE staff_id=?");
+            $stmt->bind_param("ssssi", $encryptedName, $encryptedEmail, $hashedPassword, $status, $id);
+        } else {
+            // No password update
+            $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, status=? WHERE staff_id=?");
+            $stmt->bind_param("sssi", $encryptedName, $encryptedEmail, $status, $id);
         }
-        exit;
+        
+        $stmt->execute();
+        echo json_encode(['success' => true, 'message' => 'Staff updated successfully!']);
+        
+    } catch (Exception $e) {
+        error_log("EditStaff error: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Database error during update.']);
     }
+    exit;
+}
+
 
     if ($action === 'removeStaff') {
         $id = $_POST['id'] ?? '';
@@ -212,16 +189,16 @@ if (isset($_POST['action'])) {
     }
 }
 
-// =======================================================
-// 3. FILTERS, STATS, and PAGE DATA (Inayos para sa mysqli at 'full_name')
-// =======================================================
+
+// ============================================
+// 4. FETCH STAFF LIST (WITH DECRYPTION)
+// ============================================
 $statusFilter = $_GET['status'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
 
-// FIX: Ginamit ang tamang columns 'full_name' at 'status'
 $query = "SELECT staff_id, full_name, email, password, status, role FROM staff WHERE 1=1";
 $params = [];
-$paramTypes = ""; // Para sa bind_param
+$paramTypes = "";
 
 if ($statusFilter !== 'All') {
     $query .= " AND status = ?";
@@ -229,16 +206,13 @@ if ($statusFilter !== 'All') {
     $paramTypes .= "s";
 }
 
+// ⚠️ NOTE: Cannot search encrypted data directly
+// You need to fetch all and filter in PHP, or use a different approach
 if ($search !== '') {
-    $query .= " AND (full_name LIKE ? OR staff_id LIKE ? OR email LIKE ?)";
-    $searchTerm = "%{$search}%";
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $paramTypes .= "sss";
+    // We'll filter after decryption (see below)
 }
 
-$query .= " ORDER BY full_name ASC";
+$query .= " ORDER BY staff_id DESC";
 
 try {
     $stmt = $conn->prepare($query);
@@ -246,42 +220,56 @@ try {
         $stmt->bind_param($paramTypes, ...$params);
     }
     $stmt->execute();
-    $staffMembers = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $allStaff = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    // ✅ DECRYPT all data
+    $staffMembers = [];
+    foreach ($allStaff as $staff) {
+        $staff['full_name'] = decrypt_data($staff['full_name']);
+        $staff['email'] = decrypt_data($staff['email']);
+        
+        // Filter by search AFTER decryption
+        if ($search !== '') {
+            $searchLower = strtolower($search);
+            if (
+                stripos($staff['full_name'], $search) === false &&
+                stripos($staff['email'], $search) === false &&
+                stripos($staff['staff_id'], $search) === false
+            ) {
+                continue; // Skip this record
+            }
+        }
+        
+        $staffMembers[] = $staff;
+    }
+    
 } catch (Exception $e) {
-    error_log("Fetch Staff List error (account.php): " . $e->getMessage());
+    error_log("Fetch Staff List error: " . $e->getMessage());
     $staffMembers = [];
 }
 
-
-// Count statistics
+// 5. COUNT STATISTICS (NO DECRYPTION NEEDED)
+// ============================================
 $countSql = "SELECT
     COALESCE(SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
     COALESCE(SUM(CASE WHEN status = 'Inactive' THEN 1 ELSE 0 END), 0) AS inactive,
     COALESCE(COUNT(*), 0) AS total
     FROM staff WHERE 1=1";
-$countParams = [];
-$countParamTypes = "";
-if ($search !== '') {
-    $countSql .= " AND (full_name LIKE ? OR staff_id LIKE ? OR email LIKE ?)";
-    $q = "%{$search}%";
-    $countParams[] = $q; $countParams[] = $q; $countParams[] = $q;
-    $countParamTypes .= "sss";
-}
+
 try {
     $stmt_stats = $conn->prepare($countSql);
-    if (!empty($countParams)) {
-        $stmt_stats->bind_param($countParamTypes, ...$countParams);
-    }
     $stmt_stats->execute();
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
-    error_log("Fetch Staff Stats error (account.php): " . $e->getMessage());
+    error_log("Fetch Staff Stats error: " . $e->getMessage());
     $stats = ['active' => 0, 'inactive' => 0, 'total' => 0];
 }
 
 $activeCount = (int)($stats['active'] ?? 0);
 $inactiveCount = (int)($stats['inactive'] ?? 0);
 $totalCount = (int)($stats['total'] ?? 0);
+
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

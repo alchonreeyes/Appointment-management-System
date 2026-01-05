@@ -3,13 +3,14 @@
 session_start();
 header('Content-Type: application/json');
 include '../config/db.php';
+require_once '../config/encryption_util.php'; 
 
 $db = new Database();
 $pdo = $db->getConnection();
 
 // --- 1. COOLDOWN CONFIGURATION ---
 define('MAX_ATTEMPTS', 3);
-define('FIRST_COOLDOWN', 10);
+define('FIRST_COOLDOWN', 30); // 30 seconds cooldown para hindi masyadong matagal sa testing
 
 if (isset($_SESSION['login_cooldown_until'])) {
     $remaining = $_SESSION['login_cooldown_until'] - time();
@@ -18,126 +19,120 @@ if (isset($_SESSION['login_cooldown_until'])) {
         exit;
     } else {
         unset($_SESSION['login_cooldown_until']);
+        $_SESSION['login_attempts'] = 0;
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $email_input = trim($_POST['email'] ?? '');
+    $password_input = $_POST['password'] ?? '';
 
     if (!isset($_SESSION['login_attempts'])) $_SESSION['login_attempts'] = 0;
 
     // =========================================================
     // PRIORITY 1: CHECK ADMIN TABLE
     // =========================================================
-    $stmtAdmin = $pdo->prepare("SELECT * FROM admin WHERE email = ? LIMIT 1");
-    $stmtAdmin->execute([$email]);
-    $adminUser = $stmtAdmin->fetch(PDO::FETCH_ASSOC);
+    $stmtAdmin = $pdo->prepare("SELECT * FROM admin");
+    $stmtAdmin->execute();
+    $admins = $stmtAdmin->fetchAll(PDO::FETCH_ASSOC);
 
-    // NOTE: Plain Text Password for Admin
-    if ($adminUser && $adminUser['password'] === $password) {
+    foreach ($admins as $adminUser) {
+        // I-decrypt ang email na nasa DB para ikumpara sa tinype ni user
+        $decryptedEmail = decrypt_data($adminUser['email']);
         
-        // RESET FAILURES
-        unset($_SESSION['login_attempts']);
-        unset($_SESSION['login_cooldown_until']);
+        if ($decryptedEmail === $email_input) {
+            // Match ang Email! Ngayon, i-verify ang Password (Bcrypt)
+            if (password_verify($password_input, $adminUser['password'])) {
+                
+                // Success! Reset failure counters
+                unset($_SESSION['login_attempts']);
+                unset($_SESSION['login_cooldown_until']);
 
-        // SET SESSION FOR ADMIN
-        $_SESSION['user_id'] = $adminUser['id'];
-        $_SESSION['user_role'] = 'admin'; // Always 'admin' from this table
-        $_SESSION['full_name'] = $adminUser['name'];
+                $_SESSION['user_id'] = $adminUser['id'];
+                $_SESSION['user_role'] = 'admin';
+                $_SESSION['full_name'] = decrypt_data($adminUser['name']);
 
-        echo json_encode([
-            'success' => true,
-            'message' => 'Welcome, Admin!',
-            'redirect' => '../mod/admin/admin_dashboard.php'
-        ]);
-        exit;
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Welcome, Admin!',
+                    'redirect' => '../mod/admin/admin_dashboard.php'
+                ]);
+                exit;
+            }
+        }
     }
 
     // =========================================================
     // PRIORITY 2: CHECK STAFF TABLE
     // =========================================================
-    $stmtStaff = $pdo->prepare("SELECT * FROM staff WHERE email = ? LIMIT 1");
-    $stmtStaff->execute([$email]);
-    $staffUser = $stmtStaff->fetch(PDO::FETCH_ASSOC);
+    $stmtStaff = $pdo->prepare("SELECT * FROM staff");
+    $stmtStaff->execute();
+    $staffList = $stmtStaff->fetchAll(PDO::FETCH_ASSOC);
 
-    // NOTE: Based on your database, staff uses plain text password too
-    // If you want hashed passwords for staff, use password_verify() instead
-    if ($staffUser && $staffUser['password'] === $password) {
+    foreach ($staffList as $staffUser) {
+        $decryptedStaffEmail = decrypt_data($staffUser['email']);
         
-        // Check if staff is active
-        if ($staffUser['status'] !== 'Active') {
-            echo json_encode(['success' => false, 'message' => 'Your account has been deactivated. Please contact admin.']);
-            exit;
+        if ($decryptedStaffEmail === $email_input) {
+            // Match ang Email! Verify Password
+            if (password_verify($password_input, $staffUser['password'])) {
+                
+                if ($staffUser['status'] !== 'Active') {
+                    echo json_encode(['success' => false, 'message' => 'Account deactivated. Contact Admin.']);
+                    exit;
+                }
+
+                unset($_SESSION['login_attempts']);
+                unset($_SESSION['login_cooldown_until']);
+
+                // Note: staff_id ang gamit sa staff table
+                $_SESSION['user_id'] = $staffUser['staff_id'];
+                $_SESSION['user_role'] = 'staff';
+                $_SESSION['full_name'] = decrypt_data($staffUser['full_name']);
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Welcome, Staff!',
+                    'redirect' => '../mod/staff/staff_dashboard.php'
+                ]);
+                exit;
+            }
         }
-        
-        // RESET FAILURES
-        unset($_SESSION['login_attempts']);
-        unset($_SESSION['login_cooldown_until']);
-
-        // SET SESSION FOR STAFF
-        $_SESSION['user_id'] = $staffUser['staff_id'];
-        $_SESSION['user_role'] = 'staff';
-        $_SESSION['full_name'] = $staffUser['full_name'];
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Welcome, Staff!',
-            'redirect' => '../mod/staff/staff_dashboard.php'
-        ]);
-        exit;
     }
 
     // =========================================================
-    // PRIORITY 3: CHECK CLIENTS TABLE (USERS)
+    // PRIORITY 3: CHECK CLIENTS (USERS TABLE) - Standard Plain Email
     // =========================================================
     $stmtClient = $pdo->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
-    $stmtClient->execute([$email]);
+    $stmtClient->execute([$email_input]);
     $clientUser = $stmtClient->fetch(PDO::FETCH_ASSOC);
 
-    // NOTE: Clients use hashed passwords (secure)
-    if ($clientUser && password_verify($password, $clientUser['password_hash'])) {
-        
-        // RESET FAILURES
+    if ($clientUser && password_verify($password_input, $clientUser['password_hash'])) {
         unset($_SESSION['login_attempts']);
         unset($_SESSION['login_cooldown_until']);
 
-        // SET SESSION FOR CLIENT
         $_SESSION['client_id'] = $clientUser['id'];
         $_SESSION['client_email'] = $clientUser['email'];
         $_SESSION['client_role'] = 'client';
 
-        // Check Verification
-        if ($clientUser['is_verified'] == 0) {
-            echo json_encode(['success' => false, 'message' => 'Please verify your email first.']);
-            exit;
-        }
-
-        // ✅ USE SAVED REDIRECT OR DEFAULT TO HOME
         $redirect_url = $_SESSION['redirect_after_login'] ?? '../public/home.php';
-        unset($_SESSION['redirect_after_login']); // Clean up session
+        unset($_SESSION['redirect_after_login']);
 
-        echo json_encode([
-            'success' => true,
-            'redirect' => $redirect_url
-        ]);
+        echo json_encode(['success' => true, 'redirect' => $redirect_url]);
         exit;
     }
 
     // =========================================================
-    // FAILED LOGIN (No match found)
+    // IF NO MATCH FOUND
     // =========================================================
     $_SESSION['login_attempts']++;
     $error_msg = "Invalid email or password.";
 
     if ($_SESSION['login_attempts'] >= MAX_ATTEMPTS) {
-        $duration = FIRST_COOLDOWN; 
-        $_SESSION['login_cooldown_until'] = time() + $duration;
+        $_SESSION['login_cooldown_until'] = time() + FIRST_COOLDOWN;
         $_SESSION['login_attempts'] = 0;
-        $error_msg = "Too many failed attempts. Please wait $duration seconds.";
+        $error_msg = "Too many failed attempts. Wait " . FIRST_COOLDOWN . "s.";
     }
 
     echo json_encode(['success' => false, 'message' => $error_msg]);
     exit;
 }
-?>

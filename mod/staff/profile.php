@@ -2,7 +2,7 @@
 // Start session at the very beginning
 session_start();
 require_once __DIR__ . '/../database.php'; // Ensure this path is correct relative to profile.php
-
+require_once __DIR__ . '/../../config/encryption_util.php';
 // =======================================================
 // 1. SECURITY CHECK - (Corrected for 'staff')
 // =======================================================
@@ -20,17 +20,18 @@ if (!$user_id || $user_role !== 'staff') {
     exit; // Stop all further execution
 }
 
+
 // =======================================================
-// 2. SERVER-SIDE ACTION HANDLING (FIXED: Queries now target 'staff' table)
+// 2. SERVER-SIDE ACTION HANDLING
 // =======================================================
 if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
     if ($action === 'updateProfile') {
-        $name = trim($_POST['full_name'] ?? ''); // <-- FIX: Changed to 'full_name'
+        $name = trim($_POST['full_name'] ?? '');
         $email = trim($_POST['email'] ?? '');
-        $password = $_POST['password'] ?? ''; 
+        $password = $_POST['password'] ?? '';
 
         // Validation
         if (!$name || !$email) {
@@ -42,50 +43,50 @@ if (isset($_POST['action'])) {
             exit;
         }
         if (!empty($password) && strlen($password) < 6) {
-             echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters long.']);
-             exit;
+            echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters long.']);
+            exit;
         }
 
-
         try {
-            // Check for duplicate email in admin table
-            $stmt_email = $conn->prepare("SELECT 1 FROM staff WHERE email = ?");
-            $stmt_email->bind_param("s", $email);
-            $stmt_email->execute();
-            if ($stmt_email->get_result()->num_rows > 0) {
-                 echo json_encode(['success' => false, 'message' => 'This email is already in use by an staff account.']);
-                 exit;
-            }
+            // ✅ ENCRYPT new email to check for duplicates
+            $encryptedEmailToCheck = encrypt_data($email);
             
-            // FIX: Check staff table (excluding current user)
-            $stmt_staff_email = $conn->prepare("SELECT 1 FROM staff WHERE email = ? AND staff_id != ?");
-            $stmt_staff_email->bind_param("si", $email, $user_id);
-            $stmt_staff_email->execute();
-            if($stmt_staff_email->get_result()->num_rows > 0){
+            // Check for duplicate email (excluding current user)
+            $stmt_email = $conn->prepare("SELECT staff_id FROM staff WHERE email = ? AND staff_id != ?");
+            $stmt_email->bind_param("si", $encryptedEmailToCheck, $user_id);
+            $stmt_email->execute();
+            
+            if ($stmt_email->get_result()->num_rows > 0) {
                 echo json_encode(['success' => false, 'message' => 'This email is already in use by another staff account.']);
                 exit;
             }
 
+            // ✅ ENCRYPT the new data before updating
+            $encryptedName = encrypt_data($name);
+            $encryptedEmail = encrypt_data($email);
+
             // Handle password update
             if (!empty($password)) {
-                // FIX: Updated 'staff' table with 'full_name'
+                // ✅ HASH the password
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                
                 $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, password=? WHERE staff_id=?");
-                $stmt->bind_param("sssi", $name, $email, $password, $user_id); // No hashing
+                $stmt->bind_param("sssi", $encryptedName, $encryptedEmail, $hashedPassword, $user_id);
             } else {
                 // No password update
-                // FIX: Updated 'staff' table with 'full_name'
                 $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=? WHERE staff_id=?");
-                $stmt->bind_param("ssi", $name, $email, $user_id);
+                $stmt->bind_param("ssi", $encryptedName, $encryptedEmail, $user_id);
             }
+            
             $stmt->execute();
 
-            // Update session 'full_name' to match
-            $_SESSION['full_name'] = $name; 
+            // ✅ Update session with DECRYPTED name
+            $_SESSION['full_name'] = $name;
 
             echo json_encode(['success' => true, 'message' => 'Profile updated successfully']);
         } catch (Exception $e) {
             error_log("UpdateProfile error (Staff): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error during profile update. Check logs.']);
+            echo json_encode(['success' => false, 'message' => 'Database error during profile update.']);
         }
         exit;
     }
@@ -97,12 +98,11 @@ if (isset($_POST['action'])) {
     }
 }
 
+//3. FETCH USER DATA (WITH DECRYPTION)
 // =======================================================
-// 3. FETCH USER DATA (FIXED: Querying 'staff' table)
-// =======================================================
-$user = null; // Initialize $user
+$user = null;
 try {
-    // FIX: Fetched from 'staff' table using 'staff_id' and 'full_name'
+    // Fetch ENCRYPTED data from database
     $stmt = $conn->prepare("SELECT staff_id, full_name, email, role, password FROM staff WHERE staff_id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -114,21 +114,29 @@ try {
         exit;
     }
 
+    // ✅ ✅ ✅ DECRYPT THE DATA BEFORE DISPLAYING ✅ ✅ ✅
+    $user['full_name'] = decrypt_data($user['full_name']);
+    $user['email'] = decrypt_data($user['email']);
+    
+    // ❌ DON'T decrypt password (it's hashed, not encrypted)
+    // We'll show a placeholder instead
+
 } catch (Exception $e) {
     error_log("Staff Profile fetch error: " . $e->getMessage());
-    die("Error loading profile data."); // Show generic error
+    die("Error loading profile data.");
 }
-
-// Calculate initials using the fetched staff 'full_name'
-$nameToUse = $user['full_name'] ?? 'Staff'; // <-- FIX: Use 'full_name'
+// Calculate initials using DECRYPTED name
+$nameToUse = $user['full_name'] ?? 'Staff';
 $nameParts = explode(' ', trim($nameToUse));
 if (count($nameParts) > 1) {
     $initials = strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1));
 } else if (!empty($nameToUse)) {
     $initials = strtoupper(substr($nameToUse, 0, 1));
-     if (strlen($nameToUse) > 1) { $initials .= strtoupper(substr($nameToUse, 1, 1)); }
+    if (strlen($nameToUse) > 1) { 
+        $initials .= strtoupper(substr($nameToUse, 1, 1)); 
+    }
 } else {
-    $initials = 'ST'; // <-- FIX: 'ST' for Staff
+    $initials = 'ST';
 }
 
 ?>
@@ -397,87 +405,77 @@ nav a.active { background:#2563eb; color:#fff; }
 </head>
 <body>
 
-<div id="loader-overlay">
-    <div class="loader-spinner"></div>
-    <p class="loader-text">Loading Profile...</p>
-</div>
-<div id="main-content" style="display: none;">
+<header>
+  <div class="logo-section">
+    <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
+  </div>
+  <nav id="main-nav">
+    <a href="staff_dashboard.php">🏠 Dashboard</a>
+    <a href="appointment.php">📅 Appointments</a>
+    <a href="patient_record.php">📘 Patient Record</a>
+    <a href="product.php">💊 Product & Services</a>
+    <a href="profile.php" class="active">📝 Profile</a>
+  </nav>
+</header>
 
-    <header>
-      <div class="logo-section">
-        <img src="../photo/LOGO.jpg" alt="Logo"> <strong>EYE MASTER CLINIC</strong>
-      </div>
-      <button id="menu-toggle" aria-label="Open navigation">☰</button>
-      <nav id="main-nav"> 
-        <a href="staff_dashboard.php">🏠 Dashboard</a>
-        <a href="appointment.php">📅 Appointments</a>
-        <a href="patient_record.php">📘 Patient Record</a>
-        <a href="product.php">💊 Product & Services</a>
-        <a href="profile.php" class="active">🔍 Profile</a>
-      </nav>
-    </header>
-    
-    <div class="container">
-      <div class="profile-card">
-        <div class="profile-header">
-          <div class="profile-avatar"><?= htmlspecialchars($initials) ?></div>
-          <div class="profile-info">
-              <div class="profile-name"><?= htmlspecialchars($user['full_name']) ?></div> 
-              <div class="profile-meta">
-              <span class="badge staff-id">ID: <?= htmlspecialchars($user['staff_id']) ?></span>
-              <span class="badge staff-role">
-                <?= htmlspecialchars(ucfirst($user['role'] ?? 'N/A')) ?>
-              </span>
-            </div>
-          </div>
-        </div>
-    
-        <div class="profile-body">
-          <div class="section-title">Staff Information</div>
-    
-          <form id="profileForm" onsubmit="return false;">
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="profileName">Full Name *</label>
-                <input type="text" id="profileName" value="<?= htmlspecialchars($user['full_name']) ?>" disabled required> 
-              </div>
-    
-              <div class="form-group">
-                <label for="profileEmail">Email Address *</label> 
-                <input type="email" id="profileEmail" value="<?= htmlspecialchars($user['email']) ?>" disabled required>
-              </div>
-    
-              <div class="form-group">
-                <label for="profilePassword">Password <span style="font-size:11px; color:#666; font-weight:normal;">(Leave blank to keep current when editing)</span></label>
-                <div class="password-wrapper">
-                  <input type="password" id="profilePassword" value="<?= htmlspecialchars($user['password'] ?? '') ?>" disabled>
-                  <button type="button" onclick="togglePasswordVisibility()" title="Show/Hide Password">👁️</button>
-                </div>
-              </div>
-    
-            </div>
-    
-            <div class="form-actions" id="viewActions">
-              <button type="button" class="btn btn-edit" onclick="enableEdit()">
-                ✏️ Edit Profile
-              </button>
-              <button type="button" class="btn btn-logout" onclick="openLogoutModal()">
-                🚪 Logout
-              </button>
-            </div>
-    
-            <div class="form-actions" id="editActions" style="display:none;">
-              <button type="button" class="btn btn-save" onclick="saveProfile()">
-                💾 Save Changes
-              </button>
-              <button type="button" class="btn btn-cancel" onclick="cancelEdit()">
-                ✕ Cancel
-              </button>
-            </div>
-          </form>
+<div class="container">
+  <div class="profile-card">
+    <div class="profile-header">
+      <div class="profile-avatar"><?= htmlspecialchars($initials) ?></div>
+      <div class="profile-info">
+        <!-- ✅ Display DECRYPTED name -->
+        <div class="profile-name"><?= htmlspecialchars($user['full_name']) ?></div>
+        <div class="profile-meta">
+          <span class="badge staff-id">ID: <?= htmlspecialchars($user['staff_id']) ?></span>
+          <span class="badge staff-role"><?= htmlspecialchars(ucfirst($user['role'] ?? 'N/A')) ?></span>
         </div>
       </div>
     </div>
+
+    <div class="profile-body">
+      <div class="section-title">Staff Information</div>
+
+      <form id="profileForm" onsubmit="return false;">
+        <div class="form-grid">
+          
+          <!-- ✅ Display DECRYPTED full name -->
+          <div class="form-group">
+            <label for="profileName">Full Name *</label>
+            <input type="text" id="profileName" value="<?= htmlspecialchars($user['full_name']) ?>" disabled required>
+          </div>
+
+          <!-- ✅ Display DECRYPTED email -->
+          <div class="form-group">
+            <label for="profileEmail">Email Address *</label>
+            <input type="email" id="profileEmail" value="<?= htmlspecialchars($user['email']) ?>" disabled required>
+          </div>
+
+          <!-- ❌ DON'T show actual hashed password -->
+          <div class="form-group">
+            <label for="profilePassword">Password <span style="font-size:11px; color:#666; font-weight:normal;">(Leave blank to keep current)</span></label>
+            <div class="password-wrapper">
+              <!-- Show placeholder, not actual password -->
+              <input type="password" id="profilePassword" value="" placeholder="••••••••" disabled>
+              <button type="button" onclick="togglePasswordVisibility()" title="Show/Hide Password">👁️</button>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="form-actions" id="viewActions">
+          <button type="button" class="btn btn-edit" onclick="enableEdit()">✏️ Edit Profile</button>
+          <button type="button" class="btn btn-logout" onclick="confirmLogout()">🚪 Logout</button>
+        </div>
+
+        <div class="form-actions" id="editActions" style="display:none;">
+          <button type="button" class="btn btn-save" onclick="saveProfile()">💾 Save Changes</button>
+          <button type="button" class="btn btn-cancel" onclick="cancelEdit()">✕ Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
     
     <div id="logoutOverlay" class="logout-overlay" aria-hidden="true">
       <div class="logout-card" role="dialog">
@@ -491,155 +489,135 @@ nav a.active { background:#2563eb; color:#fff; }
     </div>
     
     <script>
-    // FIX: Ginamit ang 'full_name' mula sa PHP
-    let originalData = {
-      name: <?= json_encode($user['full_name']) ?>, 
-      email: <?= json_encode($user['email']) ?>
-    };
-    
-    // =======================================================
-    // <-- START: BAGONG 'showToast' FUNCTION (CENTERED)
-    // =======================================================
-    function showToast(msg, type = 'success') {
-        // 1. Create overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'toast-overlay';
-        
-        // 2. Create toast box
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`; // Keep .toast for the box
-        toast.innerHTML = `
-            <div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div>
-            <div class="toast-message">${msg}</div>
-        `;
-        
-        // 3. Append to body
-        overlay.appendChild(toast);
-        document.body.appendChild(overlay);
-        
-        // 4. Auto-remove after 2.5 seconds
-        const timer = setTimeout(() => {
-            overlay.style.opacity = '0';
-            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
-        }, 2500);
-        
-        // 5. Allow click-to-close
-        overlay.addEventListener('click', () => {
-            clearTimeout(timer); // Stop auto-remove if clicked
-            overlay.style.opacity = '0';
-            overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
-        }, { once: true });
-    }
-    // =======================================================
-    // <-- END: BAGONG 'showToast' FUNCTION
-    // =======================================================
-    
-    function togglePasswordVisibility() {
-      const input = document.getElementById('profilePassword');
-      const btn = input?.closest('.password-wrapper')?.querySelector('button');
-      if (!input || !btn) return;
-      input.type = (input.type === 'password') ? 'text' : 'password';
-      btn.textContent = (input.type === 'password') ? '👁️' : '🙈';
-    }
-    
-    function enableEdit() {
-      document.getElementById('profileName').disabled = false;
-      document.getElementById('profileEmail').disabled = false;
-      document.getElementById('profilePassword').disabled = false;
-      document.getElementById('profilePassword').value = ''; // Clear on edit start
-      document.getElementById('viewActions').style.display = 'none';
-      document.getElementById('editActions').style.display = 'flex';
-      document.getElementById('profileName').focus(); 
-      showToast('You can now edit your profile', 'success');
-    }
-    
-    function cancelEdit() {
-      document.getElementById('profileName').value = originalData.name;
-      document.getElementById('profileEmail').value = originalData.email;
-       // ** Restore original password on cancel **
-      document.getElementById('profilePassword').value = <?= json_encode($user['password'] ?? '') ?>;
-    
+ // ✅ Store DECRYPTED data in JavaScript
+let originalData = {
+  name: <?= json_encode($user['full_name']) ?>,
+  email: <?= json_encode($user['email']) ?>
+};
+
+function showToast(msg, type = 'success') {
+    const overlay = document.createElement('div');
+    overlay.className = 'toast-overlay';
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div>
+        <div class="toast-message">${msg}</div>
+    `;
+    overlay.appendChild(toast);
+    document.body.appendChild(overlay);
+    const timer = setTimeout(() => {
+        overlay.style.opacity = '0';
+        overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    }, 2500);
+    overlay.addEventListener('click', () => {
+        clearTimeout(timer);
+        overlay.style.opacity = '0';
+        overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    }, { once: true });
+}
+
+function togglePasswordVisibility() {
+  const input = document.getElementById('profilePassword');
+  const btn = input?.closest('.password-wrapper')?.querySelector('button');
+  if (!input || !btn) return;
+  input.type = (input.type === 'password') ? 'text' : 'password';
+  btn.textContent = (input.type === 'password') ? '👁️' : '🙈';
+}
+
+function enableEdit() {
+  document.getElementById('profileName').disabled = false;
+  document.getElementById('profileEmail').disabled = false;
+  document.getElementById('profilePassword').disabled = false;
+  document.getElementById('profilePassword').value = ''; // Clear password field
+  document.getElementById('profilePassword').placeholder = 'Enter new password (optional)';
+  document.getElementById('viewActions').style.display = 'none';
+  document.getElementById('editActions').style.display = 'flex';
+  document.getElementById('profileName').focus();
+  showToast('You can now edit your profile', 'success');
+}
+
+function cancelEdit() {
+  document.getElementById('profileName').value = originalData.name;
+  document.getElementById('profileEmail').value = originalData.email;
+  document.getElementById('profilePassword').value = '';
+  document.getElementById('profilePassword').placeholder = '••••••••';
+
+  document.getElementById('profileName').disabled = true;
+  document.getElementById('profileEmail').disabled = true;
+  document.getElementById('profilePassword').disabled = true;
+
+  const passInput = document.getElementById('profilePassword');
+  passInput.type = 'password';
+  const passBtn = passInput.closest('.password-wrapper')?.querySelector('button');
+  if(passBtn) passBtn.textContent = '👁️';
+
+  document.getElementById('viewActions').style.display = 'flex';
+  document.getElementById('editActions').style.display = 'none';
+  showToast('Changes cancelled', 'error');
+}
+function saveProfile() {
+  const name = document.getElementById('profileName').value.trim();
+  const email = document.getElementById('profileEmail').value.trim();
+  const password = document.getElementById('profilePassword').value;
+
+  if (!name || !email) {
+    showToast('Please fill in Name and Email fields.', 'error'); 
+    return;
+  }
+  if (password && password.length < 6) {
+    showToast('New password must be at least 6 characters long.', 'error'); 
+    return;
+  }
+
+  const formData = new URLSearchParams();
+  formData.append('action', 'updateProfile');
+  formData.append('full_name', name);
+  formData.append('email', email);
+  if (password) {
+    formData.append('password', password);
+  }
+
+  const saveBtn = document.querySelector('#editActions .btn-save');
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '⏳ Saving...';
+
+  fetch('profile.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: formData
+  })
+  .then(res => res.json())
+  .then(payload => {
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '💾 Save Changes';
+
+    if (payload.success) {
+      originalData.name = name;
+      originalData.email = email;
+
       document.getElementById('profileName').disabled = true;
       document.getElementById('profileEmail').disabled = true;
       document.getElementById('profilePassword').disabled = true;
-    
-      const passInput = document.getElementById('profilePassword');
-      passInput.type = 'password'; // Reset to hidden
-      const passBtn = passInput.closest('.password-wrapper')?.querySelector('button');
-      if(passBtn) passBtn.textContent = '👁️';
-    
+
       document.getElementById('viewActions').style.display = 'flex';
       document.getElementById('editActions').style.display = 'none';
-      showToast('Changes cancelled', 'error');
+      document.querySelector('.profile-name').textContent = name;
+
+      showToast(payload.message, 'success');
+      setTimeout(() => window.location.reload(), 1500);
+    } else {
+      showToast(payload.message || 'Failed to update profile.', 'error');
     }
-    
-    
-    function saveProfile() {
-      // FIX: Binasa ang 'profileName'
-      const name = document.getElementById('profileName').value.trim(); 
-      const email = document.getElementById('profileEmail').value.trim();
-      const password = document.getElementById('profilePassword').value;
-    
-      // Validation
-      if (!name || !email) {
-        showToast('Please fill in Name and Email fields.', 'error'); return;
-      }
-      if (password && password.length < 6) {
-           showToast('New password must be at least 6 characters long.', 'error'); return;
-      }
-    
-      const formData = new URLSearchParams();
-      formData.append('action', 'updateProfile');
-      formData.append('full_name', name); // FIX: Ipinadala bilang 'full_name'
-      formData.append('email', email);
-      
-      // FIX: Only send password if it's not empty
-      if (password) {
-         formData.append('password', password);
-      }
-    
-    
-      const saveBtn = document.querySelector('#editActions .btn-save');
-      saveBtn.disabled = true;
-      saveBtn.innerHTML = '⏳ Saving...';
-    
-      fetch('profile.php', {
-        method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        body: formData
-      })
-      .then(res => res.json())
-      .then(payload => {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '💾 Save Changes';
-    
-        if (payload.success) {
-          originalData.name = name; 
-          originalData.email = email;
-    
-          document.getElementById('profileName').disabled = true;
-          document.getElementById('profileEmail').disabled = true;
-          document.getElementById('profilePassword').disabled = true;
-    
-          document.getElementById('viewActions').style.display = 'flex';
-          document.getElementById('editActions').style.display = 'none';
-          document.querySelector('.profile-name').textContent = name;
-          // TODO: Recalculate initials if name changed
-    
-          showToast(payload.message, 'success');
-           setTimeout(() => window.location.reload(), 1500); // Reload to get new password hash
-    
-        } else {
-          showToast(payload.message || 'Failed to update profile.', 'error');
-        }
-      })
-      .catch(err => {
-        console.error(err);
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '💾 Save Changes';
-        showToast('Network error while saving profile.', 'error');
-      });
-    }
+  })
+  .catch(err => {
+    console.error(err);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '💾 Save Changes';
+    showToast('Network error while saving profile.', 'error');
+  });
+}
+
     
     // --- Logout Functions remain the same ---
     function openLogoutModal() {
@@ -652,33 +630,30 @@ nav a.active { background:#2563eb; color:#fff; }
         overlay.classList.remove('show');
         overlay.setAttribute('aria-hidden', 'true');
     }
-    function confirmLogout() {
-       fetch('profile.php', { method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'}, body: new URLSearchParams({action: 'logout'}) })
-       .then(res => res.json())
-       .then(payload => {
-         if (payload.success) {
-           showToast('Logging out...', 'success');
-           setTimeout(() => { window.location.href = '../../public/login.php'; }, 1000); // Correct redirect
-         } else { showToast('Logout failed.', 'error'); }
-       })
-       .catch(err => { console.error(err); showToast('Logout network error.', 'error'); setTimeout(() => { window.location.href = '../login.php'; }, 1500); }); // Correct redirect
-    }
     
-    // --- Modal closing listeners remain the same ---
-    document.addEventListener('click', function(e){
-      const logoutOverlay = document.getElementById('logoutOverlay');
-      if (logoutOverlay?.classList.contains('show') && e.target === logoutOverlay) {
-        closeLogoutModal();
+function confirmLogout() {
+  if (confirm('Are you sure you want to logout?')) {
+    fetch('profile.php', { 
+      method: 'POST', 
+      headers: {'Content-Type':'application/x-www-form-urlencoded'}, 
+      body: new URLSearchParams({action: 'logout'}) 
+    })
+    .then(res => res.json())
+    .then(payload => {
+      if (payload.success) {
+        showToast('Logging out...', 'success');
+        setTimeout(() => { window.location.href = '../../public/login.php'; }, 1000);
+      } else { 
+        showToast('Logout failed.', 'error'); 
       }
+    })
+    .catch(err => { 
+      console.error(err); 
+      showToast('Logout network error.', 'error'); 
+      setTimeout(() => { window.location.href = '../../public/login.php'; }, 1500); 
     });
-    document.addEventListener('keydown', function(e){
-      if (e.key === 'Escape') {
-        const logoutOverlay = document.getElementById('logoutOverlay');
-           if (logoutOverlay?.classList.contains('show')) {
-               closeLogoutModal();
-           }
-      }
-    });
+  }
+}
     </script>
     
 </div>
