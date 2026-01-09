@@ -159,18 +159,18 @@ header { display:flex; align-items:center; background:#fff; padding:12px 20px 12
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 /* BLUE THEME: Active Nav Link */
-nav a.active { background:#2563eb; color:#fff; }
+nav a.active { background: #dc3545; color:#fff; }
 .container { padding:30px 20px 40px 75px; max-width:1000px; margin:0 auto; }
 .profile-card { background:#fff; border:1px solid #e6e9ee; border-radius:16px; overflow:hidden; box-shadow:0 4px 12px rgba(0,0,0,0.05); }
 /* BLUE THEME: Profile Header */
-.profile-header { background:linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%); padding:32px 40px; display:flex; align-items:center; gap:20px; }
+.profile-header { background:linear-gradient(135deg, #d81d1dff 0%, #af1e1eff 100%); padding:32px 40px; display:flex; align-items:center; gap:20px; }
 .profile-avatar { width:90px; height:90px; border-radius:50%; background:rgba(255,255,255,0.2); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:32px; border:4px solid rgba(255,255,255,0.3); }
 .profile-info { flex:1; }
 .profile-name { font-size:28px; font-weight:800; color:#fff; margin-bottom:8px; }
 .profile-meta { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
 .badge { display:inline-block; padding:6px 14px; border-radius:20px; font-weight:700; font-size:12px; text-transform:uppercase; }
 /* BLUE THEME: Staff Role Badge */
-.badge.staff-role { background:rgba(255,255,255,0.9); color:#1d4ed8; }
+.badge.staff-role { background:rgba(255,255,255,0.9); color:red; }
 .badge.staff-id { background:rgba(255,255,255,0.2); color:#fff; border:2px solid rgba(255,255,255,0.3); }
 .profile-body { padding:40px; }
 .section-title { font-size:20px; font-weight:700; color:#2c3e50; margin-bottom:24px; display:flex; align-items:center; gap:10px; }
@@ -384,7 +384,7 @@ nav a.active { background:#2563eb; color:#fff; }
   
   nav#main-nav a.active {
     background: none; /* Alisin ang blue background sa mobile view */
-    color: #60a5fa; /* Light Blue para kitang-kita */
+    color: #fa6060ff; /* Light Blue para kitang-kita */
   }
 
   /* Ayusin ang profile header sa mobile */

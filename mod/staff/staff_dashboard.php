@@ -309,7 +309,7 @@ if (empty($recentAppointments)) {
     align-items: center;
     justify-content: center;
     flex-direction: column;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.1s ease;
 }
 .loader-spinner-fullpage {
     width: 60px;
@@ -1196,11 +1196,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 <div id="toast-overlay-global" class="toast-overlay" style="z-index: 10000;">
     </div>
 
-
-<div class="vertical-bar">
-    <div class="circle"></div>
-</div>
-
 <div class="popup-overlay" onclick="closePopup()"></div>
 
 <header>
@@ -1476,8 +1471,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         setTimeout(() => {
             pageLoader.style.display = 'none'; // Itago ang loader pagkatapos ng fade
-        }, 500); // 0.5s fade duration (tugma sa CSS transition)
-    }, 1000); // 1-second delay
+        }, 100); // 0.5s fade duration (tugma sa CSS transition)
+    }, 100); // 1-second delay
 });
 
 

@@ -1329,7 +1329,7 @@ document.addEventListener('DOMContentLoaded', function() {
         showContent();
     } else {
         // Kung ito ay fresh page load, maghintay ng 1 second
-        setTimeout(showContent, 1000); 
+        setTimeout(showContent, 100); 
     }
 });
 </script>

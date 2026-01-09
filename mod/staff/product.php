@@ -920,10 +920,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <button type="button" class="add-btn" style="background-color: #17a2b8; margin-right: 10px;" onclick="window.location.href='particulars.php'">
                 📋 Manage Particulars
             </button>
-            
-            <button type="button" class="add-btn" onclick="openAddModal()">
-                ➕ Add New Service
-            </button>
 
         <?php else: ?>
             <button type="button" class="add-btn" onclick="openAddModal()">
@@ -1934,7 +1930,7 @@ document.addEventListener('DOMContentLoaded', function() {
             content.style.display = 'block';
             content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 1000); // Ginamit ko pa rin ang 1s delay mo
+    }, 50); // Ginamit ko pa rin ang 1s delay mo
 });
 </script>
 

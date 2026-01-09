@@ -1975,9 +1975,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (content) {
             content.style.display = 'block';
-            content.style.animation = 'fadeInContent 0.5s ease';
+            content.style.animation = 'fadeInContent 0.1 ease';
         }
-    }, 1000);
+    }, 100);
 });
 </script>
 

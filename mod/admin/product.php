@@ -928,13 +928,16 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </button>
 
 <?php elseif ($activeTable === 'services'): ?>
-    <button type="button" class="add-btn" style="background-color: #17a2b8; margin-right: 10px;" onclick="window.location.href='particulars.php'">
-        📋 Manage Particulars
-    </button>
-    
     <button type="button" class="add-btn" onclick="openAddModal()">
         ➕ Add New Service
     </button>
+        <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='services.php'">
+        ➕ Customize Forms of Service
+    </button>
+    <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='particulars.php'">
+        📋 Manage Particulars
+    </button>
+
 
 <?php else: ?>
     <button type="button" class="add-btn" onclick="openAddModal()">

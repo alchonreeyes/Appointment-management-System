@@ -19,7 +19,7 @@ if ($is_logged_in) {
     $update->execute();
 }
 
-// Fetch services with booking_page (SCALABLE - NO HARDCODING!)
+// ✅ FETCH ALL SERVICES
 $stmt = $pdo->prepare("SELECT * FROM services ORDER BY service_id ASC");
 $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -168,6 +168,32 @@ function formatServiceTitle($title) {
         .icon { width: 18px; height: 18px; stroke: #555; flex-shrink: 0; }
         .disease-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         
+        /* ✅ CUSTOM SERVICE STYLING (Matches Ishihara Design) */
+        .custom-service-indicator {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-top: 3px solid #667eea;
+            text-align: center;
+        }
+        
+        .custom-service-indicator h4 {
+            margin: 0 0 8px 0;
+            font-size: 0.9rem;
+            color: #667eea;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .custom-service-indicator p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #666;
+            line-height: 1.4;
+        }
+        
         .appointment-btn {
             margin-top: auto;
             background: #111;
@@ -210,72 +236,100 @@ function formatServiceTitle($title) {
                 <ul class="carousel-track" id="track">
                     
                     <?php foreach ($services as $service): ?>
+                        
                         <?php
                             $sId = $service['service_id'];
                             $name = $service['service_name'];
                             $desc = $service['description'];
                             
-                            // ✅ GET BOOKING PAGE FROM DATABASE (SCALABLE!)
+                            // ✅ DETERMINE BOOKING PAGE
                             $link = $service['booking_page'] ?? '../public/appointment.php';
+                            
+                            // ✅ CHECK IF CUSTOM SERVICE
+                            $is_custom = (strpos($link, 'booking-form.php') !== false || strpos($link, 'custom_service.php') !== false);
+                            
+                            // If custom service, pass service_id as parameter
+                            if ($is_custom) {
+                                $link = '../public/custom_service.php?service_id=' . $sId;
+                            }
                             
                             $myParticulars = $groupedParticulars[$sId] ?? [];
                             $benefits = array_filter($myParticulars, fn($p) => $p['category'] === 'benefit');
                             $diseases = array_filter($myParticulars, fn($p) => $p['category'] === 'disease');
                             $extras   = array_filter($myParticulars, fn($p) => $p['category'] === 'extra');
+                            
+                            $has_details = !empty($benefits) || !empty($diseases) || !empty($extras);
                         ?>
 
                         <li class="carousel-slide">
                             <div class="appointment-wrapper">
                                 <div class="card-header">
                                     <h2 class="brand-name"><?= formatServiceTitle($name) ?></h2>
+                                   
                                     <p class="service-description"><?= nl2br(htmlspecialchars($desc)) ?></p>
+                                   
                                 </div>
                                 
-                                <?php if (!empty($benefits)): ?>
-                                <div class="benefits-list">
-                                    <?php $chunks = array_chunk($benefits, 2); foreach ($chunks as $row): ?>
-                                    <div class="benefit-row">
-                                        <?php foreach ($row as $item): ?>
-                                        <div class="benefit-item">
-                                            <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                            <span><?= htmlspecialchars($item['label']) ?></span>
+                                <?php if ($has_details): ?>
+                                    <!-- ✅ SHOW PARTICULARS (For regular services) -->
+                                    
+                                    <?php if (!empty($benefits)): ?>
+                                    <div class="benefits-list">
+                                        <?php $chunks = array_chunk($benefits, 2); foreach ($chunks as $row): ?>
+                                        <div class="benefit-row">
+                                            <?php foreach ($row as $item): ?>
+                                            <div class="benefit-item">
+                                                <svg class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span><?= htmlspecialchars($item['label']) ?></span>
+                                            </div>
+                                            <?php endforeach; ?>
                                         </div>
                                         <?php endforeach; ?>
                                     </div>
-                                    <?php endforeach; ?>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if (!empty($diseases)): ?>
-                                <div class="health-screening">
-                                    <h3 style="font-size:0.85rem; margin-bottom:10px;">Health Screening:</h3>
-                                    <div class="disease-grid">
-                                        <?php foreach ($diseases as $item): ?>
-                                        <div class="disease-item">
-                                            <svg class="check-icon" style="stroke:orange; background:#fff8e1;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                            <span><?= htmlspecialchars($item['label']) ?></span>
+                                    <?php endif; ?>
+                                    
+                                    <?php if (!empty($diseases)): ?>
+                                    <div class="health-screening">
+                                        <h3 style="font-size:0.85rem; margin-bottom:10px;">Health Screening:</h3>
+                                        <div class="disease-grid">
+                                            <?php foreach ($diseases as $item): ?>
+                                            <div class="disease-item">
+                                                <svg class="check-icon" style="stroke:orange; background:#fff8e1;" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                                <span><?= htmlspecialchars($item['label']) ?></span>
+                                            </div>
+                                            <?php endforeach; ?>
                                         </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>  
-                                <?php endif; ?>
+                                    </div>  
+                                    <?php endif; ?>
 
-                                <?php if (!empty($extras)): ?>
-                                <div class="extra-benefits">
-                                    <?php foreach ($extras as $item): ?>
-                                    <div class="extra-item">
-                                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line></svg>
-                                        <span><?= htmlspecialchars($item['label']) ?></span>
+                                    <?php if (!empty($extras)): ?>
+                                    <div class="extra-benefits">
+                                        <?php foreach ($extras as $item): ?>
+                                        <div class="extra-item">
+                                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line></svg>
+                                            <span><?= htmlspecialchars($item['label']) ?></span>
+                                        </div>
+                                        <?php endforeach; ?>
                                     </div>
-                                    <?php endforeach; ?>
-                                </div>
+                                    <?php endif; ?>
+                                    
+                                <?php elseif ($is_custom): ?>
+                                    <!-- ✅ CUSTOM SERVICE DESIGN (Matches Ishihara Style) -->
+                                    <div class="custom-service-indicator">
+                                        <h4>✨ Custom Service</h4>
+                                        <p>This service includes personalized questions tailored to your needs.</p>
+                                    </div>
+                                    
+                                <?php else: ?>
+                                    <!-- Empty state for services with no details -->
+                                    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center; color: #999; font-size: 0.85rem; margin-bottom: 15px;">
+                                        No additional details available
+                                    </div>
                                 <?php endif; ?>
                                 
                                 <?php if ($is_logged_in): ?>
-                                    <!-- User is logged in, go directly to booking page -->
                                     <a class="appointment-btn" href="<?= htmlspecialchars($link) ?>">BOOK NOW</a>
                                 <?php else: ?>
-                                    <!-- User not logged in, redirect to login with return URL -->
                                     <a class="appointment-btn" href="../public/login.php?redirect=<?= urlencode($link) ?>">BOOK NOW</a>
                                 <?php endif; ?>
                             </div>

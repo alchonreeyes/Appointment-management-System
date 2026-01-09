@@ -79,9 +79,6 @@
 </div>
 <style>@keyframes spin { 0% { transform:rotate(0deg); } 100% { transform:rotate(360deg); } }</style>
 
-<!-- SIDEBAR DECORATION -->
-<div class="vertical-bar"><div class="circle"></div></div>
-
 <!-- MAIN HEADER NAVIGATION -->
 <header>
     <div class="logo-section">

@@ -234,7 +234,7 @@ $result = $conn->query($sql);
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
 
-      <a href="../public/appointment.php"><button class="add-to-cart-btn">Want Prescriptions?</button></a>
+
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
     </div>
@@ -268,7 +268,7 @@ let activeFilters = {
 document.addEventListener('DOMContentLoaded', () => {
     // Check boxes if they match active filters (optional logic)
     
-    // --- URGENT FIX: Run applyFilters immediately on DOM load ---
+    // --- URGENT FIX: Run   applyFilters immediately on DOM load ---
     applyFilters(); 
 });
 
