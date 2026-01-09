@@ -24,6 +24,11 @@ $stmt = $pdo->prepare("SELECT * FROM services ORDER BY service_id ASC");
 $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// ✅ CHECK WHICH SERVICES HAVE CUSTOM FORMS
+$stmtForms = $pdo->prepare("SELECT service_id FROM service_forms");
+$stmtForms->execute();
+$servicesWithForms = $stmtForms->fetchAll(PDO::FETCH_COLUMN);
+
 // Fetch particulars
 $stmtPart = $pdo->prepare("SELECT * FROM particulars ORDER BY particular_id ASC");
 $stmtPart->execute();
@@ -242,15 +247,15 @@ function formatServiceTitle($title) {
                             $name = $service['service_name'];
                             $desc = $service['description'];
                             
+                            // ✅ CHECK IF SERVICE HAS CUSTOM FORM
+                            $is_custom = in_array($sId, $servicesWithForms);
+                            
                             // ✅ DETERMINE BOOKING PAGE
-                            $link = $service['booking_page'] ?? '../public/appointment.php';
-                            
-                            // ✅ CHECK IF CUSTOM SERVICE
-                            $is_custom = (strpos($link, 'booking-form.php') !== false || strpos($link, 'custom_service.php') !== false);
-                            
-                            // If custom service, pass service_id as parameter
                             if ($is_custom) {
                                 $link = '../public/custom_service.php?service_id=' . $sId;
+                            } else {
+                                // Use stored booking_page or default to appointment.php
+                                $link = $service['booking_page'] ?? '../public/appointment.php';
                             }
                             
                             $myParticulars = $groupedParticulars[$sId] ?? [];
