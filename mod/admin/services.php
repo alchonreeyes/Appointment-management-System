@@ -345,8 +345,8 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <i class="fas fa-plus"></i> <a href="product.php">
         <button class="btn btn-primary" >
                 Back
-            </button>
-        </a>
+            </a>
+        </button>
     </div>
     
     <table class="services-table">
@@ -354,7 +354,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tr>
                 <th>Service Name</th>
                 <th>Description</th>
-                <th>Price</th>
+          
                 <th>Actions</th>
             </tr>
         </thead>
@@ -363,7 +363,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tr>
                 <td><strong><?= htmlspecialchars($service['service_name']) ?></strong></td>
                 <td><?= htmlspecialchars($service['description']) ?></td>
-                <td>₱<?= number_format($service['price'], 2) ?></td>
+         
                 <td>
                     <button class="btn-edit" onclick="openFormBuilder(<?= $service['service_id'] ?>)">
                         <i class="fas fa-wrench"></i> Form Builder
