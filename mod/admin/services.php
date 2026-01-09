@@ -345,8 +345,8 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <i class="fas fa-plus"></i> <a href="product.php">
         <button class="btn btn-primary" >
                 Back
-            </a>
-        </button>
+            </button>
+        </a>
     </div>
     
     <table class="services-table">
