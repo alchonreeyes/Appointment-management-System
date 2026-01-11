@@ -830,3 +830,6 @@ p {
 .flatpickr-day.flatpickr-disabled-closed:hover {
   background-color: #e5e7eb !important;
 }
+/* .flatpickr-day{
+    transition: 0.5s ease-in;
+} */

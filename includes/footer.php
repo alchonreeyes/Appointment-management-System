@@ -140,7 +140,7 @@ $brandsCol2 = array_slice($allBrands, 5, 5);
             
             <div class="social-icons">
                 <a href="https://web.facebook.com/EyeMasterOpticalClinic" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
-                <a href="../public/store.php" aria-label="Email"><i class="fas fa-envelope"></i></a>
+                <a href="mailto:eyemasteropticalclinic@gmail.com" aria-label="Email"><i class="fas fa-envelope"></i></a>
             </div>
         </div>
 

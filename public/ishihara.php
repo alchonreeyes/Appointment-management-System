@@ -230,7 +230,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
           <option value="13:30">1:30 PM</option>
           <option value="14:30">2:30 PM</option>
           <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+          
         </select>
       </div>
     </div>

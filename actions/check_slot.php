@@ -26,29 +26,30 @@ try {
         exit;
     }
 
-    // Check slot availability - IMPORTANT: Include time in query!
-    $checkSlot = $pdo->prepare("
-        SELECT used_slots, max_slots 
-        FROM appointment_slots 
-        WHERE service_id = ? AND appointment_date = ? AND appointment_time = ?
-    ");
-    $checkSlot->execute([$service_id, $date, $time]);
-    $slot = $checkSlot->fetch(PDO::FETCH_ASSOC);
+    // Check ALL services for this date+time
+$checkSlot = $pdo->prepare("
+    SELECT SUM(used_slots) as total_used, MAX(max_slots) as slot_limit
+    FROM appointment_slots 
+    WHERE appointment_date = ? AND appointment_time = ?
+    GROUP BY appointment_date, appointment_time
+");
+$checkSlot->execute([$date, $time]);
 
-    if (!$slot) {
-        // No slot record = 1 slot available
-        echo json_encode(['available' => true, 'remaining' => 1]);
+$slot = $checkSlot->fetch(PDO::FETCH_ASSOC);
+
+if (!$slot || $slot['total_used'] === null) {
+    echo json_encode(['available' => true, 'remaining' => 1]);
+} else {
+    $remaining = 1 - intval($slot['total_used']); // Global limit = 1
+    if ($remaining > 0) {
+        echo json_encode(['available' => true, 'remaining' => $remaining]);
     } else {
-        $remaining = $slot['max_slots'] - $slot['used_slots'];
-        if ($remaining > 0) {
-            echo json_encode(['available' => true, 'remaining' => $remaining]);
-        } else {
-            echo json_encode(['available' => false, 'message' => 'Time slot taken']);
-        }
+        echo json_encode(['available' => false, 'message' => 'Time slot taken']);
     }
+}
 
 } catch (Exception $e) {
     error_log("check_slot.php error: " . $e->getMessage());
     echo json_encode(['available' => false, 'message' => 'Server error']);
 }
-?>
+?>  
