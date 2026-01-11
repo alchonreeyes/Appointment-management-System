@@ -212,29 +212,36 @@ if (isset($_SESSION['login_cooldown_until'])) {
                 })
                 .then(response => response.json())
                 .then(data => {
-                    if (data.success) {
-                        // A. SUCCESS: Show Popup & Redirect
-                        const popup = document.getElementById('successPopup');
-                        popup.classList.add('active'); // CSS will handle visibility
-                        
-                        setTimeout(() => {
-                            window.location.href = data.redirect;
-                        }, 1500); // 1.5 seconds delay
+    if (data.success) {
+        // SUCCESS: Show Popup & Redirect
+        const popup = document.getElementById('successPopup');
+        popup.classList.add('active');
+        
+        setTimeout(() => {
+            window.location.href = data.redirect;
+        }, 1500);
 
-                    } else {
-                        // B. ERROR: Show Message (No Reload)
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
-                        
-                        errorAlert.style.display = 'block';
-                        errorAlert.innerText = "❌ " + data.message;
-                        
-                        // Kung cooldown error, reload page after 2 seconds to start timer
-                        if (data.message.includes("attempts")) {
-                            setTimeout(() => window.location.reload(), 2000);
-                        }
-                    }
-                })
+    } else {
+        // ERROR: Show Message
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        errorAlert.style.display = 'block';
+        errorAlert.innerText = "❌ " + data.message;
+        
+        // ✅ NEW: Redirect to verify page if unverified
+        if (data.redirect) {
+            setTimeout(() => {
+                window.location.href = data.redirect;
+            }, 2000);
+        }
+        
+        // Cooldown check
+        if (data.message.includes("attempts")) {
+            setTimeout(() => window.location.reload(), 2000);
+        }
+    }
+})
                 .catch(error => {
                     console.error('Error:', error);
                     btn.disabled = false;

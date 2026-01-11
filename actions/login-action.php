@@ -102,24 +102,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // =========================================================
     // PRIORITY 3: CHECK CLIENTS (USERS TABLE) - Standard Plain Email
     // =========================================================
-    $stmtClient = $pdo->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
-    $stmtClient->execute([$email_input]);
-    $clientUser = $stmtClient->fetch(PDO::FETCH_ASSOC);
+    // PRIORITY 3: CHECK CLIENTS (USERS TABLE) - Standard Plain Email
+$stmtClient = $pdo->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+$stmtClient->execute([$email_input]);
+$clientUser = $stmtClient->fetch(PDO::FETCH_ASSOC);
 
-    if ($clientUser && password_verify($password_input, $clientUser['password_hash'])) {
-        unset($_SESSION['login_attempts']);
-        unset($_SESSION['login_cooldown_until']);
-
-        $_SESSION['client_id'] = $clientUser['id'];
-        $_SESSION['client_email'] = $clientUser['email'];
-        $_SESSION['client_role'] = 'client';
-
-        $redirect_url = $_SESSION['redirect_after_login'] ?? '../public/home.php';
-        unset($_SESSION['redirect_after_login']);
-
-        echo json_encode(['success' => true, 'redirect' => $redirect_url]);
+if ($clientUser && password_verify($password_input, $clientUser['password_hash'])) {
+    
+    // ✅ NEW: Check if email is verified
+    if ($clientUser['is_verified'] == 0) {
+        $_SESSION['email'] = $clientUser['email']; // Store for verify page
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Please verify your email first.',
+            'redirect' => '../public/verify_email.php'
+        ]);
         exit;
     }
+    
+    unset($_SESSION['login_attempts']);
+    unset($_SESSION['login_cooldown_until']);
+
+    $_SESSION['client_id'] = $clientUser['id'];
+    $_SESSION['client_email'] = $clientUser['email'];
+    $_SESSION['client_role'] = 'client';
+
+    $redirect_url = $_SESSION['redirect_after_login'] ?? '../public/home.php';
+    unset($_SESSION['redirect_after_login']);
+
+    echo json_encode(['success' => true, 'redirect' => $redirect_url]);
+    exit;
+}
 
     // =========================================================
     // IF NO MATCH FOUND

@@ -7,7 +7,7 @@ require_once __DIR__ . '/../config/encryption_util.php';
 // ========================================
 // 1. COOLDOWN CHECK (3 Minutes)
 // ========================================
-$cooldown_minutes = 1;
+$cooldown_minutes = 15;
 if (isset($_SESSION['last_appointment_time'])) {
     $time_passed = time() - $_SESSION['last_appointment_time'];
     $time_remaining = ($cooldown_minutes * 60) - $time_passed;
@@ -37,7 +37,20 @@ try {
 
     // =======================================================
     // 2. ENCRYPT SENSITIVE DATA
-    // =======================================================
+    // Check if client is verified
+$verifyClient = $pdo->prepare("SELECT account_status FROM clients WHERE client_id = ?");
+$verifyClient->execute([$client_id]);
+$status = $verifyClient->fetch()['account_status'];
+
+if ($status === 'suspended') {
+    echo json_encode(['success' => false, 'message' => 'Your account has been suspended. Contact clinic for assistance.']);
+    exit;
+}
+
+if ($status === 'pending') {
+    echo json_encode(['success' => false, 'message' => 'Your account is pending verification. Please wait for admin approval.']);
+    exit;
+}
     $full_name    = encrypt_data(trim($_POST['full_name'] ?? ''));
     $phone_number = encrypt_data(trim($_POST['contact_number'] ?? ''));
     $occupation   = encrypt_data(trim($_POST['occupation'] ?? ''));
@@ -80,6 +93,45 @@ try {
     $appointment_group_id = "EM-" . date('Ymd') . "-" . rand(1000, 9999);
     
     $service_id = intval($_POST['service_id'] ?? 0);
+    // After line 90 (after getting $service_id)
+$today = date('Y-m-d');
+
+// Check how many appointments this client has today
+$checkDaily = $pdo->prepare("
+    SELECT COUNT(*) as today_count 
+    FROM appointments 
+    WHERE client_id = ? 
+      AND DATE(created_at) = ?
+      AND status_id NOT IN (4, 5)
+");
+$checkDaily->execute([$client_id, $today]);
+$dailyCount = $checkDaily->fetch()['today_count'];
+
+if ($dailyCount >= 2) { // Allow max 2 bookings per day
+    echo json_encode(['success' => false, 'message' => 'You can only book 2 appointments per day. Please try again tomorrow.']);
+    exit;
+}
+// In appointment-action.php after transaction
+$ip = $_SERVER['REMOTE_ADDR'];
+$pdo->prepare("INSERT INTO spam_log (client_id, action_type, ip_address) VALUES (?, 'booking', ?)")
+    ->execute([$client_id, $ip]);
+
+// Auto-suspend if 10+ bookings in 1 hour
+$checkSpam = $pdo->prepare("
+    SELECT COUNT(*) as spam_count 
+    FROM spam_log 
+    WHERE client_id = ? 
+      AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+");
+$checkSpam->execute([$client_id]);
+$spamCount = $checkSpam->fetch()['spam_count'];
+
+if ($spamCount > 10) {
+    $pdo->prepare("UPDATE clients SET account_status = 'suspended' WHERE client_id = ?")
+        ->execute([$client_id]);
+    echo json_encode(['success' => false, 'message' => 'Account suspended due to suspicious activity.']);
+    exit;
+}
 
     // ========================================
     // 3. START TRANSACTION WITH SLOT LOCKING

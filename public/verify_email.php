@@ -61,7 +61,16 @@ if (isset($_POST['verify'])) {
             <?php elseif (isset($_SESSION['success'])): ?>
                 <p class="success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></p>
             <?php endif; ?>
+            
         </form>
+        </form>
+
+<!-- ✅ Add Resend Code Button -->
+<form method="POST" action="../actions/resend_verification.php" style="margin-top: 15px;">
+    <button type="submit" name="resend" style="background: #666; padding: 10px 20px; border: none; color: white; border-radius: 5px; cursor: pointer;">
+        Resend Verification Code
+    </button>
+</form>
     </div>
 
     <?php include '../includes/footer.php'; ?>

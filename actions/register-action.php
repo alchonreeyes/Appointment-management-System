@@ -76,48 +76,54 @@ $encrypted_phone_number = encrypt_data($phone_number);
                                VALUES (?, ?, ?, ?)");
         $stmt->execute([$userId, $gender, $age, $encrypted_occupation]);
 
-        // --- 5. SEND VERIFICATION EMAIL ---
-        $mail = new PHPMailer(true); 
-        try {
-            $mail->isSMTP();
-            $mail->Host = 'smtp.gmail.com';
-            $mail->SMTPAuth = true;
-            $mail->Username = 'alchonreyez@gmail.com'; 
-            $mail->Password = 'urwbzscfmaynltzx'; // Use your App Password here
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port = 587;
+       // --- 5. SEND VERIFICATION EMAIL ---
+$mail = new PHPMailer(true); 
+try {
+    $mail->isSMTP();
+    $mail->Host = 'smtp.gmail.com';
+    $mail->SMTPAuth = true;
+    $mail->Username = 'alchonreyez@gmail.com'; 
+    $mail->Password = 'urwbzscfmaynltzx';
+    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+    $mail->Port = 587;
 
-            $mail->setFrom('alchonreyez@gmail.com', 'EyeMaster Clinic');
-            $mail->addAddress($email, $full_name);
+    $mail->setFrom('alchonreyez@gmail.com', 'EyeMaster Clinic');
+    $mail->addAddress($email, $full_name);
 
-            $mail->isHTML(true);
-            $mail->Subject = 'Verify your EyeMaster account';
-            $mail->Body = "
-                <div style='font-family:Arial, sans-serif; background:#f8f9fa; padding:20px; border-radius:10px;'>
-                    <h2 style='color:#004aad;'>Welcome to EyeMaster Clinic!</h2>
-                    <p>Hi <b>$full_name</b>,</p>
-                    <p>Thank you for registering! Please verify your email using the code below:</p>
-                    <h1 style='color:#004aad; text-align:center;'>$verification_code</h1>
-                    <p style='text-align:center;'>Enter this code on the verification page to activate your account.</p>
-                    <p>Thank you,<br><b>EyeMaster Clinic Team</b></p>
-                </div>
-            ";
+    $mail->isHTML(true);
+    $mail->Subject = 'Verify your EyeMaster account';
+    $mail->Body = "
+        <div style='font-family:Arial, sans-serif; background:#f8f9fa; padding:20px; border-radius:10px;'>
+            <h2 style='color:#004aad;'>Welcome to EyeMaster Clinic!</h2>
+            <p>Hi <b>$full_name</b>,</p>
+            <p>Thank you for registering! Please verify your email using the code below:</p>
+            <h1 style='color:#004aad; text-align:center;'>$verification_code</h1>
+            <p style='text-align:center;'>Enter this code on the verification page to activate your account.</p>
+            <p>Thank you,<br><b>EyeMaster Clinic Team</b></p>
+        </div>
+    ";
 
-            $mail->send();
+    $mail->send();
 
-            // Success logic
-            $_SESSION['email'] = $email;
-            $_SESSION['success'] = "A verification code has been sent to your email.";
-            header("Location: ../public/verify_email.php");
-            exit;
+    // ✅ Success - Email sent
+    $_SESSION['email'] = $email;
+    $_SESSION['success'] = "A verification code has been sent to your email.";
+    header("Location: ../public/verify_email.php");
+    exit;
 
-        } catch (Exception $e) {
-            // Log the error but redirect the user (don't expose internal error)
-            error_log("Mailer Error: " . $mail->ErrorInfo);
-            $_SESSION['error'] = "Mailer Error: Could not send verification email. " . $mail->ErrorInfo;
-            header("Location: ../public/register.php");
-            exit;
-        }
+} catch (Exception $e) {
+    // ❌ Email failed - DELETE the user account
+    $deleteUser = $pdo->prepare("DELETE FROM users WHERE id = ?");
+    $deleteUser->execute([$userId]);
+    
+    $deleteClient = $pdo->prepare("DELETE FROM clients WHERE user_id = ?");
+    $deleteClient->execute([$userId]);
+
+    error_log("Mailer Error: " . $mail->ErrorInfo);
+    $_SESSION['error'] = "Registration failed: Could not send verification email. Please check your email and try again.";
+    header("Location: ../public/register.php");
+    exit;
+}
 
     } catch (PDOException $e) {
         $_SESSION['error'] = "Registration failed: " . $e->getMessage();
