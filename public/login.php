@@ -112,15 +112,30 @@ if (isset($_SESSION['login_cooldown_until'])) {
                 <h1>Welcome Back</h1>
                 <p>Please enter your credentials to login.</p>
             </div>
+<!-- Registration Success Alert -->
+<?php if (isset($_SESSION['registration_success'])): ?>
+    <div class="alert-box" style="background-color: #d1fae5; color: #065f46; border-color: #6ee7b7; display: block; margin-bottom: 15px;">
+        ✅ <?= htmlspecialchars($_SESSION['registration_success']); unset($_SESSION['registration_success']); ?>
+    </div>
+<?php endif; ?>
 
-            <div id="errorAlert" class="alert-box"></div>
+<!-- Verification Success Alert -->
+<?php if (isset($_SESSION['verification_success'])): ?>
+    <div class="alert-box" style="background-color: #d1fae5; color: #065f46; border-color: #6ee7b7; display: block; margin-bottom: 15px;">
+        ✅ <?= htmlspecialchars($_SESSION['verification_success']); unset($_SESSION['verification_success']); ?>
+    </div>
+<?php endif; ?>
 
-            <?php if ($in_cooldown): ?>
-                <div class="alert-box alert-cooldown" style="display:block;">
-                    Too many attempts. Please wait.
-                    <div id="cooldownTimer" style="font-weight:bold; margin-top:5px;">⏱️ <?= $cooldown_remaining ?>s</div>
-                </div>
-            <?php endif; ?>
+<!-- Error Alert (for login failures) -->
+<div id="errorAlert" class="alert-box"></div>
+
+<!-- Cooldown Alert -->
+<?php if ($in_cooldown): ?>
+    <div class="alert-box alert-cooldown" style="display:block;">
+        Too many attempts. Please wait.
+        <div id="cooldownTimer" style="font-weight:bold; margin-top:5px;">⏱️ <?= $cooldown_remaining ?>s</div>
+    </div>
+<?php endif; ?>
 
             <form id="loginForm">
                 <div class="input-group">

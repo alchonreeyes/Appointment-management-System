@@ -4,70 +4,147 @@ header('Content-Type: application/json');
 include '../config/db.php';
 require_once __DIR__ . '/../config/encryption_util.php'; 
 
-// ========================================
-// 1. COOLDOWN CHECK (3 Minutes)
-// ========================================
-$cooldown_minutes = 15;
-if (isset($_SESSION['last_appointment_time'])) {
-    $time_passed = time() - $_SESSION['last_appointment_time'];
-    $time_remaining = ($cooldown_minutes * 60) - $time_passed;
-    if ($time_remaining > 0) {
-        $minutes_left = ceil($time_remaining / 60);
-        echo json_encode(['success' => false, 'message' => "Please wait $minutes_left minute(s) before booking again."]);
-        exit;
-    }
-}
-
 try {
     $db = new Database();
     $pdo = $db->getConnection();
 
+    // ========================================
+    // 1. CHECK SESSION
+    // ========================================
     if (!isset($_SESSION['client_id'])) {
         echo json_encode(['success' => false, 'message' => 'Session expired. Please login again.']);
         exit;
     }
 
-    // --- FETCH INTERNAL CLIENT_ID ---
+    // ========================================
+    // 2. GET CLIENT_ID
+    // ========================================
     $client_user_id = $_SESSION['client_id'];
-    $stmt = $pdo->prepare("SELECT client_id FROM clients WHERE user_id = ?");
+    $stmt = $pdo->prepare("SELECT client_id, account_status FROM clients WHERE user_id = ?");
     $stmt->execute([$client_user_id]);
     $client = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$client) throw new Exception("Client record not found.");
+    
+    if (!$client) {
+        echo json_encode(['success' => false, 'message' => 'Client record not found.']);
+        exit;
+    }
+    
     $client_id = $client['client_id'];
+    $account_status = $client['account_status'] ?? 'active';
 
-    // =======================================================
-    // 2. ENCRYPT SENSITIVE DATA
-    // Check if client is verified
-$verifyClient = $pdo->prepare("SELECT account_status FROM clients WHERE client_id = ?");
-$verifyClient->execute([$client_id]);
-$status = $verifyClient->fetch()['account_status'];
+    // ========================================
+    // 3. CHECK IF SUSPENDED
+    // ========================================
+    if ($account_status === 'suspended') {
+        echo json_encode(['success' => false, 'message' => 'Your account has been suspended. Please contact the clinic.']);
+        exit;
+    }
 
-if ($status === 'suspended') {
-    echo json_encode(['success' => false, 'message' => 'Your account has been suspended. Contact clinic for assistance.']);
+    // ========================================
+    // 4. COOLDOWN CHECK (15 Minutes)
+    // ========================================
+    $cooldown_minutes = 2;
+    if (isset($_SESSION['last_appointment_time'])) {
+        $time_passed = time() - $_SESSION['last_appointment_time'];
+        $time_remaining = ($cooldown_minutes * 60) - $time_passed;
+        if ($time_remaining > 0) {
+            $minutes_left = ceil($time_remaining / 60);
+            echo json_encode(['success' => false, 'message' => "Please wait $minutes_left minute(s) before booking again."]);
+            exit;
+        }
+    }
+
+    // ========================================
+// 5. ANTI-SPAM: Detect Aggressive Booking
+// ========================================
+
+// Check bookings in last 10 minutes
+$checkAggressive = $pdo->prepare("
+    SELECT appointment_id, appointment_date, appointment_time, service_id
+    FROM appointments 
+    WHERE client_id = ? 
+      AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
+      AND status_id IN (1, 2)
+    ORDER BY created_at DESC
+");
+$checkAggressive->execute([$client_id]);
+$recentBookings = $checkAggressive->fetchAll(PDO::FETCH_ASSOC);
+$recentCount = count($recentBookings);
+
+// If 6+ bookings in 10 minutes = SPAMMER
+if ($recentCount >= 6) {
+    
+    // 1. Cancel all their recent appointments
+    $cancelIds = array_column($recentBookings, 'appointment_id');
+    $placeholders = str_repeat('?,', count($cancelIds) - 1) . '?';
+    
+    $pdo->prepare("
+        UPDATE appointments 
+        SET status_id = 5, reason_cancel = 'Auto-cancelled: Suspicious activity'
+        WHERE appointment_id IN ($placeholders)
+    ")->execute($cancelIds);
+    
+    // 2. Restore all slots they took
+    foreach ($recentBookings as $booking) {
+        $pdo->prepare("
+            UPDATE appointment_slots 
+            SET used_slots = used_slots - 1 
+            WHERE service_id = ? 
+              AND appointment_date = ? 
+              AND appointment_time = ?
+              AND used_slots > 0
+        ")->execute([
+            $booking['service_id'],
+            $booking['appointment_date'],
+            $booking['appointment_time']
+        ]);
+    }
+    
+    // 3. Suspend the account
+    $pdo->prepare("UPDATE clients SET account_status = 'suspended' WHERE client_id = ?")
+        ->execute([$client_id]);
+    
+    echo json_encode([
+        'success' => false, 
+        'message' => 'Account suspended: Suspicious booking activity detected. All recent appointments have been cancelled.'
+    ]);
     exit;
 }
 
-if ($status === 'pending') {
-    echo json_encode(['success' => false, 'message' => 'Your account is pending verification. Please wait for admin approval.']);
+// Normal check: Max 3 bookings in 24 hours (for regular users)
+$checkDaily = $pdo->prepare("
+    SELECT COUNT(*) as daily_count 
+    FROM appointments 
+    WHERE client_id = ? 
+      AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      AND status_id IN (1, 2)
+");
+$checkDaily->execute([$client_id]);
+$dailyCount = $checkDaily->fetch()['daily_count'];
+
+if ($dailyCount >= 3) {
+    echo json_encode([
+        'success' => false, 
+        'message' => 'You can only book 3 appointments per day. Please try again tomorrow.'
+    ]);
     exit;
 }
+
+    // ========================================
+    // 6. ENCRYPT SENSITIVE DATA
+    // ========================================
     $full_name    = encrypt_data(trim($_POST['full_name'] ?? ''));
     $phone_number = encrypt_data(trim($_POST['contact_number'] ?? ''));
     $occupation   = encrypt_data(trim($_POST['occupation'] ?? ''));
-
     $concern_raw  = trim($_POST['concern'] ?? '');
     $concern      = encrypt_data($concern_raw);
-
     $symptoms_raw = isset($_POST['symptoms']) ? (is_array($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : $_POST['symptoms']) : '';
     $symptoms     = encrypt_data($symptoms_raw);
-
     $ish_reason   = encrypt_data(trim($_POST['ishihara_reason'] ?? ''));
     $ish_prev     = encrypt_data(trim($_POST['previous_color_issues'] ?? ''));
     $ish_notes    = encrypt_data(trim($_POST['ishihara_notes'] ?? ''));
-
     $cert_purpose = trim($_POST['certificate_purpose'] ?? '');
     $cert_other   = encrypt_data(trim($_POST['certificate_other'] ?? ''));
-
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
     $age = intval($_POST['age'] ?? 0);
@@ -89,52 +166,11 @@ if ($status === 'pending') {
         exit;
     }
 
-    // Reference ID
     $appointment_group_id = "EM-" . date('Ymd') . "-" . rand(1000, 9999);
-    
     $service_id = intval($_POST['service_id'] ?? 0);
-    // After line 90 (after getting $service_id)
-$today = date('Y-m-d');
-
-// Check how many appointments this client has today
-$checkDaily = $pdo->prepare("
-    SELECT COUNT(*) as today_count 
-    FROM appointments 
-    WHERE client_id = ? 
-      AND DATE(created_at) = ?
-      AND status_id NOT IN (4, 5)
-");
-$checkDaily->execute([$client_id, $today]);
-$dailyCount = $checkDaily->fetch()['today_count'];
-
-if ($dailyCount >= 2) { // Allow max 2 bookings per day
-    echo json_encode(['success' => false, 'message' => 'You can only book 2 appointments per day. Please try again tomorrow.']);
-    exit;
-}
-// In appointment-action.php after transaction
-$ip = $_SERVER['REMOTE_ADDR'];
-$pdo->prepare("INSERT INTO spam_log (client_id, action_type, ip_address) VALUES (?, 'booking', ?)")
-    ->execute([$client_id, $ip]);
-
-// Auto-suspend if 10+ bookings in 1 hour
-$checkSpam = $pdo->prepare("
-    SELECT COUNT(*) as spam_count 
-    FROM spam_log 
-    WHERE client_id = ? 
-      AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-");
-$checkSpam->execute([$client_id]);
-$spamCount = $checkSpam->fetch()['spam_count'];
-
-if ($spamCount > 10) {
-    $pdo->prepare("UPDATE clients SET account_status = 'suspended' WHERE client_id = ?")
-        ->execute([$client_id]);
-    echo json_encode(['success' => false, 'message' => 'Account suspended due to suspicious activity.']);
-    exit;
-}
 
     // ========================================
-    // 3. START TRANSACTION WITH SLOT LOCKING
+    // 7. START TRANSACTION
     // ========================================
     $pdo->beginTransaction();
 
@@ -144,50 +180,43 @@ if ($spamCount > 10) {
         
         if (empty($date) || empty($time)) continue;
 
-        // ========================================
-        // 4. CHECK CLOSED DATES FROM schedule_settings
-        // ========================================
+        // Check closed dates
         $checkClosed = $pdo->prepare("SELECT status FROM schedule_settings WHERE schedule_date = ? AND status = 'Closed'");
         $checkClosed->execute([$date]);
         if ($checkClosed->fetch()) {
             throw new Exception("Sorry, the clinic is closed on " . date('F j, Y', strtotime($date)) . ".");
         }
 
- // ========================================
-// 5. SLOT AVAILABILITY CHECK (PREVENTS OVERBOOKING)
-// ========================================
-$checkSlot = $pdo->prepare("
-    SELECT slot_id, used_slots, max_slots 
-    FROM appointment_slots 
-    WHERE service_id = ? AND appointment_date = ? AND appointment_time = ?
-    FOR UPDATE
-");
-$checkSlot->execute([$service_id, $date, $time]);
-$slotData = $checkSlot->fetch(PDO::FETCH_ASSOC);
+        // Check slot availability
+        $checkSlot = $pdo->prepare("
+            SELECT slot_id, used_slots, max_slots 
+            FROM appointment_slots 
+            WHERE service_id = ? AND appointment_date = ? AND appointment_time = ?
+            FOR UPDATE
+        ");
+        $checkSlot->execute([$service_id, $date, $time]);
+        $slotData = $checkSlot->fetch(PDO::FETCH_ASSOC);
 
-if (!$slotData) {
-    // Create new slot record
-    $createSlot = $pdo->prepare("
-        INSERT INTO appointment_slots (service_id, appointment_date, appointment_time, max_slots, used_slots) 
-        VALUES (?, ?, ?, 1, 1)
-    ");
-    $createSlot->execute([$service_id, $date, $time]);
-} else {
-    // Check if full
-    if ($slotData['used_slots'] >= $slotData['max_slots']) {
-        throw new Exception("Sorry, the " . date('g:i A', strtotime($time)) . " slot on " . date('F j, Y', strtotime($date)) . " is fully booked. Please select another time.");
-    }
-    
-    // Increment
-    $updateSlot = $pdo->prepare("
-        UPDATE appointment_slots 
-        SET used_slots = used_slots + 1 
-        WHERE slot_id = ?
-    ");
-    $updateSlot->execute([$slotData['slot_id']]);
-}
+        if (!$slotData) {
+            $createSlot = $pdo->prepare("
+                INSERT INTO appointment_slots (service_id, appointment_date, appointment_time, max_slots, used_slots) 
+                VALUES (?, ?, ?, 1, 1)
+            ");
+            $createSlot->execute([$service_id, $date, $time]);
+        } else {
+            if ($slotData['used_slots'] >= $slotData['max_slots']) {
+                throw new Exception("Sorry, the " . date('g:i A', strtotime($time)) . " slot on " . date('F j, Y', strtotime($date)) . " is fully booked.");
+            }
+            
+            $updateSlot = $pdo->prepare("
+                UPDATE appointment_slots 
+                SET used_slots = used_slots + 1 
+                WHERE slot_id = ?
+            ");
+            $updateSlot->execute([$slotData['slot_id']]);
+        }
 
-        // Common Parameters
+        // Common parameters
         $params = [
             ':client_id' => $client_id,
             ':service_id' => $service_id,
@@ -205,9 +234,7 @@ if (!$slotData) {
             ':appointment_group_id' => $appointment_group_id
         ];
 
-        // ========================================
-        // 6. INSERT APPOINTMENT BASED ON TYPE
-        // ========================================
+        // Insert based on type
         if ($type === 'medical') {
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,

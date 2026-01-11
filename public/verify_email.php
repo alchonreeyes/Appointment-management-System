@@ -2,77 +2,42 @@
 include '../config/db.php';
 session_start();
 
-if (!isset($_SESSION['email'])) {
+// ✅ Check if token exists in URL
+if (!isset($_GET['token']) || empty($_GET['token'])) {
+    $_SESSION['error'] = "Invalid verification link.";
     header("Location: register.php");
     exit;
 }
 
-if (isset($_POST['verify'])) {
-    $code = trim($_POST['verification_code']);
-    $email = $_SESSION['email'];
+$token = $_GET['token'];
 
-    try {
-        $db = new Database();
-        $pdo = $db->getConnection();
+try {
+    $db = new Database();
+    $pdo = $db->getConnection();
 
-        $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? AND verification_code = ?");
-        $stmt->execute([$email, $code]);
+    // ✅ Find user by token
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE verification_token = ? AND is_verified = 0");
+    $stmt->execute([$token]);
 
-        if ($stmt->rowCount() > 0) {
-            // ✅ Mark as verified
-            $update = $pdo->prepare("UPDATE users SET is_verified = 1, verification_code = NULL WHERE email = ?");
-            $update->execute([$email]);
+    if ($stmt->rowCount() > 0) {
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // ✅ Mark as verified and clear token
+        $update = $pdo->prepare("UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = ?");
+        $update->execute([$user['id']]);
 
-            $_SESSION['success'] = "Email verified successfully. You can now log in.";
-            unset($_SESSION['email']);
-            header("Location: login.php");
-            exit;
-        } else {
-            $_SESSION['error'] = "Invalid verification code. Please try again.";
-        }
-    } catch (PDOException $e) {
-        $_SESSION['error'] = "Error verifying email: " . $e->getMessage();
+        $_SESSION['success'] = "Email verified successfully! You can now log in.";
+        header("Location: login.php");
+        exit;
+    } else {
+        $_SESSION['error'] = "Invalid or expired verification link.";
+        header("Location: register.php");
+        exit;
     }
+
+} catch (PDOException $e) {
+    $_SESSION['error'] = "Error: " . $e->getMessage();
+    header("Location: register.php");
+    exit;
 }
 ?>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Verification</title>
-    <link rel="stylesheet" href="../assets/verify.css">
-</head>
-<body>
-    <?php include '../includes/navbar.php'; ?>
-
-    <div class="verify-wrapper">
-        <form method="POST" class="verify-form">
-            <h2>Verify Your Email</h2>
-            <p>We’ve sent a 6-digit code to your email. Enter it below to verify your account.</p>
-
-            <input type="text" name="verification_code" placeholder="Enter verification code" maxlength="6" required>
-
-            <button type="submit" name="verify">Verify Email</button>
-
-            <?php if (isset($_SESSION['error'])): ?>
-                <p class="error"><?= $_SESSION['error']; unset($_SESSION['error']); ?></p>
-            <?php elseif (isset($_SESSION['success'])): ?>
-                <p class="success"><?= $_SESSION['success']; unset($_SESSION['success']); ?></p>
-            <?php endif; ?>
-            
-        </form>
-        </form>
-
-<!-- ✅ Add Resend Code Button -->
-<form method="POST" action="../actions/resend_verification.php" style="margin-top: 15px;">
-    <button type="submit" name="resend" style="background: #666; padding: 10px 20px; border: none; color: white; border-radius: 5px; cursor: pointer;">
-        Resend Verification Code
-    </button>
-</form>
-    </div>
-
-    <?php include '../includes/footer.php'; ?>
-</body>
-</html>

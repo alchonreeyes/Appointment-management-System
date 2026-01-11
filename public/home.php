@@ -126,7 +126,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </a>
         <a href="../public/about.php" style="text-decoration: none;">
             <div class="step-card text-center">
-                <span class="step-number">02</span>
+                <span class="step-number">03</span>
                 <div class="step-icon"><i class="fa-solid fa-eye"></i></div>
                 <h3>About Us</h3>
                 <p style="color:#666; font-size: 0.9rem;">Our clinic uses advanced diagnostic technology to deliver precise, personalized eye exams.</p>

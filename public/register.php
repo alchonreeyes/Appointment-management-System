@@ -37,18 +37,32 @@ if (isset($_SESSION['client_id'])) {
                 </div>
             </div>
 
-            <!-- Form Body -->
-            <div class="signup-body">
-                <!-- Progress Indicator -->
-                <div class="form-progress">
-                    <div class="progress-text">Complete your registration</div>
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" id="progressBar"></div>
-                    </div>
-                </div>
 
-                <form action="../actions/register-action.php" method="POST" id="signupForm">
-                    
+<!-- Form Body -->
+<div class="signup-body">
+    <!-- Progress Indicator -->
+    <div class="form-progress">
+        <div class="progress-text">Complete your registration</div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- ✅ ALERTS MUST BE HERE (INSIDE signup-body, BEFORE form) -->
+    <?php if (isset($_SESSION['error'])): ?>
+        <div class="alert alert-error">
+            ❌ <?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (isset($_SESSION['success'])): ?>
+        <div class="alert alert-success">
+            ✅ <?= htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
+        </div>
+    <?php endif; ?>
+
+    
+    <form action="../actions/register-action.php" method="POST" id="signupForm">    
                     <!-- Full Name -->
                     <div class="form-group full-width">
                         <label>Full Name <span class="required">*</span></label>
@@ -274,40 +288,48 @@ if (isset($_SESSION['client_id'])) {
         });
 
         // Progress Bar Update
-        const form = document.getElementById('signupForm');
-        const progressBar = document.getElementById('progressBar');
-        const inputs = form.querySelectorAll('input[required]');
+const form = document.getElementById('signupForm');
+const progressBar = document.getElementById('progressBar');
+const inputs = form.querySelectorAll('input[required], select[required]'); // ✅ Add select
 
-        function updateProgress() {
-            let filled = 0;
-            inputs.forEach(input => {
-                if (input.type === 'checkbox') {
-                    if (input.checked) filled++;
-                } else {
-                    if (input.value.trim() !== '') filled++;
-                }
-            });
-            
-            const progress = (filled / inputs.length) * 100;
-            progressBar.style.width = progress + '%';
+function updateProgress() {
+    let filled = 0;
+    inputs.forEach(input => {
+        if (input.type === 'checkbox') {
+            if (input.checked) filled++;
+        } else if (input.tagName === 'SELECT') { // ✅ Handle select
+            if (input.value !== '') filled++;
+        } else {
+            if (input.value.trim() !== '') filled++;
         }
+    });
+    
+    const progress = (filled / inputs.length) * 100;
+    progressBar.style.width = progress + '%';
+}
 
-        inputs.forEach(input => {
-            input.addEventListener('input', updateProgress);
-            input.addEventListener('change', updateProgress);
-        });
+inputs.forEach(input => {
+    input.addEventListener('input', updateProgress);
+    input.addEventListener('change', updateProgress);
+});
 
-        // Form Validation
-        form.addEventListener('submit', function(e) {
-            const terms = document.getElementById('terms');
-            const policy = document.getElementById('policy');
+       // Form Validation
+form.addEventListener('submit', function(e) {
+    const terms = document.getElementById('terms');
+    const policy = document.getElementById('policy');
+    const submitBtn = this.querySelector('.submit-btn');
 
-            if (!terms.checked || !policy.checked) {
-                e.preventDefault();
-                alert('Please accept all terms and conditions to continue');
-                return false;
-            }
-        });
+    if (!terms.checked || !policy.checked) {
+        e.preventDefault();
+        alert('Please accept all terms and conditions to continue');
+        return false;
+    }
+
+    // ✅ ADD LOADING STATE
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Creating Account...';
+    submitBtn.style.opacity = '0.6';
+});
         // FILE: register.php (inside <script>)
 
 // Phone Number Input Filter
