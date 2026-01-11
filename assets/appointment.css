@@ -793,3 +793,40 @@ p {
 .product-grid {
     overflow: visible !important;
 }
+.slot-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.badge-available {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.badge-full {
+    background-color: #fee;
+    color: #991b1b;
+}
+
+.badge-checking {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.badge-error {
+    background-color: #f3f4f6;
+    color: #6b7280;
+}   
+/* Flatpickr Disabled Styles */
+.flatpickr-day.flatpickr-disabled-sunday,
+.flatpickr-day.flatpickr-disabled-closed {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed !important;
+}
+.flatpickr-day.flatpickr-disabled-sunday:hover,
+.flatpickr-day.flatpickr-disabled-closed:hover {
+  background-color: #e5e7eb !important;
+}

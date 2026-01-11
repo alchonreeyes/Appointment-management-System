@@ -5,18 +5,9 @@ include '../config/db.php';
 require_once __DIR__ . '/../config/encryption_util.php'; 
 
 // ========================================
-// 1. CONFIGURATION: BLOCKED DATES (Manual Restriction)
+// 1. COOLDOWN CHECK (3 Minutes)
 // ========================================
-$blocked_dates = [
-    '2025-12-12', // Christmas Party
-    '2025-12-25', // Christmas Day
-    '2026-01-01'  // New Year
-];
-
-// ========================================
-// 2. COOLDOWN CHECK (3 Minutes)
-// ========================================
-$cooldown_minutes = 3;
+$cooldown_minutes = 1;
 if (isset($_SESSION['last_appointment_time'])) {
     $time_passed = time() - $_SESSION['last_appointment_time'];
     $time_remaining = ($cooldown_minutes * 60) - $time_passed;
@@ -45,30 +36,25 @@ try {
     $client_id = $client['client_id'];
 
     // =======================================================
-    // 3. ENCRYPT SENSITIVE DATA (PII & MEDICAL INFO)
+    // 2. ENCRYPT SENSITIVE DATA
     // =======================================================
-    // A. Personal Info
     $full_name    = encrypt_data(trim($_POST['full_name'] ?? ''));
     $phone_number = encrypt_data(trim($_POST['contact_number'] ?? ''));
-    $occupation   = encrypt_data(trim($_POST['occupation'] ?? '')); // Encrypted
+    $occupation   = encrypt_data(trim($_POST['occupation'] ?? ''));
 
-    // B. Medical Info (Normal Appointment)
     $concern_raw  = trim($_POST['concern'] ?? '');
-    $concern      = encrypt_data($concern_raw); // Encrypted
+    $concern      = encrypt_data($concern_raw);
 
     $symptoms_raw = isset($_POST['symptoms']) ? (is_array($_POST['symptoms']) ? implode(", ", $_POST['symptoms']) : $_POST['symptoms']) : '';
-    $symptoms     = encrypt_data($symptoms_raw); // Encrypted
+    $symptoms     = encrypt_data($symptoms_raw);
 
-    // C. Ishihara Specifics
-    $ish_reason   = encrypt_data(trim($_POST['ishihara_reason'] ?? '')); // Encrypted
-    $ish_prev     = encrypt_data(trim($_POST['previous_color_issues'] ?? '')); // Encrypted
-    $ish_notes    = encrypt_data(trim($_POST['ishihara_notes'] ?? '')); // Encrypted
+    $ish_reason   = encrypt_data(trim($_POST['ishihara_reason'] ?? ''));
+    $ish_prev     = encrypt_data(trim($_POST['previous_color_issues'] ?? ''));
+    $ish_notes    = encrypt_data(trim($_POST['ishihara_notes'] ?? ''));
 
-    // D. Certificate Specifics
-    $cert_purpose = trim($_POST['certificate_purpose'] ?? ''); // Plain Text (Usually generic dropdown)
-    $cert_other   = encrypt_data(trim($_POST['certificate_other'] ?? '')); // Encrypted (Custom Input)
+    $cert_purpose = trim($_POST['certificate_purpose'] ?? '');
+    $cert_other   = encrypt_data(trim($_POST['certificate_other'] ?? ''));
 
-    // Common Plain Text Fields
     $suffix = trim($_POST['suffix'] ?? '');
     $gender = trim($_POST['gender'] ?? '');
     $age = intval($_POST['age'] ?? 0);
@@ -92,7 +78,12 @@ try {
 
     // Reference ID
     $appointment_group_id = "EM-" . date('Ymd') . "-" . rand(1000, 9999);
+    
+    $service_id = intval($_POST['service_id'] ?? 0);
 
+    // ========================================
+    // 3. START TRANSACTION WITH SLOT LOCKING
+    // ========================================
     $pdo->beginTransaction();
 
     foreach ($appointments as $slot) {
@@ -102,22 +93,58 @@ try {
         if (empty($date) || empty($time)) continue;
 
         // ========================================
-        // 4. CLOSURE DATE CHECK
+        // 4. CHECK CLOSED DATES FROM schedule_settings
         // ========================================
-        if (in_array($date, $blocked_dates)) {
+        $checkClosed = $pdo->prepare("SELECT status FROM schedule_settings WHERE schedule_date = ? AND status = 'Closed'");
+        $checkClosed->execute([$date]);
+        if ($checkClosed->fetch()) {
             throw new Exception("Sorry, the clinic is closed on " . date('F j, Y', strtotime($date)) . ".");
         }
 
-        // Common Parameters for all Queries
+ // ========================================
+// 5. SLOT AVAILABILITY CHECK (PREVENTS OVERBOOKING)
+// ========================================
+$checkSlot = $pdo->prepare("
+    SELECT slot_id, used_slots, max_slots 
+    FROM appointment_slots 
+    WHERE service_id = ? AND appointment_date = ? AND appointment_time = ?
+    FOR UPDATE
+");
+$checkSlot->execute([$service_id, $date, $time]);
+$slotData = $checkSlot->fetch(PDO::FETCH_ASSOC);
+
+if (!$slotData) {
+    // Create new slot record
+    $createSlot = $pdo->prepare("
+        INSERT INTO appointment_slots (service_id, appointment_date, appointment_time, max_slots, used_slots) 
+        VALUES (?, ?, ?, 1, 1)
+    ");
+    $createSlot->execute([$service_id, $date, $time]);
+} else {
+    // Check if full
+    if ($slotData['used_slots'] >= $slotData['max_slots']) {
+        throw new Exception("Sorry, the " . date('g:i A', strtotime($time)) . " slot on " . date('F j, Y', strtotime($date)) . " is fully booked. Please select another time.");
+    }
+    
+    // Increment
+    $updateSlot = $pdo->prepare("
+        UPDATE appointment_slots 
+        SET used_slots = used_slots + 1 
+        WHERE slot_id = ?
+    ");
+    $updateSlot->execute([$slotData['slot_id']]);
+}
+
+        // Common Parameters
         $params = [
             ':client_id' => $client_id,
-            ':service_id' => $_POST['service_id'] ?? 6,
-            ':full_name' => $full_name,       // Encrypted
+            ':service_id' => $service_id,
+            ':full_name' => $full_name,
             ':suffix' => $suffix,
             ':gender' => $gender,
             ':age' => $age,
-            ':phone_number' => $phone_number, // Encrypted
-            ':occupation' => $occupation,     // Encrypted
+            ':phone_number' => $phone_number,
+            ':occupation' => $occupation,
             ':appointment_date' => $date,
             ':appointment_time' => $time,
             ':consent_info' => isset($_POST['consent_info']) ? 1 : 0,
@@ -126,9 +153,9 @@ try {
             ':appointment_group_id' => $appointment_group_id
         ];
 
-        // =======================================================
-        // 5. INSERT QUERY BASED ON TYPE
-        // =======================================================
+        // ========================================
+        // 6. INSERT APPOINTMENT BASED ON TYPE
+        // ========================================
         if ($type === 'medical') {
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
@@ -140,7 +167,7 @@ try {
                         :consent_info, :consent_reminders, :consent_terms, :appointment_group_id, 1
                     )";
             $params[':certificate_purpose'] = $cert_purpose; 
-            $params[':certificate_other'] = $cert_other; // Encrypted
+            $params[':certificate_other'] = $cert_other;
 
         } elseif ($type === 'ishihara') {
             $sql = "INSERT INTO appointments (
@@ -153,12 +180,11 @@ try {
                         :consent_info, :consent_reminders, :consent_terms, :appointment_group_id, 1
                     )";
             $params[':ishihara_test_type'] = $_POST['ishihara_test_type'] ?? 'Basic Screening';
-            $params[':ishihara_reason'] = $ish_reason; // Encrypted
-            $params[':previous_color_issues'] = $ish_prev; // Encrypted
-            $params[':ishihara_notes'] = $ish_notes; // Encrypted
+            $params[':ishihara_reason'] = $ish_reason;
+            $params[':previous_color_issues'] = $ish_prev;
+            $params[':ishihara_notes'] = $ish_notes;
 
         } else {
-            // Normal appointment
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
                         appointment_date, appointment_time, wear_glasses, symptoms, concern,
@@ -171,8 +197,8 @@ try {
                         :appointment_group_id, 1
                     )";
             $params[':wear_glasses'] = $_POST['wear_glasses'] ?? null;
-            $params[':symptoms'] = $symptoms; // Encrypted
-            $params[':concern'] = $concern;   // Encrypted
+            $params[':symptoms'] = $symptoms;
+            $params[':concern'] = $concern;
             $params[':selected_products'] = isset($_POST['selected_products']) ? implode(", ", $_POST['selected_products']) : 'None';
         }
 
@@ -188,5 +214,5 @@ try {
 } catch (Exception $e) {
     if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
     error_log("Booking Error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]); 
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]); 
 }

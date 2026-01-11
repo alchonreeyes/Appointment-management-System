@@ -14,10 +14,41 @@ if ($conn->connect_error) {
 // 1. CAPTURE THE SEARCH TERM
 $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';
 
-// 2. MODIFY QUERY BASED ON SEARCH
+// 2. FETCH DYNAMIC FILTER OPTIONS FROM DATABASE
+// Get unique genders
+$genderQuery = "SELECT DISTINCT gender FROM products WHERE gender IS NOT NULL AND gender != '' ORDER BY gender";
+$genderResult = $conn->query($genderQuery);
+$genders = [];
+while($row = $genderResult->fetch_assoc()) {
+    $genders[] = $row['gender'];
+}
+
+// Get unique brands
+$brandQuery = "SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand";
+$brandResult = $conn->query($brandQuery);
+$brands = [];
+while($row = $brandResult->fetch_assoc()) {
+    $brands[] = $row['brand'];
+}
+
+// Get unique lens types
+$lensQuery = "SELECT DISTINCT lens_type FROM products WHERE lens_type IS NOT NULL AND lens_type != '' ORDER BY lens_type";
+$lensResult = $conn->query($lensQuery);
+$lensTypes = [];
+while($row = $lensResult->fetch_assoc()) {
+    $lensTypes[] = $row['lens_type'];
+}
+
+// Get unique frame types
+$frameQuery = "SELECT DISTINCT frame_type FROM products WHERE frame_type IS NOT NULL AND frame_type != '' ORDER BY frame_type";
+$frameResult = $conn->query($frameQuery);
+$frameTypes = [];
+while($row = $frameResult->fetch_assoc()) {
+    $frameTypes[] = $row['frame_type'];
+}
+
+// 3. MODIFY QUERY BASED ON SEARCH
 if ($searchTerm) {
-    // Secure search query using prepared statement logic later, 
-    // but for now, we will filter via JS or simple SQL LIKE
     $sql = "SELECT * FROM products WHERE product_name LIKE '%$searchTerm%' OR brand LIKE '%$searchTerm%' ORDER BY created_at DESC";
     $pageTitle = "Results: '" . htmlspecialchars($searchTerm) . "'";
 } else {
@@ -25,26 +56,6 @@ if ($searchTerm) {
     $pageTitle = "TOP-RATED FRAMES";
 }
 
-$result = $conn->query($sql);
-?>
-
-
-
-<?php
-// browse.php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "capstone";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-}
-
-// Fetch products from database
-$sql = "SELECT * FROM products ORDER BY created_at DESC LIMIT 12";
 $result = $conn->query($sql);
 ?>
 <!DOCTYPE html>
@@ -55,90 +66,77 @@ $result = $conn->query($sql);
     <title>Top-Rated Frames</title>
     <link rel="stylesheet" href="../assets/browse.css"> 
     <style>
-        /* Fix to ensure images fit the card */
         .product-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
         .modal { z-index: 9999; }
+
+        /* Modal Gallery Styles */
+        .modal-left {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .modal-main-display-container {
+            width: 100%;
+            height: 400px;
+            background-color: #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #e0e0e0;
+        }
+
+        #modalMainDisplayImg {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .modal-thumbnails-row {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 5px;
+        }
+
+        .thumb-img {
+            width: 70px;
+            height: 70px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+            opacity: 0.7;
+        }
+
+        .thumb-img:hover {
+            opacity: 1;
+        }
+
+        .thumb-img.active-thumb {
+            border-color: #ee4d2d;
+            opacity: 1;
+        }
     </style>
-    <style>
-    /* Fix to ensure images fit the card (You already have this) */
-    .product-image img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; }
-    .modal { z-index: 9999; }
-
-    /* --- NEW MODAL GALLERY STYLES --- */
-    .modal-left {
-        display: flex;
-        flex-direction: column;
-        gap: 15px; /* Space between main image and thumbnails */
-    }
-
-    /* Main large image container */
-    .modal-main-display-container {
-        width: 100%;
-        height: 400px; /* Fixed height for consistency */
-        background-color: #f0f0f0;
-        border-radius: 8px;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #e0e0e0;
-    }
-
-    #modalMainDisplayImg {
-        width: 100%;
-        height: 100%;
-        object-fit: contain; /* Ensures entire image is visible */
-        display: block;
-    }
-
-    /* Thumbnail row container */
-    .modal-thumbnails-row {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto; /* Allow scrolling if too many images */
-        padding-bottom: 5px;
-    }
-
-    /* Individual thumbnail style */
-    .thumb-img {
-        width: 70px;
-        height: 70px;
-        object-fit: cover;
-        border-radius: 4px;
-        cursor: pointer;
-        border: 2px solid transparent; /* Invisible border by default */
-        transition: all 0.2s;
-        opacity: 0.7;
-    }
-
-    .thumb-img:hover {
-        opacity: 1;
-    }
-
-    /* Style for the currently active thumbnail (Shopee uses orange/red border) */
-    .thumb-img.active-thumb {
-        border-color: #ee4d2d; /* Shopee orange/red color */
-        opacity: 1;
-    }
-</style>
 </head>
 <body>
 
-<?php include '../includes/navbar.php';  ?>
+<?php include '../includes/navbar.php'; ?>
 
 <div class="container">
   <div class="hero-section">
-<div class="hero-content">
-  <h1><?= $pageTitle ?></h1> 
-  
-  <?php if(!$searchTerm): ?>
-      <h2>LUXE LOOKS, LOVED PRICES</h2>
-    
-  <?php endif; ?>
-</div>
+    <div class="hero-content">
+      <h1><?= $pageTitle ?></h1> 
+      <?php if(!$searchTerm): ?>
+          <h2>LUXE LOOKS, LOVED PRICES</h2>
+      <?php endif; ?>
+    </div>
     <img src="../assets/src/hero-img(3).jpg" class="hero-image" alt="Hero" onerror="this.style.display='none'">
   </div>
-     <!--centered h1 as navbar search bar content it was name of eye glasses  -->
 
   <div class="filters-section">
     <aside class="sidebar">
@@ -148,33 +146,80 @@ $result = $conn->query($sql);
       </div>
       <button class="clear-all" onclick="clearAllFilters()">Clear all ✕</button>
       
+      <!-- DYNAMIC GENDER FILTER -->
+      <?php if (!empty($genders)): ?>
       <div class="filter-group">
         <h4>Gender & Age</h4>
-        <div class="filter-option"><input type="checkbox" id="male" class="filter-checkbox" data-filter="gender" value="Male"><label for="male">Men</label></div>
-        <div class="filter-option"><input type="checkbox" id="female" class="filter-checkbox" data-filter="gender" value="Female"><label for="female">Women</label></div>
-        <div class="filter-option"><input type="checkbox" id="unisex" class="filter-checkbox" data-filter="gender" value="Unisex"><label for="unisex">Unisex</label></div>
+        <?php foreach($genders as $gender): ?>
+          <?php 
+            $genderId = strtolower(str_replace(' ', '-', $gender));
+            $displayName = $gender === 'Male' ? 'Men' : ($gender === 'Female' ? 'Women' : $gender);
+          ?>
+          <div class="filter-option">
+            <input type="checkbox" 
+                   id="<?= $genderId ?>" 
+                   class="filter-checkbox" 
+                   data-filter="gender" 
+                   value="<?= htmlspecialchars($gender) ?>">
+            <label for="<?= $genderId ?>"><?= htmlspecialchars($displayName) ?></label>
+          </div>
+        <?php endforeach; ?>
       </div>
+      <?php endif; ?>
       
+      <!-- DYNAMIC BRANDS FILTER -->
+      <?php if (!empty($brands)): ?>
       <div class="filter-group">
         <h4>Brands</h4>
-        <div class="filter-option"><input type="checkbox" id="rayban" class="filter-checkbox" data-filter="brand" value="Ray-Ban"><label for="rayban">Ray-Ban</label></div>
-        <div class="filter-option"><input type="checkbox" id="oakley" class="filter-checkbox" data-filter="brand" value="Oakley"><label for="oakley">Oakley</label></div>
-        <div class="filter-option"><input type="checkbox" id="coach" class="filter-checkbox" data-filter="brand" value="Coach"><label for="coach">Coach</label></div>
-        <div class="filter-option"><input type="checkbox" id="ssss" class="filter-checkbox" data-filter="brand" value="SSSS"><label for="ssss">SSSS</label></div>
+        <?php foreach($brands as $brand): ?>
+          <?php $brandId = strtolower(str_replace(' ', '-', $brand)); ?>
+          <div class="filter-option">
+            <input type="checkbox" 
+                   id="brand-<?= $brandId ?>" 
+                   class="filter-checkbox" 
+                   data-filter="brand" 
+                   value="<?= htmlspecialchars($brand) ?>">
+            <label for="brand-<?= $brandId ?>"><?= htmlspecialchars($brand) ?></label>
+          </div>
+        <?php endforeach; ?>
       </div>
+      <?php endif; ?>
       
+      <!-- DYNAMIC LENS TYPES FILTER -->
+      <?php if (!empty($lensTypes)): ?>
       <div class="filter-group">
         <h4>Lens Types</h4>
-        <div class="filter-option"><input type="checkbox" id="single-vision" class="filter-checkbox" data-filter="lens" value="Single Vision"><label for="single-vision">Single Vision</label></div>
-        <div class="filter-option"><input type="checkbox" id="bifocal" class="filter-checkbox" data-filter="lens" value="Bifocal"><label for="bifocal">Bifocal</label></div>
+        <?php foreach($lensTypes as $lensType): ?>
+          <?php $lensId = strtolower(str_replace(' ', '-', $lensType)); ?>
+          <div class="filter-option">
+            <input type="checkbox" 
+                   id="lens-<?= $lensId ?>" 
+                   class="filter-checkbox" 
+                   data-filter="lens" 
+                   value="<?= htmlspecialchars($lensType) ?>">
+            <label for="lens-<?= $lensId ?>"><?= htmlspecialchars($lensType) ?></label>
+          </div>
+        <?php endforeach; ?>
       </div>
+      <?php endif; ?>
       
+      <!-- DYNAMIC FRAME TYPES FILTER -->
+      <?php if (!empty($frameTypes)): ?>
       <div class="filter-group">
         <h4>Frame Types</h4>
-        <div class="filter-option"><input type="checkbox" id="fullrim" class="filter-checkbox" data-filter="frame" value="Full Rim"><label for="fullrim">Full Rim</label></div>
-        <div class="filter-option"><input type="checkbox" id="halfrim" class="filter-checkbox" data-filter="frame" value="Half Rim"><label for="halfrim">Half Rim</label></div>
-        <div class="filter-option"><input type="checkbox" id="rimless" class="filter-checkbox" data-filter="frame" value="Rimless"><label for="rimless">Rimless</label></div>
+        <?php foreach($frameTypes as $frameType): ?>
+          <?php $frameId = strtolower(str_replace(' ', '-', $frameType)); ?>
+          <div class="filter-option">
+            <input type="checkbox" 
+                   id="frame-<?= $frameId ?>" 
+                   class="filter-checkbox" 
+                   data-filter="frame" 
+                   value="<?= htmlspecialchars($frameType) ?>">
+            <label for="frame-<?= $frameId ?>"><?= htmlspecialchars($frameType) ?></label>
+          </div>
+        <?php endforeach; ?>
       </div>
+      <?php endif; ?>
     </aside>
     
     <main class="main-content">
@@ -190,8 +235,6 @@ $result = $conn->query($sql);
         if ($result->num_rows > 0) {
             while($row = $result->fetch_assoc()) {
                 $imagePath = $row['image_path'];
-                
-                // Fix image path logic
                 $imagePath = str_replace('../photo/', '../mod/photo/', $imagePath);
                 
                 echo '<div class="product-card">';
@@ -219,43 +262,39 @@ $result = $conn->query($sql);
   </div>
 </div>
 
+<!-- Modal -->
 <div class="modal" id="productModal">
   <div class="modal-content">
     <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-left">
-    <div class="modal-main-display-container">
+      <div class="modal-main-display-container">
         <img id="modalMainDisplayImg" src="" alt="Product Image" onerror="this.style.display='none'">
+      </div>
+      <div class="modal-thumbnails-row" id="modalThumbnailsContainer" style="display: none;"></div>
     </div>
-
-    <div class="modal-thumbnails-row" id="modalThumbnailsContainer" style="display: none;">
-        </div>
-</div>
     <div class="modal-right">
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
-
-
       <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
       <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
     </div>
   </div>
 </div>
 
-<?php include '../includes/footer.php';  ?>
+<?php include '../includes/footer.php'; ?>
+
 <script>
-// 1. Initialize Filters on Load
+// Initialize Filters
 const urlParams = new URLSearchParams(window.location.search);
 const initialSearch = urlParams.get('search') || '';
 
-// If there is an initial search term from the URL (navbar search)
 if (initialSearch) {
     document.querySelector('.hero-content h1').textContent = `Results: '${initialSearch}'`;
-    // Hide the subtitle if searching
     const sub = document.querySelector('.hero-content h2');
     if(sub) sub.style.display = 'none';
 }
 
-// 2. State Management (CRITICAL: Initialize search term here)
+// State Management
 let activeFilters = { 
     gender: [], 
     brand: [], 
@@ -264,11 +303,8 @@ let activeFilters = {
     search: initialSearch 
 };
 
-// 3. Setup Listeners
+// Setup Listeners
 document.addEventListener('DOMContentLoaded', () => {
-    // Check boxes if they match active filters (optional logic)
-    
-    // --- URGENT FIX: Run   applyFilters immediately on DOM load ---
     applyFilters(); 
 });
 
@@ -286,16 +322,13 @@ document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
     });
 });
 
-// 4. The Filter Function (The core AJAX call)
+// Filter Function
 function applyFilters() {
     const formData = new FormData();
-    // Send all filter arrays as JSON strings
     formData.append('genders', JSON.stringify(activeFilters.gender));
     formData.append('brands', JSON.stringify(activeFilters.brand));
     formData.append('lensTypes', JSON.stringify(activeFilters.lens));
     formData.append('frameTypes', JSON.stringify(activeFilters.frame));
-    
-    // Send the combined Search Term (from URL or from clearAllFilters)
     formData.append('search', activeFilters.search);
     
     fetch('filter_products.php', { 
@@ -315,7 +348,7 @@ function applyFilters() {
     .catch(error => console.error('Fetch Error:', error));
 }
 
-// 5. Render Grid (No change needed here, it handles the output)
+// Render Grid
 function updateProductGrid(products) {
     const grid = document.getElementById('productGrid');
     
@@ -326,7 +359,6 @@ function updateProductGrid(products) {
     
     grid.innerHTML = products.map(product => {
         let imagePath = product.image_path || '';
-        // Path correction logic
         if (imagePath.includes('../photo/')) {
             imagePath = imagePath.replace('../photo/', '../mod/photo/');
         }
@@ -339,14 +371,13 @@ function updateProductGrid(products) {
             <div class="product-info">
                 <h3>${product.product_name}</h3>
                 <p style="text-transform: capitalize;">${product.brand} - ${product.frame_type || 'Frame'}</p>
-
                 <button class="see-more-btn" onclick="openModal(${product.product_id})">See more</button>
             </div>
         </div>`;
     }).join('');
 }
 
-// UI Toggles (No change needed)
+// UI Toggles
 function toggleFilters() {
     document.querySelector('.sidebar').classList.toggle('hidden');
     document.querySelector('.show-filters-btn').classList.toggle('visible');
@@ -355,18 +386,13 @@ function showFilters() { toggleFilters(); }
 
 function clearAllFilters() {
     document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
-    
-    // Reset filters AND search term
     activeFilters = { gender: [], brand: [], lens: [], frame: [], search: '' };
-    
-    // Clear URL query parameter
     window.history.pushState({}, document.title, window.location.pathname);
     document.querySelector('.hero-content h1').textContent = 'TOP-RATED FRAMES';
-    
     applyFilters();
 }
 
-// --- Modal Logic (No change needed) ---
+// Modal Logic
 function openModal(productId) {
     document.getElementById('modalTitle').textContent = 'Loading...';
     document.getElementById('modalMainDisplayImg').src = '';
@@ -433,3 +459,4 @@ function closeModal() {
 </script>
 </body>
 </html>
+<?php $conn->close(); ?>

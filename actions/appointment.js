@@ -2,11 +2,12 @@
   'use strict';
 
   document.addEventListener('DOMContentLoaded', function () {
-    /* =========================================
-       CLOSURE DATES - FETCH FROM ADMIN
-       ========================================= */
     let closedDates = [];
+    let flatpickrInstances = [];
     
+    // ========================================
+    // FETCH CLOSED DATES FROM ADMIN
+    // ========================================
     async function fetchClosedDates() {
       try {
         const response = await fetch('../actions/get-closed-dates.php');
@@ -16,53 +17,124 @@
           closedDates = data.closed_dates;
           console.log('✅ Loaded closed dates:', closedDates);
           
-          // Apply restrictions to all date inputs
-          applyClosedDatesRestriction();
+          // Initialize Flatpickr after loading closed dates
+          initializeFlatpickr();
         }
       } catch (error) {
         console.error('❌ Failed to fetch closed dates:', error);
+        // Still initialize Flatpickr even if fetch fails
+        initializeFlatpickr();
       }
     }
     
-    function applyClosedDatesRestriction() {
-      const dateInputs = document.querySelectorAll(".date-input");
-      
-      dateInputs.forEach(input => {
-        // Listen for date changes
-        input.addEventListener('input', function(e) {
-          const selectedDate = e.target.value;
-          
-          if (closedDates.includes(selectedDate)) {
-            const index = parseInt(e.target.dataset.index);
-            
-            // Clear the invalid date
-            e.target.value = '';
-            appointments[index].date = '';
-            
-            // Show error message
-            const message = document.getElementById(`slot-message-${index}`);
-            const badge = document.getElementById(`slot-badge-${index}`);
-            
-            if (message && badge) {
-              badge.style.background = '#fee2e2';
-              badge.style.color = '#991b1b';
-              badge.textContent = 'Clinic Closed';
-              
-              message.style.display = 'block';
-              message.style.background = '#fef2f2';
-              message.style.color = '#991b1b';
-              message.style.border = '1px solid #fecaca';
-              message.style.padding = '8px';
-              message.style.borderRadius = '4px';
-              message.textContent = '❌ Sorry, the clinic is closed on this date. Please choose another day.';
-            }
-            
-            alert('⚠️ The clinic is closed on ' + formatDate(selectedDate) + '. Please select another date.');
-            updateSlotDisplay(index);
-          }
-        });
+    // ========================================
+    // INITIALIZE FLATPICKR DATE PICKERS
+    // ========================================
+    function initializeFlatpickr() {
+  const dateInputs = document.querySelectorAll(".date-input");
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  dateInputs.forEach(input => {
+    const index = parseInt(input.dataset.index);
+    const timeSelect = document.querySelector(`.time-select[data-index="${index}"]`);
+    
+    const flatpickrInstance = flatpickr(input, {
+      minDate: tomorrow,
+      dateFormat: "Y-m-d",
+      disable: [
+        // Disable Sundays
+        function(date) {
+          return (date.getDay() === 0);
+        },
+        // Disable closed dates from admin
+        ...closedDates
+      ],
+      onChange: function(selectedDates, dateStr) {
+        appointments[index].date = dateStr;
+        
+        // Update time options when date changes
+        if (timeSelect) {
+          updateTimeOptions(input, timeSelect);
+        }
+        
+        // Update all displays
+        for (let i = 0; i < appointments.length; i++) {
+          updateSlotDisplay(i);
+        }
+        updateHiddenField();
+      },
+      onDayCreate: function(dObj, dStr, fp, dayElem) {
+        const dateStr = dayElem.dateObj.toISOString().split('T')[0];
+        
+        // Gray out Sundays
+        if (dayElem.dateObj.getDay() === 0) {
+          dayElem.classList.add('flatpickr-disabled-sunday');
+        }
+        
+        // Gray out closed dates
+        if (closedDates.includes(dateStr)) {
+          dayElem.classList.add('flatpickr-disabled-closed');
+        }
+      }
+    });
+    
+    flatpickrInstances.push(flatpickrInstance);
+  });
+}
+// Add this RIGHT AFTER the initializeFlatpickr() function
+async function updateTimeOptions(dateInput, timeSelect) {
+  const date = dateInput.value;
+  const serviceId = document.querySelector('input[name="service_id"]')?.value;
+  
+  if (!date || !serviceId) return;
+  
+  console.log('🔄 Updating time options for:', date);
+  
+  try {
+    const response = await fetch(`../actions/get_available_times.php?service_id=${serviceId}&date=${date}`);
+    const data = await response.json();
+    
+    console.log('⏰ Available times data:', data);
+    
+    if (data.success) {
+      // Reset all options first
+      Array.from(timeSelect.options).forEach(option => {
+        if (option.value === '') return;
+        option.disabled = false;
+        option.textContent = option.textContent.replace(' (Booked)', '');
+        option.style.color = '';
       });
+
+      // Disable unavailable times
+      Array.from(timeSelect.options).forEach(option => {
+        if (option.value === '') return;
+        
+        const isUnavailable = data.unavailable_times.includes(option.value);
+        
+        if (isUnavailable) {
+          option.disabled = true;
+          option.textContent = option.textContent.replace(' (Booked)', '') + ' (Booked)';
+          option.style.color = '#999';
+          option.style.textDecoration = 'line-through';
+        }
+      });
+      
+      // If currently selected time is now unavailable, clear it
+      if (data.unavailable_times.includes(timeSelect.value)) {
+        timeSelect.value = '';
+        const index = timeSelect.getAttribute('data-index');
+        if (index !== null) {
+          appointments[parseInt(index)].time = '';
+          updateSlotDisplay(parseInt(index));
+        }
+      }
     }
+  } catch (error) {
+    console.error('❌ Error updating time options:', error);
+  }
+}
     
     function formatDate(dateStr) {
       const date = new Date(dateStr + 'T00:00:00');
@@ -74,7 +146,6 @@
       });
     }
     
-    // Initialize - fetch closed dates on page load
     fetchClosedDates();
 
     /* =========================================
@@ -125,9 +196,6 @@
         updateHiddenField();
     };
 
-    /* =========================================
-       INITIALIZATION & VARIABLES
-       ========================================= */
     const steps = Array.from(document.querySelectorAll('.form-step'));
     const nextBtns = Array.from(document.querySelectorAll('.next-btn'));
     const prevBtns = Array.from(document.querySelectorAll('.prev-btn'));
@@ -139,14 +207,10 @@
     let formStepIndex = 0;
     
     let appointments = [
-      { date: "", time: "" },
-      { date: "", time: "" },
-      { date: "", time: "" }
-    ];
-    
-    /* =========================================
-       NAVIGATION & VALIDATION LOGIC
-       ========================================= */
+  { date: "", time: "", isFullyBooked: false },
+  { date: "", time: "", isFullyBooked: false },
+  { date: "", time: "", isFullyBooked: false }
+];
     
     function updateProgress(stepIndex) {
       progressSteps.forEach((step, i) => {
@@ -159,9 +223,8 @@
       });
     }
 
-    function updateSummaryView() {
-        console.log("Generating Summary..."); 
 
+    function updateSummaryView() {
         const summaryBox = document.getElementById('finalSummary');
         if (!summaryBox) return;
 
@@ -263,7 +326,24 @@
                 </div>
             `;
         }
+/* 
 
+i did this instead of claude suggestion but i revised it
+
+1:am 
+-- 1. Create the missing table
+CREATE TABLE IF NOT EXISTS `appointment_slots` (
+  `slot_id` int(11) NOT NULL AUTO_INCREMENT,
+  `service_id` int(11) NOT NULL,
+  `appointment_date` date NOT NULL,
+  `appointment_time` time NOT NULL, 
+  `available_slots` int(11) NOT NULL DEFAULT 5,
+  PRIMARY KEY (`slot_id`),
+  -- This makes sure you can't have two rows for "Dental - Jan 10 - 10:00AM"
+  UNIQUE KEY `uniq_service_date_time` (`service_id`, `appointment_date`, `appointment_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+*/
         summaryBox.innerHTML = `
         <style>
           .ams-review-summary { font-family: system-ui, sans-serif; color: #0f172a; max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #e6edf3; border-radius: 12px; overflow: hidden; }
@@ -327,16 +407,11 @@
     function checkDuplicateAppointment(currentIndex) {
       const currentAppt = appointments[currentIndex];
       
-      if (!currentAppt.date || !currentAppt.time) {
-        return false;
-      }
+      if (!currentAppt.date || !currentAppt.time) return false;
 
       for (let i = 0; i < appointments.length; i++) {
         if (i === currentIndex) continue;
-        
-        const otherAppt = appointments[i];
-        
-        if (otherAppt.date === currentAppt.date && otherAppt.time === currentAppt.time) {
+        if (appointments[i].date === currentAppt.date && appointments[i].time === currentAppt.time) {
           return true;
         }
       }
@@ -345,68 +420,74 @@
     }
 
     function validateStep(stepElement) {
-        let isValid = true;
+    let isValid = true;
+    
+    try {
+        const inputs = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
+        inputs.forEach(input => {
+            if (!input.value.trim()) {
+                isValid = false;
+                input.classList.add('input-error');
+                input.addEventListener('input', () => input.classList.remove('input-error'), {once: true});
+            } else {
+                input.classList.remove('input-error');
+            }
+        });
+
+        const radioGroups = new Set();
+        stepElement.querySelectorAll('input[type="radio"][required]').forEach(r => radioGroups.add(r.name));
         
-        try {
-            const inputs = stepElement.querySelectorAll('input[required], select[required], textarea[required]');
-            inputs.forEach(input => {
-                if (!input.value.trim()) {
-                    isValid = false;
-                    input.classList.add('input-error');
-                    input.addEventListener('input', () => input.classList.remove('input-error'), {once: true});
-                } else {
-                    input.classList.remove('input-error');
-                }
-            });
+        radioGroups.forEach(groupName => {
+            const radios = stepElement.querySelectorAll(`input[name="${groupName}"]`);
+            const isChecked = Array.from(radios).some(r => r.checked);
+            if (!isChecked) {
+                isValid = false;
+                alert(`Please select an option for: ${groupName.replace('_', ' ')}`);
+            }
+        });
 
-            const radioGroups = new Set();
-            stepElement.querySelectorAll('input[type="radio"][required]').forEach(r => radioGroups.add(r.name));
+        if (stepElement.querySelector('.date-input')) {
+            const validSlots = appointments.filter(a => a.date && a.time);
             
-            radioGroups.forEach(groupName => {
-                const radios = stepElement.querySelectorAll(`input[name="${groupName}"]`);
-                const isChecked = Array.from(radios).some(r => r.checked);
-                if (!isChecked) {
-                    isValid = false;
-                    alert(`Please select an option for: ${groupName.replace('_', ' ')}`);
-                }
-            });
+            if (validSlots.length === 0) {
+                isValid = false;
+                alert("⚠️ Please select at least one appointment date and time.");
+                return false;
+            }
 
-            if (stepElement.querySelector('.date-input')) {
-                const validSlots = appointments.filter(a => a.date && a.time);
-                
-                if (validSlots.length === 0) {
-                    isValid = false;
-                    alert("⚠️ Please select at least one appointment date and time.");
-                    return false;
-                }
-
-                // CHECK FOR CLOSED DATES
-                for (let i = 0; i < appointments.length; i++) {
-                    if (appointments[i].date && appointments[i].time) {
-                        // Check if date is closed
-                        if (closedDates.includes(appointments[i].date)) {
-                            isValid = false;
-                            alert("⚠️ One of your selected dates is a clinic closure date (" + formatDate(appointments[i].date) + "). Please choose a different date.");
-                            return false;
-                        }
-                        
-                        // Check for duplicates
-                        if (checkDuplicateAppointment(i)) {
-                            isValid = false;
-                            alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
-                            return false;
-                        }
+            for (let i = 0; i < appointments.length; i++) {
+                if (appointments[i].date && appointments[i].time) {
+                    // Check closed dates
+                    if (closedDates.includes(appointments[i].date)) {
+                        isValid = false;
+                        alert("⚠️ The clinic is closed on " + formatDate(appointments[i].date) + ". Please choose a different date.");
+                        return false;
+                    }
+                    
+                    // Check duplicates
+                    if (checkDuplicateAppointment(i)) {
+                        isValid = false;
+                        alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
+                        return false;
+                    }
+                    
+                    // ⭐ NEW: Check if slot is fully booked
+                    if (appointments[i].isFullyBooked === true) {
+                        isValid = false;
+                        alert("⚠️ One or more selected time slots are fully booked. Please select different times.");
+                        return false;
                     }
                 }
             }
-
-        } catch (err) {
-            console.error("Validation Error:", err);
-            return false;
         }
 
-        return isValid;
+    } catch (err) {
+        console.error("Validation Error:", err);
+        return false;
     }
+
+    return isValid;
+}
 
     nextBtns.forEach(btn => btn.addEventListener('click', () => {
       const currentStepElement = steps[formStepIndex];
@@ -432,40 +513,97 @@
     
     showStep(formStepIndex);
 
-    function updateSlotDisplay(index) {
-      const appt = appointments[index];
-      const badge = document.getElementById(`slot-badge-${index}`);
-      const message = document.getElementById(`slot-message-${index}`);
-      
-      if (!badge || !message) return;
-      
-      if (!appt.date || !appt.time) {
-        badge.style.background = '#e5e7eb';
-        badge.style.color = '#6b7280';
-        badge.textContent = 'Select date & time';
-        message.style.display = 'none';
-        return;
-      }
+    // Replace this function (around line 380 in your code)
+function updateSlotDisplay(index) {
+  const appt = appointments[index];
+  const badge = document.getElementById(`slot-badge-${index}`);
+  const message = document.getElementById(`slot-message-${index}`);
+  
+  if (!badge || !message) return;
+  
+  // Reset booked flag
+  if (!appointments[index].isFullyBooked) {
+    appointments[index].isFullyBooked = false;
+  }
+  
+  // First check if inputs are empty
+  if (!appt.date || !appt.time) {
+    badge.style.background = '#e5e7eb';
+    badge.style.color = '#6b7280';
+    badge.textContent = 'Select date & time';
+    message.style.display = 'none';
+    appointments[index].isFullyBooked = false; // Not booked if empty
+    return;
+  }
 
-      if (checkDuplicateAppointment(index)) {
+  // Check for duplicates in current form
+  if (checkDuplicateAppointment(index)) {
+    badge.style.background = '#fee2e2';
+    badge.style.color = '#991b1b';
+    badge.textContent = 'Duplicate!';
+    message.style.display = 'block';
+    message.style.background = '#fef2f2';
+    message.style.color = '#991b1b';
+    message.style.border = '1px solid #fecaca';
+    message.style.padding = '8px';
+    message.style.borderRadius = '4px';
+    message.textContent = '⚠️ This date and time is already selected in another appointment.';
+    appointments[index].isFullyBooked = true; // Treat duplicates as blocked
+    return;
+  }
+
+  // NOW CHECK SERVER AVAILABILITY
+  badge.style.background = '#fef3c7';
+  badge.style.color = '#92400e';
+  badge.textContent = 'Checking...';
+  
+  const serviceId = document.querySelector('input[name="service_id"]').value;
+  const url = `../actions/check_slot.php?service_id=${serviceId}&date=${appt.date}&time=${appt.time}`;
+  
+  console.log('🔍 Checking slot:', url);
+  
+  fetch(url)
+    .then(response => {
+      console.log('📡 Response status:', response.status);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      console.log('✅ Slot data:', data);
+      
+      if (data.available) {
+        badge.style.background = '#d1fae5';
+        badge.style.color = '#065f46';
+        badge.textContent = `Available (${data.remaining} left)`;
+        message.style.display = 'none';
+        appointments[index].isFullyBooked = false; // Available!
+      } else {
         badge.style.background = '#fee2e2';
         badge.style.color = '#991b1b';
-        badge.textContent = 'Duplicate!';
+        badge.textContent = 'Fully Booked';
         message.style.display = 'block';
         message.style.background = '#fef2f2';
         message.style.color = '#991b1b';
-        message.style.border = '1px solid #fecaca';
         message.style.padding = '8px';
         message.style.borderRadius = '4px';
-        message.textContent = '⚠️ This date and time is already selected in another appointment. Please choose a different slot.';
-        return;
+        message.textContent = '⚠️ ' + (data.message || 'This slot is fully booked. Please select a different time.');
+        appointments[index].isFullyBooked = true; // BLOCKED!
       }
-
-      badge.style.background = '#d1fae5';
-      badge.style.color = '#065f46';
-      badge.textContent = 'Available';
-      message.style.display = 'none';
-    }
+    })
+    .catch(err => {
+      console.error('❌ Slot check error:', err);
+      badge.style.background = '#fef3c7';
+      badge.style.color = '#92400e';
+      badge.textContent = 'Error checking';
+      message.style.display = 'block';
+      message.style.background = '#fffbeb';
+      message.style.color = '#92400e';
+      message.style.padding = '8px';
+      message.style.borderRadius = '4px';
+      message.textContent = 'Unable to check availability. Please try again.';
+      appointments[index].isFullyBooked = true; // Treat errors as blocked for safety
+    });
+}
 
     function updateHiddenField() {
       const field = document.getElementById("appointment_dates_json");
@@ -478,21 +616,7 @@
       field.value = JSON.stringify(validAppointments);
     }
 
-    const dateInputs = document.querySelectorAll(".date-input");
     const timeSelects = document.querySelectorAll(".time-select");
-
-    dateInputs.forEach(input => {
-      input.addEventListener("change", (e) => {
-        const index = parseInt(e.target.dataset.index);
-        appointments[index].date = e.target.value;
-        
-        for (let i = 0; i < appointments.length; i++) {
-          updateSlotDisplay(i);
-        }
-        
-        updateHiddenField();
-      });
-    });
 
     timeSelects.forEach(select => {
       select.addEventListener("change", (e) => {
@@ -507,71 +631,192 @@
       });
     });
 
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+   if (form) {
+  form.addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const validAppointments = appointments.filter(a => a.date && a.time);
     
-    const yyyy = tomorrow.getFullYear();
-    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
-    const dd = String(tomorrow.getDate()).padStart(2, '0');
-    const minDate = `${yyyy}-${mm}-${dd}`;
-
-    dateInputs.forEach(input => {
-        input.setAttribute("min", minDate);
-        input.addEventListener('keydown', (e) => e.preventDefault()); 
-    });
-
-    if (form) {
-      form.addEventListener("submit", async function(e) {
-        e.preventDefault();
-
-        const validAppointments = appointments.filter(a => a.date && a.time);
-        
-        if (validAppointments.length === 0) {
-          alert("⚠️ Please select at least one appointment date and time.");
-          return false;
-        }
-
-        for (let i = 0; i < appointments.length; i++) {
-            if (appointments[i].date && appointments[i].time) {
-                if (checkDuplicateAppointment(i)) {
-                    alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
-                    return false;
-                }
-            }
-        }
-
-        const formData = new FormData(form);
-        
-        updateHiddenField();
-        
-        const jsonField = document.getElementById("appointment_dates_json");
-        if (jsonField) {
-            formData.set('appointment_dates_json', jsonField.value);
-        } else {
-            alert("System Error: Could not find appointment data field.");
-            return false;
-        }
-
-        try {
-          const response = await fetch("../actions/appointment-action.php", {
-            method: "POST",
-            body: formData
-          });
-
-          const result = await response.json();
-
-          if (result.success) {
-            window.location.href = "../pages/appointment-success.php";
-          } else {
-            alert("❌ " + result.message);
-          }
-        } catch (error) {
-          console.error("Submission error:", error);
-          alert("❌ An error occurred while submitting.");
-        }
-      });
+    if (validAppointments.length === 0) {
+      alert("⚠️ Please select at least one appointment date and time.");
+      return false;
     }
 
+    // Check for duplicates
+    for (let i = 0; i < appointments.length; i++) {
+        if (appointments[i].date && appointments[i].time) {
+            if (checkDuplicateAppointment(i)) {
+                alert("⚠️ You have duplicate appointments selected. Please choose different dates or times.");
+                return false;
+            }
+            
+            // ⭐ NEW: Check if any slot is fully booked
+            if (appointments[i].isFullyBooked === true) {
+                alert("⚠️ One or more selected time slots are fully booked. Please select different times and try again.");
+                return false;
+            }
+        }
+    }
+
+    const formData = new FormData(form);
+    
+    updateHiddenField();
+    
+    const jsonField = document.getElementById("appointment_dates_json");
+    if (jsonField) {
+        formData.set('appointment_dates_json', jsonField.value);
+    } else {
+        alert("System Error: Could not find appointment data field.");
+        return false;
+    }
+
+    try {
+      const response = await fetch("../actions/appointment-action.php", {
+        method: "POST",
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        window.location.href = "../pages/appointment-success.php";
+      } else {
+        alert("❌ " + result.message);
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      alert("❌ An error occurred while submitting.");
+    }
   });
+}
+
+  });
+ // Check slot availability when date or time changes
+function checkSlotAvailability(rowIndex) {
+    const dateInput = document.querySelector(`.date-input[data-index="${rowIndex}"]`);
+    const timeSelect = document.querySelector(`.time-select[data-index="${rowIndex}"]`);
+    const badge = document.getElementById(`slot-badge-${rowIndex}`);
+    const message = document.getElementById(`slot-message-${rowIndex}`);
+    
+    const date = dateInput ? dateInput.value : '';
+    const time = timeSelect ? timeSelect.value : '';
+    const serviceIdInput = document.querySelector('input[name="service_id"]');
+    const serviceId = serviceIdInput ? serviceIdInput.value : '';
+    
+    if (!date || !time || !serviceId) {
+        badge.textContent = 'Select date & time';
+        badge.className = 'slot-badge';
+        if (message) message.style.display = 'none';
+        return;
+    }
+    
+    // Show loading state
+    badge.textContent = 'Checking...';
+    badge.className = 'slot-badge badge-checking';
+    
+    // Build URL - IMPORTANT: Check the correct path
+    const url = `../actions/check_slot.php?service_id=${serviceId}&date=${date}&time=${time}`;
+    
+    console.log('Checking slot:', url); // Debug log
+    
+    // AJAX call to check availability
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status); // Debug log
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Slot data:', data); // Debug log
+            
+            if (data.available) {
+                badge.textContent = `Available (${data.remaining} left)`;
+                badge.className = 'slot-badge badge-available';
+                if (message) message.style.display = 'none';
+            } else {
+                badge.textContent = 'Fully Booked';
+                badge.className = 'slot-badge badge-full';
+                if (message) {
+                    message.textContent = data.message || 'This slot is no longer available';
+                    message.style.display = 'block';
+                    message.style.backgroundColor = '#fee2e2';
+                    message.style.color = '#991b1b';
+                    message.style.padding = '8px';
+                    message.style.borderRadius = '4px';
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Slot check error:', err); // Debug log
+            badge.textContent = 'Error checking';
+            badge.className = 'slot-badge badge-error';
+            if (message) {
+                message.textContent = 'Unable to check availability. Please try again.';
+                message.style.display = 'block';
+                message.style.backgroundColor = '#fef3c7';
+                message.style.color = '#92400e';
+            }
+        });
+}
+
+// Initialize event listeners when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing slot checkers...'); // Debug log
+    
+    // Attach to existing inputs
+    document.querySelectorAll('.date-input, .time-select').forEach(input => {
+        input.addEventListener('change', function() {
+            const index = this.getAttribute('data-index');
+            console.log('Input changed for row:', index); // Debug log
+            checkSlotAvailability(index);
+        });
+    });
+    
+    // Also check on page load if values are already selected
+    document.querySelectorAll('.date-input').forEach(input => {
+        const index = input.getAttribute('data-index');
+        if (input.value) {
+            checkSlotAvailability(index);
+        }
+    });
+});
+// Disable booked time slots dynamically
+async function updateTimeOptions(dateInput, timeSelect) {
+  const date = dateInput.value;
+  const serviceId = document.querySelector('input[name="service_id"]').value;
+  
+  if (!date || !serviceId) return;
+  
+  try {
+    const response = await fetch(`../actions/get_available_times.php?service_id=${serviceId}&date=${date}`);
+    const data = await response.json();
+    
+    if (data.success) {
+      // Disable unavailable times
+      Array.from(timeSelect.options).forEach(option => {
+        if (option.value === '') return; // Skip "Select Time" option
+        
+        const isUnavailable = data.unavailable_times.includes(option.value);
+        option.disabled = isUnavailable;
+        
+        if (isUnavailable) {
+          option.textContent = option.textContent.replace(' (Booked)', '') + ' (Booked)';
+          option.style.color = '#999';
+        } else {
+          option.textContent = option.textContent.replace(' (Booked)', '');
+          option.style.color = '';
+        }
+      });
+      
+      // If currently selected time is now unavailable, clear it
+      if (data.unavailable_times.includes(timeSelect.value)) {
+        timeSelect.value = '';
+      }
+    }
+  } catch (error) {
+    console.error('Error updating time options:', error);
+  }
+}
 })();

@@ -93,6 +93,8 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ishihara Test Appointment</title>
   <link rel="stylesheet" href="../assets/appointment.css">
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 <body>
 <?php include '../includes/navbar.php'; ?>
@@ -216,7 +218,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="date" class="date-input" data-index="0">
+             <input type="text" class="date-input" data-index="0" placeholder="Select date..." readonly>
       </div>
       
       <div>
@@ -248,7 +250,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="date" class="date-input" data-index="1">
+          <input type="text" class="date-input" data-index="1" placeholder="Select date..." readonly>
       </div>
       
       <div>
@@ -280,7 +282,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
       <div>
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="date" class="date-input" data-index="2">
+          <input type="text" class="date-input" data-index="2" placeholder="Select date..." readonly>
       </div>
       
       <div>

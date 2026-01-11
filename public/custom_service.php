@@ -1,17 +1,13 @@
 <?php
 session_start();
-
-// 1. REQUIRES
 require_once '../config/db.php';
 require_once '../config/encryption_util.php';
 
-// 2. CHECK SESSION
 if (!isset($_SESSION['client_id'])) {
     header("Location: login.php");
     exit;
 }
 
-// 3. GET SERVICE ID
 $service_id = isset($_GET['service_id']) ? intval($_GET['service_id']) : 0;
 if ($service_id === 0) {
     die("Invalid service");
@@ -20,7 +16,7 @@ if ($service_id === 0) {
 $db = new Database();
 $pdo = $db->getConnection();
 
-// 4. FETCH SERVICE DETAILS
+// FETCH SERVICE DETAILS
 $stmt = $pdo->prepare("SELECT * FROM services WHERE service_id = ?");
 $stmt->execute([$service_id]);
 $service = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -29,7 +25,7 @@ if (!$service) {
     die("Service not found");
 }
 
-// 5. FETCH FORM FIELDS (Dynamic Questions)
+// FETCH FORM FIELDS
 $stmt = $pdo->prepare("
     SELECT ff.* FROM form_fields ff
     JOIN service_forms sf ON ff.form_id = sf.form_id
@@ -46,7 +42,7 @@ foreach ($form_fields as $field) {
     $steps[$step_name][] = $field;
 }
 
-// 6. FETCH CLIENT DATA (Auto-fill Step 1)
+// FETCH CLIENT DATA
 $client_profile_data = [];
 if (isset($_SESSION['client_id'])) {
     $stmt = $pdo->prepare("
@@ -60,20 +56,16 @@ if (isset($_SESSION['client_id'])) {
 
     if ($encrypted_row) {
         $client_profile_data = $encrypted_row;
-
         if (function_exists('decrypt_data')) {
             try {
                 $client_profile_data['full_name'] = decrypt_data($encrypted_row['full_name']);
                 $client_profile_data['phone_number'] = decrypt_data($encrypted_row['phone_number']);
                 $client_profile_data['occupation'] = decrypt_data($encrypted_row['occupation']);
-            } catch (Throwable $e) {
-                // Fallback to raw values
-            }
+            } catch (Throwable $e) {}
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -81,6 +73,21 @@ if (isset($_SESSION['client_id'])) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($service['service_name']) ?></title>
   <link rel="stylesheet" href="../assets/appointment.css">
+  <!-- FLATPICKR CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <style>
+    /* Flatpickr Disabled Styles */
+    .flatpickr-day.flatpickr-disabled-sunday,
+    .flatpickr-day.flatpickr-disabled-closed {
+      background-color: #f3f4f6 !important;
+      color: #9ca3af !important;
+      cursor: not-allowed !important;
+    }
+    .flatpickr-day.flatpickr-disabled-sunday:hover,
+    .flatpickr-day.flatpickr-disabled-closed:hover {
+      background-color: #e5e7eb !important;
+    }
+  </style>
 </head>
 <body>
 <?php include '../includes/navbar.php'; ?>
@@ -104,12 +111,9 @@ if (isset($_SESSION['client_id'])) {
     </div>
 
     <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">
-            
       <input type="hidden" name="service_id" value="<?= $service_id ?>">
       
-      <!-- ============================================ -->
-      <!-- STEP 1: PERSONAL DETAILS (Same as Ishihara) -->
-      <!-- ============================================ -->
+      <!-- STEP 1: PERSONAL DETAILS -->
       <div class="form-step active">
         <h2>Let's get you scheduled</h2>
         <p style="color:black;">Fill in your details to proceed with <?= htmlspecialchars($service['service_name']) ?>.</p>
@@ -134,25 +138,12 @@ if (isset($_SESSION['client_id'])) {
             <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
           </select>
           
-          <input 
-            type="number" 
-            name="age" 
-            placeholder="Enter your Age..." 
-            required
-            min="1" 
-            max="120"
-            value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>"
-          >
+          <input type="number" name="age" placeholder="Enter your Age..." required min="1" max="120"
+                 value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>">
           <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
 
-          <input 
-            type="text" 
-            name="contact_number" 
-            placeholder="0912 345 678" 
-            maxlength="11" 
-            required
-            value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>"
-          >
+          <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="11" required
+                 value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>">
           <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number</p>
         </div>
 
@@ -164,9 +155,7 @@ if (isset($_SESSION['client_id'])) {
         <button type="button" class="next-btn">Next</button>
       </div>
 
-      <!-- ============================================ -->
-      <!-- STEP 2: DYNAMIC QUESTIONS (From Form Builder) -->
-      <!-- ============================================ -->
+      <!-- STEP 2: DYNAMIC QUESTIONS -->
       <div class="form-step">
         <h3 style="color: #004aad;"><?= htmlspecialchars($service['service_name']) ?> Details</h3>
         <p style="color: #666; margin-bottom: 10px;">Please answer the following questions.</p>
@@ -187,7 +176,6 @@ if (isset($_SESSION['client_id'])) {
                 $is_required = $field['is_required'] ? 'required' : '';
               ?>
               
-              <!-- TEXT INPUT -->
               <?php if ($field['field_type'] === 'text'): ?>
                 <div style="margin-bottom: 15px;">
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #444;">
@@ -195,11 +183,9 @@ if (isset($_SESSION['client_id'])) {
                     <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?>
                   </label>
                   <input type="text" name="<?= $field_name ?>" <?= $is_required ?> 
-                         placeholder="<?= htmlspecialchars($field['placeholder_text'] ?? '') ?>"
                          style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
                 </div>
               
-              <!-- TEXTAREA -->
               <?php elseif ($field['field_type'] === 'textarea'): ?>
                 <div style="margin-bottom: 15px;">
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #444;">
@@ -207,11 +193,9 @@ if (isset($_SESSION['client_id'])) {
                     <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?>
                   </label>
                   <textarea name="<?= $field_name ?>" <?= $is_required ?> rows="3"
-                            placeholder="<?= htmlspecialchars($field['placeholder_text'] ?? '') ?>"
                             style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;"></textarea>
                 </div>
               
-              <!-- RADIO BUTTONS -->
               <?php elseif ($field['field_type'] === 'radio'): ?>
                 <div style="margin-bottom: 15px;">
                   <h5><?= htmlspecialchars($field['field_label']) ?> <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?></h5>
@@ -229,7 +213,6 @@ if (isset($_SESSION['client_id'])) {
                   </div>
                 </div>
               
-              <!-- CHECKBOXES -->
               <?php elseif ($field['field_type'] === 'checkbox'): ?>
                 <div style="margin-bottom: 15px;">
                   <h5><?= htmlspecialchars($field['field_label']) ?> <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?></h5>
@@ -247,7 +230,6 @@ if (isset($_SESSION['client_id'])) {
                   </div>
                 </div>
               
-              <!-- SELECT DROPDOWN -->
               <?php elseif ($field['field_type'] === 'select'): ?>
                 <div style="margin-bottom: 15px;">
                   <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #444;">
@@ -266,29 +248,6 @@ if (isset($_SESSION['client_id'])) {
                     <?php endforeach; ?>
                   </select>
                 </div>
-              
-              <!-- DATE -->
-              <?php elseif ($field['field_type'] === 'date'): ?>
-                <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #444;">
-                    <?= htmlspecialchars($field['field_label']) ?>
-                    <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?>
-                  </label>
-                  <input type="date" name="<?= $field_name ?>" <?= $is_required ?>
-                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
-                </div>
-              
-              <!-- NUMBER -->
-              <?php elseif ($field['field_type'] === 'number'): ?>
-                <div style="margin-bottom: 15px;">
-                  <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #444;">
-                    <?= htmlspecialchars($field['field_label']) ?>
-                    <?= $field['is_required'] ? '<span style="color: red;">*</span>' : '' ?>
-                  </label>
-                  <input type="number" name="<?= $field_name ?>" <?= $is_required ?>
-                         placeholder="<?= htmlspecialchars($field['placeholder_text'] ?? '') ?>"
-                         style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px;">
-                </div>
               <?php endif; ?>
               
             <?php endforeach; ?>
@@ -301,9 +260,7 @@ if (isset($_SESSION['client_id'])) {
         </div>
       </div>
 
-      <!-- ============================================ -->
-      <!-- STEP 3: SCHEDULING (Same as Ishihara) -->
-      <!-- ============================================ -->
+      <!-- STEP 3: SCHEDULING WITH FLATPICKR -->
       <div class="form-step">
         <h2>Choose provider & time</h2>
         <p style="color: black;">Select an appointment date and time.</p>
@@ -317,7 +274,7 @@ if (isset($_SESSION['client_id'])) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-              <input type="date" class="date-input" data-index="0">
+              <input type="text" class="date-input" data-index="0" placeholder="Select date..." readonly>
             </div>
             
             <div>
@@ -349,7 +306,7 @@ if (isset($_SESSION['client_id'])) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-              <input type="date" class="date-input" data-index="1">
+              <input type="text" class="date-input" data-index="1" placeholder="Select date..." readonly>
             </div>
             
             <div>
@@ -381,7 +338,7 @@ if (isset($_SESSION['client_id'])) {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
             <div>
               <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-              <input type="date" class="date-input" data-index="2">
+              <input type="text" class="date-input" data-index="2" placeholder="Select date..." readonly>
             </div>
             
             <div>
@@ -415,9 +372,7 @@ if (isset($_SESSION['client_id'])) {
         </div>
       </div>
 
-      <!-- ============================================ -->
-      <!-- STEP 4: REVIEW & CONFIRM (Same as Ishihara) -->
-      <!-- ============================================ -->
+      <!-- STEP 4: REVIEW & CONFIRM -->
       <div class="form-step">
         <h2>Review Your Details</h2>
         <p style="color: black;">Please review your information below before confirming.</p>
@@ -455,11 +410,12 @@ if (isset($_SESSION['client_id'])) {
   </div>
 </div>
 
+<!-- FLATPICKR JS -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="../actions/appointment.js"></script>
 <?php include '../includes/footer.php'; ?>
 
 <script>
-  // Suffix dropdown handler
   document.getElementById("suffix").addEventListener('change', function() {
     const suffixConcern = document.getElementById("suffix_concern");
     if (this.value === "Other") {
@@ -469,7 +425,6 @@ if (isset($_SESSION['client_id'])) {
     }
   });
 
-  // Age validation
   const ageInput = document.querySelector('input[name="age"]');
   const ageWarning = document.getElementById('ageWarning');
   
@@ -483,7 +438,6 @@ if (isset($_SESSION['client_id'])) {
     }
   });
 
-  // Phone validation
   const phoneInput = document.querySelector('input[name="contact_number"]');
   const phoneWarning = document.getElementById('phoneWarning');
   
