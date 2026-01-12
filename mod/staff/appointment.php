@@ -140,7 +140,7 @@ if (isset($_POST['action'])) {
             $service_id = $current_appt['service_id'];
             $appointment_date = $current_appt['appointment_date'];
             
-    $client_name = decrypt_data($current_appt['full_name']);
+            $client_name = decrypt_data($current_appt['full_name']);
             $client_email = $current_appt['email']; // Ito ay galing na sa JOIN
             $service_name = $current_appt['service_name'];
             $appointment_time = $current_appt['appointment_time'];
@@ -291,7 +291,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                     <h1>Eye Master Optical Clinic</h1>
                 </div>
                 <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . "!</p>
+          <p class='greeting'>Hi, " . htmlspecialchars(decrypt_data($current_appt['full_name'] ?? $client_name)) . ",</p>
                     <p>Good news! Your appointment at <b>Eye Master Optical Clinic</b> has been successfully confirmed.</p>
                     
                     <div class='details'>
@@ -487,7 +487,7 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                     <h1>Appointment Completed</h1>
                 </div>
                 <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars(decrypt_data($current_appt['full_name'] ?? $client_name)) . ",</p>
+                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . ",</p>
                     <p>This email serves as confirmation that you have successfully completed your appointment at <b>Eye Master Optical Clinic</b>. We hope you had a pleasant experience.</p>
                     
                     <div class='details'>
@@ -1078,10 +1078,22 @@ nav#main-nav a:hover { background: rgba(255,255,255,0.1); }
 nav#main-nav a.active { background: none; color: #ff6b6b; }
 }
 @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { .filters { flex-direction: column; align-items: stretch; } }
-
+/* --- Desktop View --- */
 #searchInput {
     margin-left: auto;
+    width: 250px; /* Binago para maging kasing haba ng card */
+}
+
+/* ... ibang styles ... */
+
+/* --- Mobile View --- */
+@media (max-width: 600px) {
+    .filters { flex-direction: column; align-items: stretch; }
+    
+    #searchInput {
+        margin-left: 0;
+        width: 100%;
+    }
 }
 
 </style>
@@ -1093,6 +1105,8 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     <p class="loader-text">Loading Management...</p>
 </div>
 <div id="main-content" style="display: none;">
+
+
 
     <header>
     <div class="logo-section">
@@ -1120,16 +1134,12 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     <?php endif; ?>
     
     <form id="filtersForm" method="get" class="filters">
-       <div>
-    <!-- ✅ BAGONG BUTTON: All Records -->
-    <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" id="clearViewFilter">
-        All Records
-    </button>
-    <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
-    <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-    <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
-    <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
-</div>
+        <div>
+            <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
+            <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
+        </div>
         <select name="status" id="statusFilter" title="Filter by status">
             <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Status</option>
             <option value="Pending" <?= $statusFilter==='Pending'?'selected':'' ?>>Pending</option>
@@ -1190,7 +1200,9 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
                     <?= htmlspecialchars($initials) ?>
                     </div>
                     <div>
-                    <div style="font-weight:700;color:#223;"> <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>  </div>
+                   <div style="font-weight:700;color:#223;">
+    <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>
+</div>
                     </div>
                 </div>
                 </td>
@@ -1975,9 +1987,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (content) {
             content.style.display = 'block';
-            content.style.animation = 'fadeInContent 0.1 ease';
+            content.style.animation = 'fadeInContent 0.5s ease';
         }
-    }, 100);
+    }, 1000);
 });
 </script>
 
@@ -2014,6 +2026,7 @@ if (menuToggle && mainNav) {
         history.go(1);
     };
 </script>
+
 
 </body>
 </html>

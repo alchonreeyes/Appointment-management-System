@@ -43,21 +43,20 @@ try {
     // ========================================
     // 4. COOLDOWN CHECK (15 Minutes)
     // ========================================
-    $cooldown_minutes = 2;
-    if (isset($_SESSION['last_appointment_time'])) {
-        $time_passed = time() - $_SESSION['last_appointment_time'];
-        $time_remaining = ($cooldown_minutes * 60) - $time_passed;
-        if ($time_remaining > 0) {
-            $minutes_left = ceil($time_remaining / 60);
-            echo json_encode(['success' => false, 'message' => "Please wait $minutes_left minute(s) before booking again."]);
-            exit;
-        }
+    $cooldown_seconds = 60; // 1 minute
+if (isset($_SESSION['last_appointment_time'])) {
+    $time_passed = time() - $_SESSION['last_appointment_time'];
+    $time_remaining = $cooldown_seconds - $time_passed;
+    if ($time_remaining > 0) {
+        $seconds_left = $time_remaining;
+        echo json_encode(['success' => false, 'message' => "Please wait $seconds_left second(s) before booking again."]);
+        exit;
     }
+}
 
     // ========================================
 // 5. ANTI-SPAM: Detect Aggressive Booking
 // ========================================
-
 // Check bookings in last 10 minutes
 $checkAggressive = $pdo->prepare("
     SELECT appointment_id, appointment_date, appointment_time, service_id
@@ -71,7 +70,9 @@ $checkAggressive->execute([$client_id]);
 $recentBookings = $checkAggressive->fetchAll(PDO::FETCH_ASSOC);
 $recentCount = count($recentBookings);
 
+
 // If 6+ bookings in 10 minutes = SPAMMER
+// (3 appointments per booking × 2 bookings = 6 appointments)
 if ($recentCount >= 6) {
     
     // 1. Cancel all their recent appointments
@@ -80,11 +81,11 @@ if ($recentCount >= 6) {
     
     $pdo->prepare("
         UPDATE appointments 
-        SET status_id = 5, reason_cancel = 'Auto-cancelled: Suspicious activity'
+        SET status_id = 5, reason_cancel = 'Auto-cancelled: Suspicious activity detected'
         WHERE appointment_id IN ($placeholders)
     ")->execute($cancelIds);
     
-    // 2. Restore all slots they took
+  // 2. Restore all slots they took
     foreach ($recentBookings as $booking) {
         $pdo->prepare("
             UPDATE appointment_slots 
@@ -106,17 +107,16 @@ if ($recentCount >= 6) {
     
     echo json_encode([
         'success' => false, 
-        'message' => 'Account suspended: Suspicious booking activity detected. All recent appointments have been cancelled.'
+        'message' => 'Account suspended: Suspicious booking activity detected. All recent appointments have been cancelled. Please contact the clinic to resolve this issue.'
     ]);
     exit;
 }
-
-// Normal check: Max 3 bookings in 24 hours (for regular users)
+// Normal check: Max 3 appointments per hour
 $checkDaily = $pdo->prepare("
     SELECT COUNT(*) as daily_count 
     FROM appointments 
     WHERE client_id = ? 
-      AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
       AND status_id IN (1, 2)
 ");
 $checkDaily->execute([$client_id]);
@@ -125,9 +125,10 @@ $dailyCount = $checkDaily->fetch()['daily_count'];
 if ($dailyCount >= 3) {
     echo json_encode([
         'success' => false, 
-        'message' => 'You can only book 3 appointments per day. Please try again tomorrow.'
+        'message' => 'You can only book 3 appointments per hour. Please try again later.'
     ]);
     exit;
+    
 }
 
     // ========================================
@@ -164,22 +165,23 @@ if ($dailyCount >= 3) {
     if (empty($appointments)) {
         echo json_encode(['success' => false, 'message' => 'Please select appointment date(s).']);
         exit;
-    }
+        }
 
     $appointment_group_id = "EM-" . date('Ymd') . "-" . rand(1000, 9999);
     $service_id = intval($_POST['service_id'] ?? 0);
 
-    // ========================================
-    // 7. START TRANSACTION
-    // ========================================
     $pdo->beginTransaction();
+ // ========================================
+// 7. START TRANSACTION BEFORE CHECKING SLOTS
+// ========================================
 
+try {
     foreach ($appointments as $slot) {
         $date = $slot['date'] ?? '';
         $time = $slot['time'] ?? '';
         
         if (empty($date) || empty($time)) continue;
-
+        
         // Check closed dates
         $checkClosed = $pdo->prepare("SELECT status FROM schedule_settings WHERE schedule_date = ? AND status = 'Closed'");
         $checkClosed->execute([$date]);
@@ -187,7 +189,7 @@ if ($dailyCount >= 3) {
             throw new Exception("Sorry, the clinic is closed on " . date('F j, Y', strtotime($date)) . ".");
         }
 
-        // Check slot availability
+        // ✅ ATOMIC CHECK: Lock the row for this slot
         $checkSlot = $pdo->prepare("
             SELECT slot_id, used_slots, max_slots 
             FROM appointment_slots 
@@ -198,16 +200,19 @@ if ($dailyCount >= 3) {
         $slotData = $checkSlot->fetch(PDO::FETCH_ASSOC);
 
         if (!$slotData) {
+            // Create new slot with 1 booking
             $createSlot = $pdo->prepare("
                 INSERT INTO appointment_slots (service_id, appointment_date, appointment_time, max_slots, used_slots) 
                 VALUES (?, ?, ?, 1, 1)
             ");
             $createSlot->execute([$service_id, $date, $time]);
         } else {
+            // ✅ CRITICAL: Check if slot is full AFTER locking
             if ($slotData['used_slots'] >= $slotData['max_slots']) {
                 throw new Exception("Sorry, the " . date('g:i A', strtotime($time)) . " slot on " . date('F j, Y', strtotime($date)) . " is fully booked.");
-            }
+                }
             
+            // ✅ ATOMIC UPDATE: Increment within the locked transaction
             $updateSlot = $pdo->prepare("
                 UPDATE appointment_slots 
                 SET used_slots = used_slots + 1 
@@ -234,7 +239,7 @@ if ($dailyCount >= 3) {
             ':appointment_group_id' => $appointment_group_id
         ];
 
-        // Insert based on type
+        // Insert based on type (rest of your code stays the same)
         if ($type === 'medical') {
             $sql = "INSERT INTO appointments (
                         client_id, service_id, full_name, suffix, gender, age, phone_number, occupation,
@@ -285,13 +290,27 @@ if ($dailyCount >= 3) {
         $stmt->execute($params);
     }
 
+    // ✅ COMMIT: Release all locks
     $pdo->commit();
     $_SESSION['last_appointment_time'] = time();
 
     echo json_encode(['success' => true, 'message' => 'Successfully booked!', 'group_id' => $appointment_group_id]);
 
 } catch (Exception $e) {
-    if (isset($pdo) && $pdo->inTransaction()) $pdo->rollBack();
+    // ✅ ROLLBACK: Release locks and undo changes (INNER CATCH)
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     error_log("Booking Error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => $e->getMessage()]); 
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+
+} catch (Exception $e) {
+    // ✅ OUTER CATCH: Handles errors from entire script
+    if (isset($pdo) && $pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    error_log("System Error: " . $e->getMessage());
+    echo json_encode(['success' => false, 'message' => 'A system error occurred. Please try again later.']);
+}
+?>

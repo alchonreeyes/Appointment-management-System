@@ -168,29 +168,26 @@ elseif ($filterWeek) {
 //             at tinama ang mga column names (full_name, status_id, etc.)
 // ======================================================================
 
-// 1. Total Appointments (based on filter)
-$sql1 = "SELECT COUNT(a.appointment_id) FROM appointments a WHERE {$statFilter}";
+// 1. Total Appointments (NOW FILTERED: Only Pending + Confirmed)
+$sql1 = "SELECT COUNT(a.appointment_id) 
+         FROM appointments a 
+         JOIN appointmentstatus s ON a.status_id = s.status_id
+         WHERE (s.status_name = 'Pending' OR s.status_name = 'Confirmed') 
+         AND {$statFilter}";
 $result1 = $conn->query($sql1);
 $totalAppointmentsToday = $result1 ? $result1->fetch_array()[0] : 0;
 
-// Comparison with yesterday
-$sql2 = "SELECT COUNT(a.appointment_id) FROM appointments a WHERE DATE(a.appointment_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
+// Comparison with yesterday (Only Pending + Confirmed)
+$sql2 = "SELECT COUNT(a.appointment_id) 
+         FROM appointments a 
+         JOIN appointmentstatus s ON a.status_id = s.status_id
+         WHERE (s.status_name = 'Pending' OR s.status_name = 'Confirmed')
+         AND DATE(a.appointment_date) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)";
 $result2 = $conn->query($sql2);
 $yesterdayCount = $result2 ? $result2->fetch_array()[0] : 0;
 $percentChange = $yesterdayCount > 0 ? round((($totalAppointmentsToday - $yesterdayCount) / $yesterdayCount) * 100) : 0;
 
-// 2. Total Patients (Pinalitan ang 'patient_name' ng 'full_name')
-$sql3 = "SELECT COUNT(DISTINCT a.full_name) FROM appointments a WHERE {$baseFilter}";
-$result3 = $conn->query($sql3);
-$totalPatients = $result3 ? $result3->fetch_array()[0] : 0;
-
-// Last month comparison
-$lastMonth = date('m', strtotime("-1 month", strtotime("1 {$filterMonth} {$filterYear}")));
-$lastYear = date('Y', strtotime("-1 month", strtotime("1 {$filterMonth} {$filterYear}")));
-$sql4 = "SELECT COUNT(DISTINCT a.full_name) FROM appointments a WHERE MONTH(a.appointment_date) = '{$lastMonth}' AND YEAR(a.appointment_date) = '{$lastYear}'";
-$result4 = $conn->query($sql4);
-$lastMonthPatients = $result4 ? $result4->fetch_array()[0] : 0;
-$patientPercentChange = $lastMonthPatients > 0 ? round((($totalPatients - $lastMonthPatients) / $lastMonthPatients) * 100) : 0;
+// *** REMOVED TOTAL PATIENTS QUERY AS REQUESTED ***
 
 // 3. Pending Appointments (Idinagdag ang JOIN at pinalitan ang 'status' ng 'status_name')
 $sql5 = "SELECT COUNT(a.appointment_id) 
@@ -271,7 +268,7 @@ $result_recent = $conn->query($sql_recent);
 $recentAppointments = $result_recent ? $result_recent->fetch_all(MYSQLI_ASSOC) : [];
         // =======================================================
         // Dito natin "bubuksan" ang lock para sa modal display
-      
+       
 // ===== FALLBACK DATA (if empty) =====
 if (empty($dailyData)) {
     $dailyData = [['date' => date('Y-m-d'), 'count' => 0]];
@@ -1254,14 +1251,11 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
     <div class="stats">
         <div class="card">
-            <p>Total Appointments</p>
+            <p>Total Appointments (Confirmed/Pending)</p>
             <h2><?= $totalAppointmentsToday ?></h2>
         </div>
+        
         <div class="card">
-            <p>Total Patients</p>
-            <h2><?= $totalPatients ?></h2>
-        </div>
-<div class="card">
             <p>Pending Appointments</p>
             <h2><?= $pendingAppointments ?></h2>
         </div>
@@ -1338,7 +1332,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             $qrData = $qrTestResult->fetch_assoc()['appointment_id'];
         }
     ?>
-    <!-- 2. Generate QR with ONLY the ID number -->
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= $qrData ?>" alt="QR Code for Appt #<?= $qrData ?>">
     <p style="font-size:12px; color:#666; margin-top:5px;">Scan to test (ID: <?= $qrData ?>)</p>
 </div>
@@ -1357,33 +1350,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 </div>
 
-<!-- ====================================================================== -->
-<!-- (Request #2 & #3) IN-UPDATE ANG MODAL NA ITO -->
-<!-- ====================================================================== -->
 <div class="detail-overlay" id="appointmentDetailModal">
     <div class="detail-card">
         
         <div class="detail-header">
-            <!-- REQUEST #3: Idinagdag ang ID na "detail-title" -->
             <div class="detail-title" id="detail-title">
                 Appointment Details
             </div>
             <span class="detail-id" id="detail-id">#0</span>
         </div>
 
-        <!-- REQUEST #2: Pinalitan ang laman para maging dynamic -->
         <div id="detailModalBody" style="padding: 24px 28px; max-height: 70vh; overflow-y: auto; font-size: 15px;">
-            <!-- Dito ilalagay ng JavaScript ang lahat ng data -->
-        </div>
+            </div>
 
         <div class="detail-actions">
             <input type="hidden" id="modal_appointment_id" value="">
             <button class="btn-small btn-close" onclick="closeAppointmentDetailModal()">Back</button>
             
-            <!-- ====================================================================== -->
-            <!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
-            <!-- Pinalitan ang `updateScannedStatus('Cancel')` -->
-            <!-- ====================================================================== -->
             <button class="btn-small btn-cancel" style="background: #dc2626; color: white;" 
                     onclick="promptScannedCancel()">
                 Cancel
@@ -1409,10 +1392,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 </div>
 
-<!-- ====================================================================== -->
-<!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
-<!-- Idinagdag ang HTML para sa Reason Modal (kinopya mula sa appointment.php) -->
-<!-- ====================================================================== -->
 <div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3001;">
     <div class="confirm-card" role="dialog" aria-modal="true">
         <div class="confirm-header">

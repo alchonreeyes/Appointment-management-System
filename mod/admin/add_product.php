@@ -2,6 +2,8 @@
 session_start();
 require_once __DIR__ . '/../database.php';
 
+
+
 // 2. HANDLE FORM SUBMISSION
 $success_msg = '';
 $error_msg = '';
@@ -15,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     // --- NEW LOGIC FOR LENS TYPE (Radio + Other) ---
     $lens_type = $_POST['lens_type'] ?? '';
     if ($lens_type === 'Other') {
+        // If "Other" is checked, grab the text from the specific input
         $lens_type = trim($_POST['lens_type_other']);
     }
     // -----------------------------------------------
@@ -144,10 +147,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
         
         textarea { resize: vertical; min-height: 100px; }
 
-        /* --- LENS TYPE STYLES --- */
+        /* --- NEW STYLES FOR CHECKLIST (RADIO) --- */
         .lens-options-container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr; /* 2 columns layout */
             gap: 10px;
             background: #f9f9f9;
             padding: 15px;
@@ -167,14 +170,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
             width: 16px;
             height: 16px;
             cursor: pointer;
-            accent-color: #991010;
+            accent-color: #991010; /* Colors the radio button red */
         }
         
         .other-input-container {
-            grid-column: 1 / -1;
+            grid-column: 1 / -1; /* Span full width */
             margin-top: 10px;
-            display: none;
+            display: none; /* Hidden by default */
         }
+        /* ---------------------------------------- */
 
         .image-upload-box {
             border: 2px dashed #ccc;
@@ -272,20 +276,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
                         </div>
                     </div>
                 </div>
-
-                <!-- ✅ FIXED: Frame Material (Not Frame Type) -->
                 <div class="form-group full">
-                    <label>Frame Material *</label>
-                    <select name="frame_type" required>
-                        <option value="">Select Frame Material</option>
-                        <option value="Plastic">Plastic</option>
-                        <option value="Titanium">Titanium</option>
-                        <option value="Stainless Steel">Stainless Steel</option>
-                        <option value="Memory Metal">Memory Metal</option>
-                        <option value="Carbon Fiber">Carbon Fiber</option>
-                        <option value="Acetate">Acetate</option>
-                        <option value="Wood">Wood</option>
-                        <option value="Aluminum">Aluminum</option>
+                    <label>Frame Type *</label>
+                    <select name="frame_type">
+                        <option value="Full Rim">Full Rim</option>
+                        <option value="Half Rim">Half Rim</option>
+                        <option value="Rimless">Rimless</option>
                     </select>
                 </div>
 
@@ -326,20 +322,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
 </div>
 
 <script>
+    // Toggle the "Other" text field
     function toggleOther(show) {
         const box = document.getElementById('otherInputBox');
         const input = document.getElementById('otherTextField');
         if (show) {
             box.style.display = 'block';
-            input.setAttribute('required', 'required');
+            input.setAttribute('required', 'required'); // Make it required if "Other" is picked
             input.focus();
         } else {
             box.style.display = 'none';
             input.removeAttribute('required');
-            input.value = '';
+            input.value = ''; // Clear it if they switch back
         }
     }
 
+    // Image Previews (Same as before)
     function previewSingle(input, targetId) {
         const container = document.getElementById(targetId);
         container.innerHTML = '';

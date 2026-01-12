@@ -864,7 +864,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       </div>
       <button id="menu-toggle" aria-label="Open navigation">☰</button>
       <nav id="main-nav">
-        <a href="staff_dashboard.php">🏠 Dashboard</a>
+     <a href="staff_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php" class="active">💊 Product & Services</a>

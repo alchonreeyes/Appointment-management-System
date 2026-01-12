@@ -5,7 +5,7 @@ session_start();
 // ✅ Check if token exists in URL
 if (!isset($_GET['token']) || empty($_GET['token'])) {
     $_SESSION['error'] = "Invalid verification link.";
-    header("Location: register.php");
+    header("Location: login.php");
     exit;
 }
 
@@ -26,18 +26,19 @@ try {
         $update = $pdo->prepare("UPDATE users SET is_verified = 1, verification_token = NULL WHERE id = ?");
         $update->execute([$user['id']]);
 
-        $_SESSION['success'] = "Email verified successfully! You can now log in.";
+        // ✅ Use the correct session variable name that login.php expects
+        $_SESSION['verification_success'] = "Email verified successfully! You can now log in.";
         header("Location: login.php");
         exit;
     } else {
-        $_SESSION['error'] = "Invalid or expired verification link.";
-        header("Location: register.php");
+        $_SESSION['error'] = "Invalid or expired verification link. Please register again.";
+        header("Location: login.php");
         exit;
     }
 
 } catch (PDOException $e) {
-    $_SESSION['error'] = "Error: " . $e->getMessage();
-    header("Location: register.php");
+    $_SESSION['error'] = "Verification error: " . $e->getMessage();
+    header("Location: login.php");
     exit;
 }
 ?>

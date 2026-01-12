@@ -28,12 +28,6 @@ if (file_exists($actionFile)) {
 </head>
 <body>
 
-<!-- <div id="page-loader-overlay">
-    <div class="loader-spinner-fullpage"></div>
-    <p>Loading Dashboard...</p>
-</div> -->
-
-
 <div id="loader-overlay">
     <div class="loader-content">
         <div class="loader-spinner"></div>
@@ -104,15 +98,25 @@ if (file_exists($actionFile)) {
     </div>
 
     <div class="stats">
+        <?php 
+            // Calculate Pending + Confirmed only
+            $pendingAndConfirmedCount = 0;
+            if (isset($statusData) && is_array($statusData)) {
+                foreach ($statusData as $s) {
+                    $sName = strtolower($s['status_name']);
+                    if ($sName === 'pending' || $sName === 'confirmed') {
+                        $pendingAndConfirmedCount += $s['count'];
+                    }
+                }
+            }
+        ?>
+
         <div class="card">
             <p>Total Appointments</p>
-            <h2><?= $totalAppointmentsToday ?></h2>
+            <h2><?= $pendingAndConfirmedCount ?></h2>
         </div>
+        
         <div class="card">
-            <p>Total Patients</p>
-            <h2><?= $totalPatients ?></h2>
-        </div>
-<div class="card">
             <p>Pending Appointments</p>
             <h2><?= $pendingAppointments ?></h2>
         </div>
@@ -126,7 +130,6 @@ if (file_exists($actionFile)) {
             <h2><?= $completedToday ?></h2>
         </div>
     </div>
-
     <div class="charts-grid">
         <div class="chart-box">
             <h3>Appointments Overview</h3>
@@ -189,7 +192,6 @@ if (file_exists($actionFile)) {
             $qrData = $qrTestResult->fetch_assoc()['appointment_id'];
         }
     ?>
-    <!-- 2. Generate QR with ONLY the ID number -->
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=<?= $qrData ?>" alt="QR Code for Appt #<?= $qrData ?>">
     <p style="font-size:12px; color:#666; margin-top:5px;">Scan to test (ID: <?= $qrData ?>)</p>
 </div>
@@ -216,33 +218,23 @@ function testQRCode() {
     </div>
 </div>
 
-<!-- ====================================================================== -->
-<!-- (Request #2 & #3) IN-UPDATE ANG MODAL NA ITO -->
-<!-- ====================================================================== -->
 <div class="detail-overlay" id="appointmentDetailModal">
     <div class="detail-card">
         
         <div class="detail-header">
-            <!-- REQUEST #3: Idinagdag ang ID na "detail-title" -->
             <div class="detail-title" id="detail-title">
                 Appointment Details
             </div>
             <span class="detail-id" id="detail-id">#0</span>
         </div>
 
-        <!-- REQUEST #2: Pinalitan ang laman para maging dynamic -->
         <div id="detailModalBody" style="padding: 24px 28px; max-height: 70vh; overflow-y: auto; font-size: 15px;">
-            <!-- Dito ilalagay ng JavaScript ang lahat ng data -->
-        </div>
+            </div>
 
         <div class="detail-actions">
             <input type="hidden" id="modal_appointment_id" value="">
             <button class="btn-small btn-close" onclick="closeAppointmentDetailModal()">Back</button>
             
-            <!-- ====================================================================== -->
-            <!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
-            <!-- Pinalitan ang `updateScannedStatus('Cancel')` -->
-            <!-- ====================================================================== -->
             <button class="btn-small btn-cancel" style="background: #dc2626; color: white;" 
                     onclick="promptScannedCancel()">
                 Cancel
@@ -268,10 +260,6 @@ function testQRCode() {
     </div>
 </div>
 
-<!-- ====================================================================== -->
-<!-- **** REQUEST #1 (CANCEL BUTTON) FIX **** -->
-<!-- Idinagdag ang HTML para sa Reason Modal (kinopya mula sa appointment.php) -->
-<!-- ====================================================================== -->
 <div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3001;">
     <div class="confirm-card" role="dialog" aria-modal="true">
         <div class="confirm-header">

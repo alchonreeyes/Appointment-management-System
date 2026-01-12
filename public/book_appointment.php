@@ -319,11 +319,7 @@ function formatServiceTitle($title) {
                                     <?php endif; ?>
                                     
                                 <?php elseif ($is_custom): ?>
-                                    <!-- ✅ CUSTOM SERVICE DESIGN (Matches Ishihara Style) -->
-                                    <div class="custom-service-indicator">
-                                        <h4>✨ Custom Service</h4>
-                                        <p>This service includes personalized questions tailored to your needs.</p>
-                                    </div>
+                                
                                     
                                 <?php else: ?>
                                     <!-- Empty state for services with no details -->

@@ -189,10 +189,30 @@ nav a.active { background:#dc3545; color:#fff; }
 .form-group input { padding:12px 14px; border:1px solid #dde3ea; border-radius:8px; font-size:14px; background:#fff; transition:all .2s; }
 .form-group input:focus { outline:none; border-color:#991010; box-shadow:0 0 0 3px rgba(153,16,16,0.1); }
 .form-group input:disabled { background:#f8f9fb; color:#6b7f86; cursor:not-allowed; }
+
+/* === UPDATED PASSWORD WRAPPER CSS === */
 .password-wrapper { position:relative; }
-.password-wrapper input { padding-right:45px; }
-.password-wrapper button { position:absolute; right:1px; top:1px; bottom:1px; width:40px; background:transparent; border:none; cursor:pointer; font-size:18px; color:#555; transition:color .2s; }
+.password-wrapper input { padding-right:45px; width: 100%; }
+.password-wrapper button { 
+    position:absolute; 
+    right:0; 
+    top:0; 
+    bottom:0; 
+    width:40px; 
+    background:transparent; 
+    border:none; 
+    cursor:pointer; 
+    font-size:18px; 
+    color:#555; 
+    transition:color .2s; 
+    z-index: 10; /* FIX: Ensures button is on top of input */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 .password-wrapper button:hover { color:#991010; }
+/* ==================================== */
+
 .form-actions { display:flex; gap:12px; justify-content:flex-end; padding-top:20px; border-top:2px solid #f3f6f9; }
 .btn { padding:12px 24px; border-radius:8px; border:none; cursor:pointer; font-weight:700; font-size:14px; transition:all .2s; display:flex; align-items:center; gap:8px; }
 .btn:hover { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,0.15); }
@@ -441,7 +461,6 @@ nav a.active { background:#dc3545; color:#fff; }
     <div class="profile-header">
       <div class="profile-avatar"><?= htmlspecialchars($initials) ?></div>
       <div class="profile-info">
-        <!-- ✅ Display DECRYPTED name -->
         <div class="profile-name"><?= htmlspecialchars($user['name']) ?></div>
         <div class="profile-meta">
           <span class="badge admin-id">ID: <?= htmlspecialchars($user['id']) ?></span>
@@ -456,24 +475,20 @@ nav a.active { background:#dc3545; color:#fff; }
       <form id="profileForm" onsubmit="return false;">
         <div class="form-grid">
           
-          <!-- ✅ Display DECRYPTED name -->
           <div class="form-group">
             <label for="profileName">Full Name *</label>
             <input type="text" id="profileName" value="<?= htmlspecialchars($user['name']) ?>" disabled required>
           </div>
 
-          <!-- ✅ Display DECRYPTED email -->
           <div class="form-group">
             <label for="profileEmail">Email Address *</label>
             <input type="email" id="profileEmail" value="<?= htmlspecialchars($user['email']) ?>" disabled required>
           </div>
 
-          <!-- ❌ DON'T show actual password -->
           <div class="form-group">
             <label for="profilePassword">Password <span style="font-size:11px; color:#666; font-weight:normal;">(Leave blank to keep current)</span></label>
             <div class="password-wrapper">
-              <!-- Show placeholder, not actual password -->
-              <input type="password" id="profilePassword" value="" placeholder="••••••••" disabled>
+              <input type="password" id="profilePassword" value="" placeholder="******** (Hidden)" disabled>
               <button type="button" onclick="togglePasswordVisibility()" title="Show/Hide Password">👁️</button>
             </div>
           </div>
@@ -532,18 +547,27 @@ function showToast(msg, type = 'success') {
         overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
     }, { once: true });
 }
-    // =======================================================
-    // <-- END: BAGONG 'showToast' FUNCTION
-    // =======================================================
-    function togglePasswordVisibility() {
-  const input = document.getElementById('profilePassword');
-  const btn = input?.closest('.password-wrapper')?.querySelector('button');
-  if (!input || !btn) return;
-  input.type = (input.type === 'password') ? 'text' : 'password';
-  btn.textContent = (input.type === 'password') ? '👁️' : '🙈';
+
+// =======================================================
+// <-- FIXED: UPDATED PASSWORD TOGGLE FUNCTION
+// =======================================================
+function togglePasswordVisibility() {
+    const input = document.getElementById('profilePassword');
+    // FIXED: Select button robustly
+    const btn = document.querySelector('.password-wrapper button');
+    
+    if (!input || !btn) return;
+
+    if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈"; 
+    } else {
+        input.type = "password";
+        btn.textContent = "👁️";
+    }
 }
     
-   function enableEdit() {
+function enableEdit() {
   document.getElementById('profileName').disabled = false;
   document.getElementById('profileEmail').disabled = false;
   document.getElementById('profilePassword').disabled = false;
@@ -555,11 +579,11 @@ function showToast(msg, type = 'success') {
   showToast('You can now edit your profile', 'success');
 }
     
-   function cancelEdit() {
+function cancelEdit() {
   document.getElementById('profileName').value = originalData.name;
   document.getElementById('profileEmail').value = originalData.email;
   document.getElementById('profilePassword').value = '';
-  document.getElementById('profilePassword').placeholder = '••••••••';
+  document.getElementById('profilePassword').placeholder = '******** (Hidden)';
 
   document.getElementById('profileName').disabled = true;
   document.getElementById('profileEmail').disabled = true;
@@ -567,7 +591,7 @@ function showToast(msg, type = 'success') {
 
   const passInput = document.getElementById('profilePassword');
   passInput.type = 'password';
-  const passBtn = passInput.closest('.password-wrapper')?.querySelector('button');
+  const passBtn = document.querySelector('.password-wrapper button');
   if(passBtn) passBtn.textContent = '👁️';
 
   document.getElementById('viewActions').style.display = 'flex';

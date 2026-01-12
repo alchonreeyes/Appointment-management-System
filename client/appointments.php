@@ -43,7 +43,7 @@ function sendAppointmentEmail($recipient_email, $recipient_name, $subject, $appo
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
         $mail->Username = 'alchonreyez@gmail.com'; // Your Gmail
-        $mail->Password = 'fdyk vxfe ofyy ufjh';         // Your App Password
+        $mail->Password = 'fdykvxfeofyyufjh';         // Your App Password
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = 587;
 
@@ -543,6 +543,31 @@ foreach ($result_encrypted as $row) {
                 opacity: 1;
             }
         }
+        .reference-id-box {
+    margin-top: 20px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-left: 3px solid #004aad;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.reference-id-box .label {
+    font-size: 11px;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+}
+
+.reference-id-box .value {
+    font-size: 14px;
+    color: #004aad;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+}
     </style>
 </head>
 <body>
@@ -716,6 +741,11 @@ foreach ($result_encrypted as $row) {
 
                 <button type="submit" class="btn-ojo" style="width:100%;">Save Changes</button>
             </form>
+            <!-- ✅ Styled Reference ID Box -->
+<div class="reference-id-box">
+    <span class="label">Reference ID</span>
+    <span class="value">${data.appointment_group_id || 'N/A'}</span>
+</div>
         </div>
     </div>
 
@@ -792,22 +822,29 @@ foreach ($result_encrypted as $row) {
             document.getElementById(id).style.display = 'none'; 
         }
         
-        function openViewModal(data) {
-            let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            
-            let content = `
-                <div class="detail-list">
-                    <div class="detail-item"><label>Date</label> <span>${formattedDate}</span></div>
-                    <div class="detail-item"><label>Time</label> <span>${data.appointment_time}</span></div>
-                    <div class="detail-item"><label>Service</label> <span>${data.service_name}</span></div>
-                    <div class="detail-item"><label>Status</label> <span>${data.status_name}</span></div>
-                    <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
-                    <div class="detail-item full-width"><label>Concern</label><span>${data.concern || 'None'}</span></div>
-                    ${data.reason_cancel ? `<div class="detail-item full-width" style="color:red"><label>Cancellation Reason</label><span>${data.reason_cancel}</span></div>` : ''}
-                </div>`;
-            document.getElementById('viewContent').innerHTML = content;
-            document.getElementById('viewModal').style.display = 'flex';
-        }
+       function openViewModal(data) {
+    let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    
+    let content = `
+        <div class="detail-list">
+            <div class="detail-item"><label>Date</label> <span>${formattedDate}</span></div>
+            <div class="detail-item"><label>Time</label> <span>${data.appointment_time}</span></div>
+            <div class="detail-item"><label>Service</label> <span>${data.service_name}</span></div>
+            <div class="detail-item"><label>Status</label> <span>${data.status_name}</span></div>
+            <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
+            <div class="detail-item full-width"><label>Concern</label><span>${data.concern || 'None'}</span></div>
+            ${data.reason_cancel ? `<div class="detail-item full-width" style="color:red"><label>Cancellation Reason</label><span>${data.reason_cancel}</span></div>` : ''}
+        </div>
+        
+        <!-- ✅ Add Reference ID at bottom right -->
+        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: right;">
+            <span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">Reference ID</span><br>
+            <span style="font-size: 13px; color: #374151; font-weight: 600; font-family: monospace;">${data.appointment_group_id || 'N/A'}</span>
+        </div>
+    `;
+    document.getElementById('viewContent').innerHTML = content;
+    document.getElementById('viewModal').style.display = 'flex';
+}
 
         function openEditModal(data) {
             document.getElementById('edit_id').value = data.appointment_id;
