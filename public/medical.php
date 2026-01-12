@@ -334,7 +334,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 <div style="margin-bottom: 12px;">
     <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
         <input type="checkbox" name="consent_reminders" value="1"> 
-        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">via SMS or email.</span></span>
+        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">email.</span></span>
     </label>
 </div>
 

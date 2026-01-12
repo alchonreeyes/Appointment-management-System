@@ -391,7 +391,7 @@ if (isset($_SESSION['client_id'])) {
         <div style="margin-bottom: 12px;">
           <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
             <input type="checkbox" name="consent_reminders" value="1"> 
-            <span>I consent to receive reminders via SMS or email.</span>
+            <span>I consent to receive reminders via email.</span>
           </label>
         </div>
 

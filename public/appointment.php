@@ -385,7 +385,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
             
             <div class="product-modal-header">
                 <h3 style="margin:0; color:#004aad;">Full Frame Collection</h3>
-                <button type="button" class="product-modal-close" onclick="closeProductModal()">&times;</button>
+                <button type="button" class="product-modal-close" onclick="closeProductModal()"></button>
             </div>
 
             <div class="product-modal-body">
@@ -449,7 +449,7 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
 <div style="margin-bottom: 12px;">
     <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
         <input type="checkbox" name="consent_reminders" value="1"> 
-        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">via SMS or email.</span></span>
+        <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">email.</span></span>
     </label>
 </div>
 

@@ -121,6 +121,126 @@ $result = $conn->query($sql);
             border-color: #ee4d2d;
             opacity: 1;
         }
+        /* Specifications Section */
+.specs-container {
+    margin: 20px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.specs-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.specs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    padding: 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.spec-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.spec-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.spec-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.spec-label {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.spec-value {
+    font-size: 14px;
+    color: #212529;
+    font-weight: 700;
+}
+
+/* Description Section */
+.description-section {
+    margin-top: 20px;
+}
+
+.description-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modal-description {
+    line-height: 1.6;
+    color: #495057;
+    font-size: 14px;
+}
+
+/* Prescription Link Enhancement */
+.prescription-link {
+    display: block;
+    text-align: center;
+    background: linear-gradient(135deg, #2d97ee 0%, #454eff 100%);
+    color: white;
+    padding: 14px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 15px;
+    margin: 20px 0;
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(238, 77, 45, 0.3);
+}
+
+.prescription-link:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(238, 77, 45, 0.4);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .specs-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .spec-item {
+        padding: 10px;
+    }
+    
+    .spec-icon {
+        font-size: 20px;
+    }
+}
     </style>
 </head>
 <body>
@@ -275,8 +395,51 @@ $result = $conn->query($sql);
     <div class="modal-right">
       <p class="modal-category">Eyeglasses</p>
       <h2 class="modal-title" id="modalTitle">Product Name</h2>
-      <a href="../public/book_appointment.php" class="prescription-link">Book An Appointment Now?</a>
-      <p id="modalDescription" style="margin-top: 20px; line-height: 1.5; color: #666;"></p>
+      
+      <!-- NEW: Specifications Section -->
+      <div class="specs-container">
+        <h3 class="specs-title">Specifications</h3>
+        <div class="specs-grid">
+          <div class="spec-item">
+            <span class="spec-icon">👤</span>
+            <div class="spec-content">
+              <span class="spec-label">Gender</span>
+              <span class="spec-value" id="specGender">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">🏷️</span>
+            <div class="spec-content">
+              <span class="spec-label">Brand</span>
+              <span class="spec-value" id="specBrand">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">👓</span>
+            <div class="spec-content">
+              <span class="spec-label">Lens Type</span>
+              <span class="spec-value" id="specLensType">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">🖼️</span>
+            <div class="spec-content">
+              <span class="spec-label">Frame Type</span>
+              <span class="spec-value" id="specFrameType">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <a href="../public/appointment.php" class="prescription-link">📅 Book An Appointment Now</a>
+      
+      <div class="description-section">
+        <h3 class="description-title">Description</h3>
+        <p id="modalDescription" class="modal-description">Loading description...</p>
+      </div>
     </div>
   </div>
 </div>
@@ -353,7 +516,7 @@ function updateProductGrid(products) {
     const grid = document.getElementById('productGrid');
     
     if (!products || products.length === 0) {
-        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:40px; color:#666;">No products match your criteria.</p>';
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align:center; padding:40px; color:none;">No products match your criteria.</p>';
         return;
     }
     
@@ -392,12 +555,19 @@ function clearAllFilters() {
     applyFilters();
 }
 
-// Modal Logic
 function openModal(productId) {
     document.getElementById('modalTitle').textContent = 'Loading...';
     document.getElementById('modalMainDisplayImg').src = '';
     document.getElementById('modalThumbnailsContainer').innerHTML = '';
     document.getElementById('modalThumbnailsContainer').style.display = 'none';
+    
+    // Reset specs
+    document.getElementById('specGender').textContent = '-';
+    document.getElementById('specBrand').textContent = '-';
+    document.getElementById('specLensType').textContent = '-';
+    document.getElementById('specFrameType').textContent = '-';
+    document.getElementById('modalDescription').textContent = 'Loading...';
+    
     document.getElementById('productModal').classList.add('active');
 
     fetch('get_product.php?id=' + productId)
@@ -409,7 +579,16 @@ function openModal(productId) {
                 return;
             }
             
+            // Set title
             document.getElementById('modalTitle').textContent = data.product_name;
+            
+            // **NEW: Populate Specifications**
+            document.getElementById('specGender').textContent = data.gender || 'Unisex';
+            document.getElementById('specBrand').textContent = data.brand || 'N/A';
+            document.getElementById('specLensType').textContent = data.lens_type || 'N/A';
+            document.getElementById('specFrameType').textContent = data.frame_type || 'N/A';
+            
+            // Set description
             document.getElementById('modalDescription').textContent = data.description || "No description available.";
             
             const mainDisplay = document.getElementById('modalMainDisplayImg');

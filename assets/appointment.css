@@ -212,32 +212,27 @@ body {
    8. Step 4: Style Preference Grid
    ========================================= */
 
-
-/* Main Grid Container - INCREASED minimum card size */
+/* Main Grid Container - Normal card size */
 .preference-grid {
     display: grid;
-    /* OLD: minmax(140px, 1fr) */
-    /* NEW: Increased from 140px to 250px for larger cards */
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px; /* Increased gap for better spacing */
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
     margin-bottom: 20px;
 }
-
-/* Individual Card Container - INCREASED padding and height */
 .preference-option-image {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border: 2px solid #e0e0e0; /* Slightly thicker border */
-    border-radius: 12px; /* More rounded corners */
-    padding: 20px; /* Increased from 10px to 20px */
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
     cursor: pointer;
     background: #fff;
     transition: all 0.3s ease;
     height: 100%;
     position: relative;
-    min-height: 280px; /* ADDED: Ensure minimum height */
+    min-height: 180px;
 }
 .preference-option:hover {
     border-color: #004aad;
@@ -647,16 +642,13 @@ p {
     width: 0;
 }
 
-/* Image Container - INCREASED size */
 .shape-image-container {
     width: 100%;
-    /* OLD: height: 60px */
-    /* NEW: Increased to 150px for much larger images */
-    height: 150px;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 15px; /* Increased spacing */
+    margin-bottom: 10px;
 }
 
     
@@ -670,12 +662,12 @@ p {
 }
 
 /* Text Label - LARGER font */
-.shape-label-text {
-    font-size: 16px; /* Increased from 12px */
-    font-weight: 600; /* Bolder */
+..shape-label-text {
+    font-size: 13px;
+    font-weight: 600;
     color: #333;
     text-align: center;
-    line-height: 1.4;
+    line-height: 1.3;
 }
 
 /* --- HOVER STATE --- */
@@ -712,25 +704,23 @@ p {
     font-weight: 700;
 }
 
-/* --- RESPONSIVE: Mobile adjustments --- */
 @media (max-width: 768px) {
     .preference-grid {
-        /* On mobile, show 2 columns instead of auto-fill */
         grid-template-columns: repeat(2, 1fr);
-        gap: 15px;
+        gap: 12px;
     }
     
     .shape-image-container {
-        height: 120px; /* Slightly smaller on mobile */
+        height: 70px;
     }
     
     .preference-option-image {
-        padding: 15px;
-        min-height: 220px;
+        padding: 10px;
+        min-height: 160px;
     }
     
     .shape-label-text {
-        font-size: 14px;
+        font-size: 12px;
     }
 }
 
