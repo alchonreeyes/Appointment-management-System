@@ -95,7 +95,6 @@ if (isset($_POST['action'])) {
 // =======================================================
 
 // --- Pagination Configuration ---
-// Setting 50 records per page keeps it fast. User can click "Next" to see more.
 $page_no = isset($_GET['page_no']) && $_GET['page_no'] != "" ? (int)$_GET['page_no'] : 1;
 $total_records_per_page = 50; 
 $offset = ($page_no - 1) * $total_records_per_page;
@@ -156,7 +155,8 @@ if ($search !== '') {
 // =======================================================
 // 4. GET TOTAL COUNT (For Pagination Logic)
 // =======================================================
-$count_query_sql = "SELECT COUNT(*) as total_records 
+// UPDATED: Added DISTINCT client_id to count unique patients
+$count_query_sql = "SELECT COUNT(DISTINCT a.client_id) as total_records 
                     FROM appointments a 
                     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id 
                     LEFT JOIN services ser ON a.service_id = ser.service_id 
@@ -179,13 +179,15 @@ try {
 // =======================================================
 // 5. GET DATA (With Limit for Speed)
 // =======================================================
+// UPDATED: Added GROUP BY a.client_id to show only one row per patient
 $query = "SELECT " . implode(", ", $selectClauses) . "
           FROM appointments a
           LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
           LEFT JOIN services ser ON a.service_id = ser.service_id
           WHERE " . implode(" AND ", $whereClauses) . "
+          GROUP BY a.client_id 
           ORDER BY a.appointment_date DESC 
-          LIMIT ?, ?"; // Pagination Limit
+          LIMIT ?, ?"; 
 
 try {
     $stmt = $conn->prepare($query);
@@ -283,19 +285,33 @@ $js_highlight_dates = json_encode($highlight_dates);
 body { background:#f8f9fa; color:#223; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
-header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
+/* UPDATED: PADDING 75px LEFT AND RIGHT */
+header { display:flex; align-items:center; background:#fff; padding:12px 75px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
-.container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
+
+/* UPDATED: PADDING 75px LEFT AND RIGHT & WIDTH 100% */
+.container { padding:20px 75px 40px 75px; max-width:100%; margin:0 auto; }
+
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 
 /* Fixed width for search input */
 #searchInput { margin-left: auto; width: 250px; min-width: 200px; }
+
+/* UPDATED: Button Group to align all buttons to the right */
+.filters .button-group {
+    margin-left: auto; /* This pushes the entire group to the right */
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
 
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; }
 
@@ -308,8 +324,28 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .btn-filter:hover { border-color: #b0b9c4; }
 .btn-filter.active { background: #991010; color: #fff; border-color: #991010; }
 
-.stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:18px; }
-.stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
+/* UPDATED: STATS CARD STYLE - CENTERED AND WIDER */
+.stats { 
+    display:flex; /* Changed from grid to flex */
+    gap:16px; 
+    margin-bottom:18px; 
+    flex-wrap: wrap; 
+    justify-content: center; /* Center the cards */
+}
+
+.stat-card { 
+    background:#fff; 
+    border:1px solid #e6e9ee; 
+    border-radius:10px; 
+    padding:18px 24px; /* More padding */
+    text-align:center; 
+    
+    /* WIDER SETTINGS */
+    flex: 1 1 300px; /* Start at 300px width */
+    max-width: 500px; /* Cap width at 500px */
+    min-width: 250px; 
+}
+
 .stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
 .stat-card p { color:#6b7f86; font-size:13px; }
 
@@ -384,6 +420,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 @media (max-width: 1000px) {
   .vertical-bar { display: none; }
+  /* Override padding for mobile */
   header { padding: 12px 20px; justify-content: space-between; }
   .logo-section { margin-right: 0; }
   .container { padding: 20px; }
@@ -397,7 +434,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { 
     .filters { flex-direction: column; align-items: stretch; }
-    #searchInput { margin-left: 0; width: 100%; margin-top: 10px; } 
+    #searchInput { width: 100%; margin-top: 10px; } 
+    .filters .button-group { margin-left: 0; width: 100%; flex-direction: column; }
     .pagination { justify-content: center; }
 }
 
@@ -428,7 +466,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
     <div class="container">
       <div class="header-row">
-        <h2>Patient Appointment Records</h2> 
+        <h2>Patient Records</h2> 
       </div>
     
       <?php if (isset($pageError)): ?>
@@ -446,13 +484,15 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
       </div>
     
-      <div style="display:flex;gap:8px;align-items:center;">
-        <select id="dateMode" title="Filter by date">
-            <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
-            <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
-        </select>
-        <input type="date" id="dateVisible" title="Select date" placeholder="Pick a date..." value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
-        <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
+      <div class="button-group">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <select id="dateMode" title="Filter by date">
+                <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
+                <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
+            </select>
+            <input type="date" id="dateVisible" title="Select date" placeholder="Pick a date..." value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
+            <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
+          </div>
       </div>
     
       <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
@@ -542,7 +582,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
       <div class="detail-card" role="dialog" aria-labelledby="detailTitle">
         <div class="detail-header">
-          <div class="detail-title" id="detailTitle">Appointment Details</div>
+          <div class="detail-title" id="detailTitle">Patient Details</div>
           <div class="detail-id" id="detailId">#</div>
         </div>
         <div id="detailModalBody"></div>

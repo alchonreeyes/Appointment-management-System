@@ -3,168 +3,150 @@
 session_start();
 // Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
 require_once __DIR__ . '/../database.php';
-require_once __DIR__ . '/../../config/encryption_util.php'; // <--- Siguraduhing tama ang path
+require_once __DIR__ . '/../../config/encryption_util.php'; 
+
 // =======================================================
-// 1. INAYOS NA SECURITY CHECK (Tugma na sa login.php)
+// 1. SECURITY CHECK
 // =======================================================
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     if (isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../login.php'); // Tama na ang path
+        header('Location: ../login.php'); 
     }
     exit;
 }
 
 // =======================================================
-// 2. SERVER-SIDE ACTION HANDLING (Inayos para sa $conn, mysqli, at 'full_name')
+// 2. SERVER-SIDE ACTION HANDLING
 // =======================================================
 if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
-    // ============================================
-// 3. VIEW DETAILS (WITH DECRYPTION)
-// ============================================
-if ($action === 'viewDetails') {
-    $id = $_POST['id'] ?? '';
-    if (!$id) {
-        echo json_encode(['success' => false, 'message' => 'Missing ID']);
-        exit;
-    }
-    
-    try {
-        $stmt = $conn->prepare("SELECT staff_id, full_name, email, role, status FROM staff WHERE staff_id = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
-        $staff = $stmt->get_result()->fetch_assoc();
-
-        if (!$staff) {
-            echo json_encode(['success' => false, 'message' => 'Staff not found']);
+    // --- VIEW DETAILS ---
+    if ($action === 'viewDetails') {
+        $id = $_POST['id'] ?? '';
+        if (!$id) {
+            echo json_encode(['success' => false, 'message' => 'Missing ID']);
             exit;
         }
         
-        // ✅ DECRYPT before sending to frontend
-        $staff['full_name'] = decrypt_data($staff['full_name']);
-        $staff['email'] = decrypt_data($staff['email']);
-        $staff['password_placeholder'] = '********';
-        
-        echo json_encode(['success' => true, 'data' => $staff]);
-    } catch (Exception $e) {
-        error_log("ViewDetails error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
-    }
-    exit;
-}
+        try {
+            $stmt = $conn->prepare("SELECT staff_id, full_name, email, role, status FROM staff WHERE staff_id = ?");
+            $stmt->bind_param("i", $id);
+            $stmt->execute();
+            $staff = $stmt->get_result()->fetch_assoc();
 
-
-   // ============================================
-// 1. ADD STAFF (WITH ENCRYPTION)
-// ============================================
-if ($action === 'addStaff') {
-    $name = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $role = trim($_POST['role'] ?? 'staff');
-
-    // Validation
-    if (!$name || !$email || !$password) {
-        echo json_encode(['success' => false, 'message' => 'All fields are required.']);
-        exit;
-    }
-
-    try {
-        // ✅ ENCRYPT sensitive data
-        $encryptedName = encrypt_data($name);
-        $encryptedEmail = encrypt_data($email);
-        
-        // ✅ HASH password (NOT encrypt)
-        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-
-        // ✅ INSERT into STAFF table (not admin)
-        $stmt = $conn->prepare("INSERT INTO staff (full_name, email, password, role, status) VALUES (?, ?, ?, ?, 'Active')");
-        $stmt->bind_param("ssss", $encryptedName, $encryptedEmail, $hashedPassword, $role);
-        
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true, 'message' => 'Staff account created successfully!']);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to save staff account.']);
-        }
-    } catch (Exception $e) {
-        error_log("AddStaff error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
-    }
-    exit;
-}
-
-
-   // ============================================
-// 2. EDIT STAFF (WITH ENCRYPTION)
-// ============================================
-if ($action === 'editStaff') {
-    $id = $_POST['staff_id'] ?? '';
-    $name = trim($_POST['full_name'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $status = $_POST['status'] ?? 'Active';
-
-    // Validation
-    if (!$id || !$name || !$email) {
-        echo json_encode(['success' => false, 'message' => 'Missing required fields.']);
-        exit;
-    }
-    
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
-        exit;
-    }
-    
-    if (!empty($password) && strlen($password) < 6) {
-        echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters.']);
-        exit;
-    }
-
-    try {
-        // ✅ Check for duplicate email in STAFF table
-        $stmt_check = $conn->prepare("SELECT staff_id FROM staff WHERE email = ? AND staff_id != ? LIMIT 1");
-        $encryptedEmailToCheck = encrypt_data($email);
-        $stmt_check->bind_param("si", $encryptedEmailToCheck, $id);
-        $stmt_check->execute();
-        
-        if ($stmt_check->get_result()->num_rows > 0) {
-            echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
-            exit;
-        }
-
-        // ✅ ENCRYPT the new data
-        $encryptedName = encrypt_data($name);
-        $encryptedEmail = encrypt_data($email);
-
-        // Handle password update
-        if (!empty($password)) {
-            // ✅ HASH new password
-            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            if (!$staff) {
+                echo json_encode(['success' => false, 'message' => 'Staff not found']);
+                exit;
+            }
             
-            $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, password=?, status=? WHERE staff_id=?");
-            $stmt->bind_param("ssssi", $encryptedName, $encryptedEmail, $hashedPassword, $status, $id);
-        } else {
-            // No password update
-            $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, status=? WHERE staff_id=?");
-            $stmt->bind_param("sssi", $encryptedName, $encryptedEmail, $status, $id);
+            // Decrypt
+            $staff['full_name'] = decrypt_data($staff['full_name']);
+            $staff['email'] = decrypt_data($staff['email']);
+            $staff['password_placeholder'] = '********';
+            
+            echo json_encode(['success' => true, 'data' => $staff]);
+        } catch (Exception $e) {
+            error_log("ViewDetails error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
+        }
+        exit;
+    }
+
+    // --- ADD STAFF ---
+    if ($action === 'addStaff') {
+        $name = trim($_POST['full_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $role = trim($_POST['role'] ?? 'staff');
+
+        if (!$name || !$email || !$password) {
+            echo json_encode(['success' => false, 'message' => 'All fields are required.']);
+            exit;
+        }
+
+        try {
+            $encryptedName = encrypt_data($name);
+            $encryptedEmail = encrypt_data($email);
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+            $stmt = $conn->prepare("INSERT INTO staff (full_name, email, password, role, status) VALUES (?, ?, ?, ?, 'Active')");
+            $stmt->bind_param("ssss", $encryptedName, $encryptedEmail, $hashedPassword, $role);
+            
+            if ($stmt->execute()) {
+                echo json_encode(['success' => true, 'message' => 'Staff account created successfully!']);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Failed to save staff account.']);
+            }
+        } catch (Exception $e) {
+            error_log("AddStaff error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
+        }
+        exit;
+    }
+
+    // --- EDIT STAFF ---
+    if ($action === 'editStaff') {
+        $id = $_POST['staff_id'] ?? '';
+        $name = trim($_POST['full_name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $status = $_POST['status'] ?? 'Active';
+
+        if (!$id || !$name || !$email) {
+            echo json_encode(['success' => false, 'message' => 'Missing required fields.']);
+            exit;
         }
         
-        $stmt->execute();
-        echo json_encode(['success' => true, 'message' => 'Staff updated successfully!']);
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'Invalid email address.']);
+            exit;
+        }
         
-    } catch (Exception $e) {
-        error_log("EditStaff error: " . $e->getMessage());
-        echo json_encode(['success' => false, 'message' => 'Database error during update.']);
+        if (!empty($password) && strlen($password) < 6) {
+            echo json_encode(['success' => false, 'message' => 'New password must be at least 6 characters.']);
+            exit;
+        }
+
+        try {
+            // Check duplicates
+            $stmt_check = $conn->prepare("SELECT staff_id FROM staff WHERE email = ? AND staff_id != ? LIMIT 1");
+            $encryptedEmailToCheck = encrypt_data($email);
+            $stmt_check->bind_param("si", $encryptedEmailToCheck, $id);
+            $stmt_check->execute();
+            
+            if ($stmt_check->get_result()->num_rows > 0) {
+                echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
+                exit;
+            }
+
+            $encryptedName = encrypt_data($name);
+            $encryptedEmail = encrypt_data($email);
+
+            if (!empty($password)) {
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, password=?, status=? WHERE staff_id=?");
+                $stmt->bind_param("ssssi", $encryptedName, $encryptedEmail, $hashedPassword, $status, $id);
+            } else {
+                $stmt = $conn->prepare("UPDATE staff SET full_name=?, email=?, status=? WHERE staff_id=?");
+                $stmt->bind_param("sssi", $encryptedName, $encryptedEmail, $status, $id);
+            }
+            
+            $stmt->execute();
+            echo json_encode(['success' => true, 'message' => 'Staff updated successfully!']);
+            
+        } catch (Exception $e) {
+            error_log("EditStaff error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Database error during update.']);
+        }
+        exit;
     }
-    exit;
-}
 
-
+    // --- REMOVE STAFF ---
     if ($action === 'removeStaff') {
         $id = $_POST['id'] ?? '';
         if (!$id) {
@@ -178,7 +160,6 @@ if ($action === 'editStaff') {
             echo json_encode(['success' => true, 'message' => 'Staff removed successfully']);
         } catch (Exception $e) {
             error_log("RemoveStaff error (account.php): " . $e->getMessage());
-            // Check for foreign key constraint error (e.g., staff assigned to appointments)
             if ($conn->errno === 1451) {
                  echo json_encode(['success' => false, 'message' => 'Cannot remove staff. They are assigned to existing appointments.']);
             } else {
@@ -191,7 +172,7 @@ if ($action === 'editStaff') {
 
 
 // ============================================
-// 4. FETCH STAFF LIST (WITH DECRYPTION)
+// 4. FETCH STAFF LIST & STATS
 // ============================================
 $statusFilter = $_GET['status'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
@@ -206,12 +187,6 @@ if ($statusFilter !== 'All') {
     $paramTypes .= "s";
 }
 
-// ⚠️ NOTE: Cannot search encrypted data directly
-// You need to fetch all and filter in PHP, or use a different approach
-if ($search !== '') {
-    // We'll filter after decryption (see below)
-}
-
 $query .= " ORDER BY staff_id DESC";
 
 try {
@@ -222,13 +197,12 @@ try {
     $stmt->execute();
     $allStaff = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     
-    // ✅ DECRYPT all data
+    // Decrypt and Filter
     $staffMembers = [];
     foreach ($allStaff as $staff) {
         $staff['full_name'] = decrypt_data($staff['full_name']);
         $staff['email'] = decrypt_data($staff['email']);
         
-        // Filter by search AFTER decryption
         if ($search !== '') {
             $searchLower = strtolower($search);
             if (
@@ -236,10 +210,9 @@ try {
                 stripos($staff['email'], $search) === false &&
                 stripos($staff['staff_id'], $search) === false
             ) {
-                continue; // Skip this record
+                continue; 
             }
         }
-        
         $staffMembers[] = $staff;
     }
     
@@ -248,8 +221,6 @@ try {
     $staffMembers = [];
 }
 
-// 5. COUNT STATISTICS (NO DECRYPTION NEEDED)
-// ============================================
 $countSql = "SELECT
     COALESCE(SUM(CASE WHEN status = 'Active' THEN 1 ELSE 0 END), 0) AS active,
     COALESCE(SUM(CASE WHEN status = 'Inactive' THEN 1 ELSE 0 END), 0) AS inactive,
@@ -261,15 +232,12 @@ try {
     $stmt_stats->execute();
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
-    error_log("Fetch Staff Stats error: " . $e->getMessage());
     $stats = ['active' => 0, 'inactive' => 0, 'total' => 0];
 }
 
 $activeCount = (int)($stats['active'] ?? 0);
 $inactiveCount = (int)($stats['inactive'] ?? 0);
 $totalCount = (int)($stats['total'] ?? 0);
-
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -278,18 +246,37 @@ $totalCount = (int)($stats['total'] ?? 0);
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Staff Account - Eye Master Clinic</title>
 <style>
-/* ... (Ang iyong buong CSS ay andito pa rin) ... */
+/* ... (Global Styles) ... */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 body { background:#f8f9fa; color:#223; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
-header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
+/* UPDATED: Symmetric padding (75px left/right) for Header */
+header { 
+    display:flex; 
+    align-items:center; 
+    background:#fff; 
+    /* CHANGED: 75px on Left AND Right */
+    padding: 12px 75px; 
+    box-shadow:0 2px 4px rgba(0,0,0,0.05); 
+    position:relative; 
+    z-index:100; 
+}
+
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
-.container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
+
+/* UPDATED: Symmetric padding (75px left/right) for Container */
+.container { 
+    padding:20px 75px 40px 75px; 
+    max-width: 100%; 
+    margin: 0 auto; 
+}
+
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
@@ -297,16 +284,33 @@ select, input[type="text"], input[type="email"], input[type="password"] { paddin
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
 .add-btn { background:#28a745; color:#fff; padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
 .add-btn:hover { background:#218838; transform:translateY(-1px); }
-/* BAGO: Responsive stats */
+
+/* UPDATED: STATS CARD STYLE - CENTERED AND WIDER */
 .stats { 
-    display:grid; 
-    grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); 
-    gap:12px; 
+    display:flex; /* Changed from grid to flex */
+    gap:16px; 
     margin-bottom:18px; 
+    flex-wrap: wrap; 
+    justify-content: center; /* Center the cards */
 }
-.stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
-.stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
-.stat-card p { color:#6b7f86; font-size:13px; }
+
+.stat-card { 
+    background:#fff; 
+    border:1px solid #e6e9ee; 
+    border-radius:10px; 
+    padding:18px 24px; /* More padding */
+    text-align:center; 
+    
+    /* WIDER SETTINGS */
+    flex: 1 1 300px; /* Start at 300px width */
+    max-width: 500px; /* Cap width at 500px */
+    min-width: 250px; 
+}
+
+.stat-card h3 { margin-bottom:6px; font-size:24px; color:#21303a; }
+.stat-card p { color:#6b7f86; font-size:14px; font-weight: 600; }
+
+
 .action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
 .view { background:#1d4ed8; }
@@ -353,204 +357,42 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .btn-danger { background: #dc3545; color: #fff; }
 .btn-danger:hover { background: #c82333; }
 
-/* ======================================================= */
-/* <-- START: BAGONG CSS para sa Centered Toast Message
-/* ======================================================= */
-.toast-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(34, 49, 62, 0.6); 
-    z-index: 9998;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 1;
-    transition: opacity 0.3s ease-out;
-    backdrop-filter: blur(4px);
-}
+.toast-overlay { position: fixed; inset: 0; background: rgba(34, 49, 62, 0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease-out; backdrop-filter: blur(4px); }
+.toast { background: #fff; color: #1a202c; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 16px; font-weight: 600; min-width: 300px; max-width: 450px; text-align: left; animation: slideUp .3s ease; }
+.toast-icon { font-size: 24px; font-weight: 800; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
+.toast-message { font-size: 15px; line-height: 1.5; }
+.toast.success { border-top: 4px solid #16a34a; } .toast.success .toast-icon { background: #16a34a; }
+.toast.error { border-top: 4px solid #dc2626; } .toast.error .toast-icon { background: #dc2626; }
 
-.toast {
-    background: #fff;
-    color: #1a202c;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    font-weight: 600;
-    min-width: 300px;
-    max-width: 450px;
-    text-align: left;
-    animation: slideUp .3s ease; 
-}
+#loader-overlay { position: fixed; inset: 0; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+.loader-spinner { width: 50px; height: 50px; border-radius: 50%; border: 5px solid #f3f3f3; border-top: 5px solid #991010; animation: spin 1s linear infinite; }
+.loader-text { margin-top: 15px; font-size: 16px; font-weight: 600; color: #5a6c7d; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+@keyframes fadeInContent { from { opacity: 0; } to { opacity: 1; } }
 
-.toast-icon {
-    font-size: 24px;
-    font-weight: 800;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: #fff;
-}
+/* Mobile Menu */
+#menu-toggle { display: none; background: #f1f5f9; border: 2px solid #e2e8f0; color: #334155; font-size: 24px; padding: 5px 12px; border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100; }
 
-.toast-message {
-    font-size: 15px;
-    line-height: 1.5;
-}
-
-.toast.success { 
-    border-top: 4px solid #16a34a;
-}
-.toast.success .toast-icon {
-    background: #16a34a; 
-}
-
-.toast.error { 
-    border-top: 4px solid #dc2626;
-}
-.toast.error .toast-icon {
-    background: #dc2626;
-}
-/* <-- END: BAGONG CSS para sa Centered Toast Message */
-
-
-/* ======================================================= */
-/* <-- START: BAGONG CSS para sa Loading Screen
-/* ======================================================= */
-#loader-overlay {
-    position: fixed;
-    inset: 0;
-    background: #ffffff;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.5s ease;
-}
-.loader-spinner {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 5px solid #f3f3f3;
-    border-top: 5px solid #991010; /* Theme color */
-    animation: spin 1s linear infinite;
-}
-.loader-text {
-    margin-top: 15px;
-    font-size: 16px;
-    font-weight: 600;
-    color: #5a6c7d;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-/* Animation for content fade-in */
-@keyframes fadeInContent {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-/* <-- END: BAGONG CSS para sa Loading Screen */
-
-
-/* --- BAGO: Mobile Navigation Toggle --- */
-#menu-toggle {
-  display: none; /* Hidden on desktop */
-  background: #f1f5f9;
-  border: 2px solid #e2e8f0;
-  color: #334155;
-  font-size: 24px;
-  padding: 5px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  margin-left: 10px;
-  z-index: 2100; 
-}
-
-
-/* --- BAGO: Responsive Media Query --- */
 @media (max-width: 1000px) {
-  .vertical-bar {
-    display: none; /* Itago ang vertical bar */
-  }
-  header {
-    padding: 12px 20px; /* Alisin ang left padding */
-    justify-content: space-between; /* I-space out ang logo at toggle */
-  }
-  .logo-section {
-    margin-right: 0; /* Alisin ang auto margin */
-  }
-  .container {
-    padding: 20px; /* Alisin ang left padding */
-  }
+  .vertical-bar { display: none; }
+  /* Override padding for mobile */
+  header { padding: 12px 20px; justify-content: space-between; }
+  .logo-section { margin-right: 0; }
+  .container { padding: 20px; }
   
-  #menu-toggle {
-    display: block; /* Ipakita ang hamburger button */
-  }
-
-  /* Itago ang original nav, gawing mobile nav */
-  nav#main-nav {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(20, 0, 0, 0.9); /* Mas madilim na background */
-    backdrop-filter: blur(5px);
-    z-index: 2000; /* Mataas sa header */
-    padding: 80px 20px 20px 20px;
-    
-    /* Animation */
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-  }
-
-  nav#main-nav.show {
-    opacity: 1;
-    visibility: visible;
-  }
-
-  nav#main-nav a {
-    color: #fff;
-    font-size: 24px;
-    font-weight: 700;
-    padding: 15px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-  }
-  
-  nav#main-nav a:hover {
-      background: rgba(255,255,255,0.1);
-  }
-  
-  nav#main-nav a.active {
-    background: none; /* Alisin ang red background sa mobile view */
-    color: #ff6b6b; /* Ibahin ang kulay ng active link */
-  }
+  #menu-toggle { display: block; }
+  nav#main-nav { display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20, 0, 0, 0.9); backdrop-filter: blur(5px); z-index: 2000; padding: 80px 20px 20px 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+  nav#main-nav.show { opacity: 1; visibility: visible; }
+  nav#main-nav a { color: #fff; font-size: 24px; font-weight: 700; padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); }
+  nav#main-nav a:hover { background: rgba(255,255,255,0.1); }
+  nav#main-nav a.active { background: none; color: #ff6b6b; }
 }
-
 @media (max-width:900px) { .detail-content { grid-template-columns:1fr; } }
 @media (max-width: 600px) { .filters { flex-direction: column; align-items: stretch; } }
-
-
 </style>
 </head>
 <body>
 
-<!-- <div id="loader-overlay">
-    <div class="loader-spinner"></div>
-    <p class="loader-text">Loading Accounts...</p>
-</div> -->
 <div id="main-content" style="display: none;">
 
     <header>
@@ -603,8 +445,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           </thead>
           <tbody>
             <?php if ($staffMembers): $i=0; foreach ($staffMembers as $staff): $i++;
-              // Calculate initials
-              $nameParts = explode(' ', trim($staff['full_name'])); // FIX: Ginamit ang 'full_name'
+              $nameParts = explode(' ', trim($staff['full_name'])); 
               $initials = count($nameParts) > 1
                 ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
                 : strtoupper(substr($staff['full_name'], 0, 1));
@@ -721,44 +562,25 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
     
     <script>
-    // =======================================================
-    // <-- START: BAGONG 'showToast' FUNCTION (CENTERED)
-    // =======================================================
     function showToast(msg, type = 'success') {
-        // 1. Create overlay
         const overlay = document.createElement('div');
         overlay.className = 'toast-overlay';
-        
-        // 2. Create toast box
         const toast = document.createElement('div');
-        toast.className = `toast ${type}`; // Keep .toast for the box
-        toast.innerHTML = `
-            <div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div>
-            <div class="toast-message">${msg}</div>
-        `;
-        
-        // 3. Append to body
+        toast.className = `toast ${type}`; 
+        toast.innerHTML = `<div class="toast-icon">${type === 'success' ? '✓' : '✕'}</div><div class="toast-message">${msg}</div>`;
         overlay.appendChild(toast);
         document.body.appendChild(overlay);
-        
-        // 4. Auto-remove after 2.5 seconds
         const timer = setTimeout(() => {
             overlay.style.opacity = '0';
             overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
         }, 2500);
-        
-        // 5. Allow click-to-close
         overlay.addEventListener('click', () => {
-            clearTimeout(timer); // Stop auto-remove if clicked
+            clearTimeout(timer); 
             overlay.style.opacity = '0';
             overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
         }, { once: true });
     }
-    // =======================================================
-    // <-- END: BAGONG 'showToast' FUNCTION
-    // =======================================================
     
-    // Function specifically for toggling password in the TABLE view
     function togglePasswordInTable(btn) {
       const wrapper = btn.closest('.password-display');
       if (!wrapper) return;
@@ -768,8 +590,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       btn.textContent = (input.type === 'password') ? '👁️' : '🙈';
     }
     
-    
-    // Toggles password visibility in Add/Edit MODAL
     function togglePasswordVisibility(btn) {
       const wrapper = btn.closest('.form-password-wrapper');
       if (!wrapper) return;
@@ -792,15 +612,13 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }
         const d = payload.data;
         document.getElementById('detailId').textContent = d.staff_id;
-        document.getElementById('detailName').textContent = d.full_name; // FIX: Ginamit ang 'full_name'
+        document.getElementById('detailName').textContent = d.full_name;
         document.getElementById('detailEmail').textContent = d.email;
-    
         const statusWrap = document.getElementById('detailStatusWrap');
         if (statusWrap) {
             const stat = (d.status || '').toLowerCase();
             statusWrap.innerHTML = `<span class="badge ${stat}">${d.status}</span>`;
         }
-    
         const overlay = document.getElementById('detailOverlay');
         overlay.classList.add('show');
         overlay.setAttribute('aria-hidden','false');
@@ -819,7 +637,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       document.getElementById('staffForm').reset();
       document.getElementById('formStaffId').value = '';
       document.getElementById('passwordHelp').style.display = 'none';
-    
       try {
         const passInput = document.getElementById('formPassword');
         passInput.type = 'password';
@@ -827,31 +644,27 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         const passBtn = passInput.closest('.form-password-wrapper')?.querySelector('button');
         if (passBtn) passBtn.textContent = '👁️';
       } catch(e) {}
-    
       const overlay = document.getElementById('formOverlay');
       overlay.classList.add('show');
       overlay.setAttribute('aria-hidden','false');
     }
     
-    // FIX: Pinalitan ang 'name' ng 'full_name'
     function openEditModal(id, full_name, email, currentPasswordHash, status) {
       document.getElementById('formTitle').textContent = 'Edit Staff';
       document.getElementById('staffForm').reset();
       document.getElementById('formStaffId').value = id;
-      document.getElementById('formStaffName').value = full_name; // FIX: Ginamit ang 'full_name'
+      document.getElementById('formStaffName').value = full_name; 
       document.getElementById('formEmail').value = email;
       document.getElementById('formPassword').value = '';
       document.getElementById('formPassword').required = false; 
       document.getElementById('formStatus').value = status;
       document.getElementById('passwordHelp').style.display = 'inline';
-    
       try {
         const passInput = document.getElementById('formPassword');
         passInput.type = 'password';
         const passBtn = passInput.closest('.form-password-wrapper')?.querySelector('button');
         if (passBtn) passBtn.textContent = '👁️';
       } catch(e) {}
-    
       const overlay = document.getElementById('formOverlay');
       overlay.classList.add('show');
       overlay.setAttribute('aria-hidden','false');
@@ -866,54 +679,35 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         const passBtn = passInput.closest('.form-password-wrapper')?.querySelector('button');
         if (passBtn) passBtn.textContent = '👁️';
       } catch(e) {}
-    
       const overlay = document.getElementById('formOverlay');
       overlay.classList.remove('show');
       overlay.setAttribute('aria-hidden','true');
     }
     
-    
     function saveStaff() {
       const id = document.getElementById('formStaffId').value;
-      const name = document.getElementById('formStaffName').value.trim(); // FIX: Kinukuha sa formStaffName
+      const name = document.getElementById('formStaffName').value.trim();
       const email = document.getElementById('formEmail').value.trim();
       const passwordInput = document.getElementById('formPassword');
       const password = passwordInput.value;
       const status = document.getElementById('formStatus').value;
-    
       const action = id ? 'editStaff' : 'addStaff';
-    
-      // Validation
       if (!name || !email) {
         showToast('Please fill in Name and Email.', 'error'); return;
       }
-      
-      // TINANGGAL ANG @GMAIL.COM VALIDATION
-      /*
-      if (!email.endsWith('@gmail.com')) {
-        showToast('Email must be a valid @gmail.com address.', 'error'); return;
-      }
-      */
-      
       if (action === 'addStaff' && !password) {
           showToast('Password is required when adding new staff.', 'error'); return;
       }
       if (password && password.length < 6) {
           showToast('Password must be at least 6 characters.', 'error'); return;
       }
-    
       const formData = new URLSearchParams();
       formData.append('action', action);
-      formData.append('full_name', name); // FIX: Ipinapadala bilang 'full_name'
+      formData.append('full_name', name);
       formData.append('email', email);
       formData.append('status', status);
-      if (password) {
-          formData.append('password', password);
-      }
-      if (id) {
-        formData.append('staff_id', id);
-      }
-    
+      if (password) { formData.append('password', password); }
+      if (id) { formData.append('staff_id', id); }
       fetch('account.php', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -949,7 +743,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     function confirmRemove() {
       const id = document.getElementById('removeStaffId').value;
       if (!id) { showToast('Could not find staff ID', 'error'); return; }
-    
       fetch('account.php', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -999,21 +792,14 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
 </div>
 <script>
-// admin_dashboard.php (O anumang Admin file na may page loader)
 document.addEventListener('DOMContentLoaded', () => {
     const pageLoader = document.getElementById('page-loader-overlay');
-    const content = document.getElementById('main-content'); // O .dashboard
-
-    // Para sa Page Loader (na may 1s delay)
-    if (pageLoader) {
-        pageLoader.style.display = 'none'; // Direktang itago
-    }
+    const content = document.getElementById('main-content');
+    if (pageLoader) { pageLoader.style.display = 'none'; }
     if (content) {
-        content.style.display = 'block'; // Direktang ipakita
+        content.style.display = 'block';
         content.style.animation = 'fadeInContent 0.5s ease';
     }
-    
-    // Para sa Dashboard.php, tanggalin ang visibility: hidden; sa CSS/HTML kung gumamit ka nito
     const dashboard = document.querySelector('.dashboard');
     if(dashboard) dashboard.style.visibility = 'visible';
 });
@@ -1023,22 +809,15 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('DOMContentLoaded', function() {
   const menuToggle = document.getElementById('menu-toggle');
   const mainNav = document.getElementById('main-nav');
-
   if (menuToggle && mainNav) {
     menuToggle.addEventListener('click', function() {
       mainNav.classList.toggle('show');
-      
-      // Palitan ang icon ng button
       if (mainNav.classList.contains('show')) {
-        this.innerHTML = '✕'; // Close icon
-        this.setAttribute('aria-label', 'Close navigation');
+        this.innerHTML = '✕'; this.setAttribute('aria-label', 'Close navigation');
       } else {
-        this.innerHTML = '☰'; // Hamburger icon
-        this.setAttribute('aria-label', 'Open navigation');
+        this.innerHTML = '☰'; this.setAttribute('aria-label', 'Open navigation');
       }
     });
-
-    // Isara ang menu kapag pinindot ang isang link
     mainNav.querySelectorAll('a').forEach(link => {
       link.addEventListener('click', function() {
         mainNav.classList.remove('show');
@@ -1052,11 +831,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     history.replaceState(null, null, location.href);
     history.pushState(null, null, location.href);
-    window.onpopstate = function () {
-        history.go(1);
-    };
+    window.onpopstate = function () { history.go(1); };
 </script>
-
 
 </body>
 </html>

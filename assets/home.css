@@ -1215,4 +1215,185 @@ body {
         height: 40px;
         font-size: 1.2rem;
     }
+}/* ========================================
+   HOVER MODAL FOR FRAME MATERIALS
+   ======================================== */
+
+.hover-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    pointer-events: none; /* Let mouse events pass through to cards below */
+}
+
+.hover-modal.show {
+    pointer-events: auto; /* Enable clicks when shown */
+}
+
+.hover-modal-content {
+    background: white;
+    padding: 50px 60px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 900px;
+    width: 85%;
+    max-height: 90vh;
+    overflow-y: auto;
+    border-left: 6px solid #d94032;
+    animation: fadeInModal 0.4s ease;
+    position: relative;
+}
+
+@keyframes fadeInModal {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.hover-modal-content h3 {
+    margin: 0 0 25px 0;
+    color: #333;
+    font-size: 2.2rem;
+    font-weight: 700;
+    border-bottom: 3px solid #f0f0f0;
+    padding-bottom: 20px;
+}
+
+.hover-modal-content p {
+    margin: 0 0 20px 0;
+    color: #666;
+    line-height: 1.9;
+    font-size: 1.1rem;
+}
+
+.hover-modal-content ul {
+    margin: 20px 0 25px 30px;
+    padding: 0;
+    color: #666;
+    line-height: 2.2;
+}
+
+.hover-modal-content ul li {
+    margin-bottom: 12px;
+    font-size: 1.05rem;
+}
+
+/* Make frame type cards hoverable */
+.frame-type-card {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.frame-type-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(217, 64, 50, 0.15);
+    border-color: #d94032;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .hover-modal-content {
+        width: 95%;
+        max-width: 95%;
+        padding: 30px 25px;
+        margin: 10px;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    
+    .hover-modal-content h3 {
+        font-size: 1.6rem;
+    }
+    
+    .hover-modal-content p {
+        font-size: 0.95rem;
+    }
+    
+    .hover-modal-content ul li {
+        font-size: 0.9rem;
+    }
+}
+/* Modal scrolling fixes */
+.hover-modal-content {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+}
+
+.hover-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.hover-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.hover-modal-content::-webkit-scrollbar-thumb {
+    background: #d94032;
+    border-radius: 10px;
+}
+
+.hover-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #b93529;
+}
+
+.hover-modal {
+    overflow: hidden;
+}
+
+.hover-modal-content h3 {
+    padding-right: 50px;
+}
+/* Enhanced Modal Scrollbar */
+.hover-modal-content {
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+.hover-modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.hover-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.hover-modal-content::-webkit-scrollbar-thumb {
+    background: #d94032;
+    border-radius: 10px;
+    transition: background 0.3s;
+}
+
+.hover-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #b93529;
+}
+
+/* Add a subtle animation indicator */
+.hover-modal-content::after {
+    content: '↓ Auto-scrolling ↓';
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(255,255,255,0.95), transparent);
+    text-align: center;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: #999;
+    pointer-events: none;
 }

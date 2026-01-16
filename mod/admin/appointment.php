@@ -8,6 +8,9 @@ require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
+// Set Timezone to Philippines so "Current Date" is accurate
+date_default_timezone_set('Asia/Manila');
+
 // BAGO: Idagdag ang PHPMailer classes
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
@@ -25,39 +28,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
         header('Location: ../../public/login.php');
     }
     exit;
-}
-
-// =======================================================
-// 2. BAGONG LOGIC: AUTO-UPDATE OVERDUE PENDING TO MISSED
-// =======================================================
-try {
-    // Kunin ang status_id para sa 'Pending' at 'Missed'
-    $status_ids = [];
-    $status_result = $conn->query("SELECT status_name, status_id FROM appointmentstatus WHERE status_name IN ('Pending', 'Missed')");
-    if ($status_result) {
-        while ($row = $status_result->fetch_assoc()) {
-            $status_ids[$row['status_name']] = $row['status_id'];
-        
-        }
-    }
-
-    if (isset($status_ids['Pending']) && isset($status_ids['Missed'])) {
-        $pending_id = $status_ids['Pending'];
-        $missed_id = $status_ids['Missed'];
-
-        // I-update ang lahat ng 'Pending' appointments na ang petsa ay lumipas na (bago ang araw na ito)
-        $update_stmt = $conn->prepare("
-            UPDATE appointments
-            SET status_id = ?
-            WHERE status_id = ?
-            AND appointment_date < CURDATE()
-        ");
-        $update_stmt->bind_param("ii", $missed_id, $pending_id);
-        $update_stmt->execute();
-        // Hindi kailangan ng error message dito, silent update lang ito
-    }
-} catch (Exception $e) {
-    error_log("Auto-update pending to missed error: " . $e->getMessage());
 }
 
 
@@ -229,11 +199,7 @@ if (isset($_POST['action'])) {
 // ==================================================
 // QR CODE LOGIC (para sa Confirmed lang)
 // ==================================================
-//
-// GAGAWIN NATING SIMPLE: ID lang ang ilalagay natin sa QR code.
-// Kayang-kaya na 'yan basahin ng verify_qr.php (dahil sa "is_numeric" check mo)
-//
-$qr_data = $id; // Ang laman ng QR code ay '103' (halimbawa)
+$qr_data = $id; 
 $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($qr_data);
                     // ==================================================
 
@@ -461,24 +427,6 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
         <meta charset='UTF-8'>
         <meta name='viewport' content='width=device-width, initial-scale=1.0'>
         <title>Appointment Completed</title>
-        <style>
-            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
-            .container { width: 90%; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #ffffff; }
-            .header { background: #1d4ed8; /* Blue for completed */ padding: 30px 20px; text-align: center; }
-            .header h1 { margin: 0; color: #ffffff; font-size: 24px; }
-            .content { padding: 32px; }
-            .content p { font-size: 16px; line-height: 1.6; color: #334155; margin-top: 0; margin-bottom: 20px; }
-            .content p.greeting { font-size: 18px; font-weight: 600; color: #1e293b; }
-            .details { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;}
-            .details h3 { margin-top: 0; margin-bottom: 16px; font-size: 18px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-            .details-item { display: block; margin-bottom: 12px; font-size: 15px; }
-            .details-label { font-weight: 600; color: #475569; }
-            .thank-you { text-align: center; margin-top: 24px; }
-            .thank-you p { font-size: 16px; color: #334155; margin: 0; }
-            .footer { padding: 32px; text-align: center; background: #f8f9fa; }
-            .footer p { font-size: 13px; color: #64748b; margin: 0; }
-        </style>
     </head>
     <body style='background-color: #f1f5f9; padding: 20px;'>
         <div class='container'>
@@ -590,34 +538,10 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
         $appt['concern']      = decrypt_data($appt['concern'] ?? '');
         $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
         $appt['notes']        = decrypt_data($appt['notes'] ?? '');
-            // =======================================================
-            // BAGO: Kunin ang past appointment history (kasama ang appointment_id)
-            // =======================================================
-            $history = [];
-            if (!empty($appt['client_id'])) {
-                $client_id = $appt['client_id'];
-                $current_appt_id = $appt['appointment_id'];
 
-                // *** FIX: Idinagdag ang a.appointment_id sa SELECT ***
-                $stmt_history = $conn->prepare("
-                    SELECT a.appointment_id, a.appointment_date, ser.service_name, s.status_name
-                    FROM appointments a
-                    LEFT JOIN services ser ON a.service_id = ser.service_id
-                    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                    WHERE a.client_id = ? AND a.appointment_id != ?
-                    ORDER BY a.appointment_date DESC
-                ");
-                $stmt_history->bind_param("ii", $client_id, $current_appt_id);
-                $stmt_history->execute();
-                $history_result = $stmt_history->get_result();
-                while ($row = $history_result->fetch_assoc()) {
-                    $history[] = $row;
-                }
-            }
-            // =======================================================
             
             // BAGO: Ipadala ang BUONG $appt object AT $history pabalik
-            echo json_encode(['success' => true, 'data' => $appt, 'history' => $history]);
+    echo json_encode(['success' => true, 'data' => $appt]);
 
         } catch (Exception $e) {
             error_log("ViewDetails error (appointment.php): " . $e->getMessage());
@@ -632,8 +556,11 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
 // =======================================================
 
 // --- Kunin ang lahat ng filters ---
-$statusFilter = $_GET['status'] ?? 'Pending'; // <-- BAGO: DEFAULT AY 'Pending'
-$dateFilter = $_GET['date'] ?? 'All';
+$statusFilter = $_GET['status'] ?? 'Pending'; // Default status is still Pending
+
+// === CHANGE: Set default date to TODAY (YYYY-MM-DD) if no date is picked ===
+$dateFilter = $_GET['date'] ?? date('Y-m-d'); 
+
 $search = trim($_GET['search'] ?? '');
 $viewFilter = $_GET['view'] ?? 'all';
 
@@ -717,7 +644,6 @@ try {
 $countSql = "SELECT
     COALESCE(SUM(CASE WHEN s.status_name = 'Pending' THEN 1 ELSE 0 END), 0)   AS pending,
     COALESCE(SUM(CASE WHEN s.status_name = 'Confirmed' THEN 1 ELSE 0 END), 0) AS accepted,
-    COALESCE(SUM(CASE WHEN s.status_name = 'Missed' THEN 1 ELSE 0 END), 0) AS missed,
     COALESCE(SUM(CASE WHEN s.status_name = 'Cancel' THEN 1 ELSE 0 END), 0) AS cancelled,
     COALESCE(SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END), 0) AS completed
     FROM appointments a
@@ -753,12 +679,11 @@ try {
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
     error_log("Fetch Stats error (appointment.php): " . $e->getMessage());
-    $stats = ['pending'=>0, 'accepted'=>0, 'missed'=>0, 'cancelled'=>0, 'completed'=>0];
+    $stats = ['pending'=>0, 'accepted'=>0, 'cancelled'=>0, 'completed'=>0];
 }
 
 $pendingCount   = (int)($stats['pending']   ?? 0);
 $acceptedCount  = (int)($stats['accepted']  ?? 0);
-$missedCount    = (int)($stats['missed']    ?? 0);
 $cancelledCount = (int)($stats['cancelled'] ?? 0);
 $completedCount = (int)($stats['completed'] ?? 0);
 
@@ -793,13 +718,27 @@ $js_highlight_dates = json_encode($highlight_dates);
 body { background:#f8f9fa; color:#223; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
-header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
+/* UPDATED: Symmetric padding (75px left/right) for Header */
+header { 
+    display:flex; align-items:center; background:#fff; 
+    padding:12px 75px 12px 75px; 
+    box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; 
+}
+
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
-.container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
+
+/* UPDATED: Symmetric padding (75px left/right) for Container */
+.container { 
+    padding:20px 75px 40px 75px; 
+    max-width:100%; 
+    margin:0 auto; 
+}
+
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
@@ -866,7 +805,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge.pending { background: #fff4e6; color: #a66300; border: 2px solid #ffd280; }
 .badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
-.badge.missed { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
+/* REMOVED MISSED BADGE CSS */
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
 .badge.cancel { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
 .detail-actions, .confirm-actions { 
@@ -1056,6 +995,7 @@ border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100;
 
 @media (max-width: 1000px) {
 .vertical-bar { display: none; }
+/* Mobile Reset: Padded to 20px when sidebar is hidden */
 header { padding: 12px 20px; justify-content: space-between; }
 .logo-section { margin-right: 0; }
 .container { padding: 20px; }
@@ -1081,7 +1021,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
 /* --- Desktop View --- */
 #searchInput {
     margin-left: auto;
-    width: 250px; /* Binago para maging kasing haba ng card */
+    width: 333px; /* Binago para maging kasing haba ng card */
 }
 
 /* ... ibang styles ... */
@@ -1145,18 +1085,24 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
             <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Status</option>
             <option value="Pending" <?= $statusFilter==='Pending'?'selected':'' ?>>Pending</option>
             <option value="Confirmed" <?= $statusFilter==='Confirmed'?'selected':'' ?>>Confirmed</option>
-            <option value="Missed" <?= $statusFilter==='Missed'?'selected':'' ?>>Missed</option>
             <option value="Cancel" <?= $statusFilter==='Cancel'?'selected':'' ?>>Cancel</option>
             <option value="Completed" <?= $statusFilter==='Completed'?'selected':'' ?>>Completed</option>
         </select>
         <div style="display:flex;gap:8px;align-items:center;">
+        
+        <?php 
+            // If dateFilter is 'All', select 'all', otherwise 'pick'
+            $isAllDates = ($dateFilter === 'All');
+        ?>
         <select id="dateMode" title="Filter by date">
-            <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
-            <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
+            <option value="all" <?= $isAllDates ? 'selected' : '' ?>>All Dates</option>
+            <option value="pick" <?= !$isAllDates ? 'selected' : '' ?>>Pick Date</option>
         </select>
+        
         <input type="date" id="dateVisible" title="Select date"
-                                value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
-        <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
+               value="<?= !$isAllDates ? htmlspecialchars($dateFilter) : '' ?>">
+               
+        <input type="hidden" name="date" id="dateHidden" value="<?= htmlspecialchars($dateFilter) ?>">
         </div>
         <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
     </form>
@@ -1164,7 +1110,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     <div class="stats">
         <div class="stat-card"><h3><?= $pendingCount ?></h3><p>Pending</p></div>
         <div class="stat-card"><h3><?= $acceptedCount ?></h3><p>Confirmed</p></div>
-        <div class="stat-card"><h3><?= $missedCount ?></h3><p>Missed</p></div>
         <div class="stat-card"><h3><?= $cancelledCount ?></h3><p>Cancel</p></div>
         <div class="stat-card"><h3><?= $completedCount ?></h3><p>Completed</p></div>
     </div>
@@ -1226,7 +1171,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
                     
                     <?php $stat = strtolower($appt['status_name']); ?>
                     
-                    <?php if ($stat === 'pending' || $stat === 'missed'): ?>
+                    <?php if ($stat === 'pending'): ?>
                     <button class="action-btn accept" onclick="updateStatus(<?= $appt['appointment_id'] ?>,'Confirmed')">Confirm</button>
                     <button class="action-btn cancel" onclick="promptForCancelReason(<?= $appt['appointment_id'] ?>)">Cancel</button>
                     <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
@@ -1250,7 +1195,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     </div>
     </div>
     
-    <!-- MAIN DETAIL MODAL -->
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
     <div class="detail-card" role="dialog" aria-labelledby="detailTitle">
         <div class="detail-header">
@@ -1264,21 +1208,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     </div>
     </div>
     
-    <!-- BAGO: HISTORY DETAIL MODAL -->
-    <div id="historyDetailOverlay" class="detail-overlay" aria-hidden="true" style="z-index: 3001;">
-    <div class="detail-card" role="dialog" aria-labelledby="historyDetailTitle">
-        <div class="detail-header" style="background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);">
-        <div class="detail-title" id="historyDetailTitle">Past Appointment Detail</div>
-        <div class="detail-id" id="historyDetailId">#</div>
-        </div>
-        <div id="historyDetailModalBody"></div>
-        <div class="detail-actions">
-        <button class="btn-small btn-close" onclick="closeHistoryDetailModal()">Close</button>
-        </div>
-    </div>
-    </div>
     
-    <!-- EDIT MODAL -->
     <div id="editModal" class="detail-overlay" aria-hidden="true" data-old-status="">
     <div class="detail-card" role="dialog" style="width:500px;"> 
         <div class="detail-header">
@@ -1299,7 +1229,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
             <select id="editStatusSelect" style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;font-weight:600;">
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
-            <option value="Missed">Missed</option>
             <option value="Cancel">Cancel</option>
             <option value="Completed">Completed</option>
             </select>
@@ -1312,7 +1241,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     </div>
     </div>
     
-    <!-- CONFIRM MODAL -->
     <div id="confirmModal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-card" role="dialog" aria-modal="true">
         <div class="confirm-header">
@@ -1327,7 +1255,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     </div>
     </div>
 
-    <!-- REASON MODAL -->
     <div id="reasonModal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-card" role="dialog" aria-modal="true">
         <div class="confirm-header">
@@ -1347,7 +1274,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     </div>
     </div>
 
-    <!-- ACTION LOADER -->
     <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
         <div class="loader-card" style="background: #fff; border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
             <div class="loader-spinner" style="border-top-color: #991010; width: 32px; height: 32px; border-width: 4px; flex-shrink: 0;"></div>
@@ -1547,7 +1473,7 @@ showConfirm(message, options)
             let buttonsHTML = '';
             const newStatus = data.status.toLowerCase();
             
-            if (newStatus === 'pending' || newStatus === 'missed') {
+            if (newStatus === 'pending') {
             buttonsHTML = `<button class="action-btn accept" onclick="updateStatus(${id},'Confirmed')">Confirm</button> <button class="action-btn cancel" onclick="promptForCancelReason(${id})">Cancel</button> <button class="action-btn view" onclick="viewDetails(${id})">View</button>`;
             } else if (newStatus === 'confirmed' || newStatus === 'completed' || newStatus === 'cancel') {
             buttonsHTML = `<button class="action-btn edit" onclick="openEditModal(${id})">Edit</button> <button class="action-btn view" onclick="viewDetails(${id})">View</button>`;
@@ -1572,7 +1498,8 @@ showConfirm(message, options)
 
 function updateStats() {
     const rows = document.querySelectorAll('#appointmentsTable tbody tr[data-status]');
-    let pending = 0, accepted = 0, missed = 0, cancelled = 0, completed = 0;
+    // REMOVED MISSED VARIABLE AND COUNTING
+    let pending = 0, accepted = 0, cancelled = 0, completed = 0;
     const statCards = document.querySelectorAll('.stat-card h3');
     const isStatusFiltered = document.getElementById('statusFilter').value !== 'All';
     const isDateFiltered = document.getElementById('dateHidden').value !== 'All';
@@ -1583,111 +1510,20 @@ function updateStats() {
         const status = row.getAttribute('data-status');
         if (status === 'pending') pending++;
         else if (status === 'confirmed') accepted++;
-        else if (status === 'missed') missed++;
+        // REMOVED MISSED CHECK
         else if (status === 'cancel') cancelled++;
         else if (status === 'completed') completed++;
     });
     if (!isFiltered) {
         if (statCards[0]) statCards[0].textContent = pending;
         if (statCards[1]) statCards[1].textContent = accepted;
-        if (statCards[2]) statCards[2].textContent = missed;
-        if (statCards[3]) statCards[3].textContent = cancelled;
-        if (statCards[4]) statCards[4].textContent = completed;
+        // Adjusted indexes since one card was removed
+        if (statCards[2]) statCards[2].textContent = cancelled;
+        if (statCards[3]) statCards[3].textContent = completed;
     }
 }
 
-// =======================================================
-// BAGO: viewHistoryDetails function
-// =======================================================
-function viewHistoryDetails(id) {
-    showActionLoader('Fetching past detail...');
-    fetch('appointment.php', { 
-        method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({action:'viewDetails', id:id})
-    })
-    .then(res => res.json())
-    .then(payload => {
-        hideActionLoader();
-        if (!payload || !payload.success) {
-            showToast(payload?.message || 'Failed to load details', 'error');
-            return;
-        }
-        
-        const d = payload.data;
-        document.getElementById('historyDetailId').textContent = '#' + d.appointment_id;
-        const modalBody = document.getElementById('historyDetailModalBody');
-        modalBody.innerHTML = '';
-        
-        const labels = {
-            'full_name': 'Patient Name', 'status_name': 'Status', 'service_name': 'Service',
-            'staff_name': 'Staff Assigned', 'appointment_date': 'Date', 'appointment_time': 'Time',
-            'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
-            'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
-            'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
-            'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
-            'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
-            'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
-            'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason',
-            'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)',
-        };
-        const displayOrder = [
-            'full_name', 'status_name', 'service_name', 'staff_name',
-            'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
-            'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
-            'certificate_purpose', 'certificate_other', 'ishihara_test_type',
-            'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
-            'consent_info', 'consent_reminders', 'consent_terms'
-        ];
-        
-        let contentHtml = '<div class="detail-grid">';
-        
-        for (const key of displayOrder) {
-            if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
-                let value = d[key];
-                const label = labels[key] || key;
-                let rowClass = 'detail-row';
-                if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) {
-                    rowClass += ' full-width';
-                }
-                if (key === 'appointment_date') {
-                    value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-                } else if (key === 'appointment_time') {
-                    value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                } else if (key === 'consent_info' || key === 'consent_reminders' || key === 'consent_terms') {
-                    value = value == 1 ? 'Yes' : 'No';
-                } else if (key === 'status_name') {
-                    value = `<span class="badge ${value.toLowerCase()}">${value}</span>`;
-                } else {
-                    value = `<b>${value}</b>`;
-                }
-                contentHtml += `
-                    <div class="${rowClass}">
-                        <span class="detail-label">${label}</span>
-                        <div class="detail-value">${value}</div>
-                    </div>
-                `;
-            }
-        }
-        contentHtml += '</div>';
-        
-        modalBody.innerHTML = contentHtml;
-        
-        document.getElementById('historyDetailOverlay').classList.add('show');
-        document.getElementById('historyDetailOverlay').setAttribute('aria-hidden','false');
-    })
-    .catch(err => { 
-        hideActionLoader();
-        console.error(err); 
-        showToast('Network error.', 'error'); 
-    });
-}
 
-function closeHistoryDetailModal() {
-    const overlay = document.getElementById('historyDetailOverlay');
-    overlay.classList.remove('show');
-    overlay.setAttribute('aria-hidden','true');
-}
 
 // =======================================================
 // UPDATED: viewDetails function (main modal with history)
@@ -1763,36 +1599,6 @@ fetch('appointment.php', {
         }
     }
     contentHtml += '</div>';
-
-    // *** IDAGDAG ANG HISTORY SECTION na may View button ***
-    if (payload.history && payload.history.length > 0) {
-        contentHtml += `<div class="history-section">
-            <h3>Past Appointment History (Total: ${payload.history.length})</h3>
-            <ul class="history-list">`;
-        
-        payload.history.forEach(hist => {
-            const pastDate = new Date(hist.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            contentHtml += `
-                <li class="history-item">
-                    <div class="history-item-info">
-                        ${hist.service_name || 'Unknown Service'}
-                        <span>${pastDate}</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap: 8px;">
-                        <span class="badge ${(hist.status_name || 'unknown').toLowerCase()}">${hist.status_name || 'N/A'}</span>
-                        <button class="btn-view-history" onclick="viewHistoryDetails(${hist.appointment_id})">View</button>
-                    </div>
-                </li>
-            `;
-        });
-        
-        contentHtml += `</ul></div>`;
-    } else if (d.client_id) {
-         contentHtml += `<div class="history-section">
-            <h3>Past Appointment History</h3>
-            <p style="font-size:14px; color:#64748b; text-align:center; padding:10px 0;">No other past appointments found for this client.</p>
-         </div>`;
-    }
     
     modalBody.innerHTML = contentHtml;
     
@@ -1881,7 +1687,6 @@ const confirmOverlay = document.getElementById('confirmModal');
 const reasonOverlay = document.getElementById('reasonModal');
 
 if (detailOverlay?.classList.contains('show') && e.target === detailOverlay) closeDetailModal();
-if (historyOverlay?.classList.contains('show') && e.target === historyOverlay) closeHistoryDetailModal();
 if (editOverlay?.classList.contains('show') && e.target === editOverlay) closeEditModal();
 if (reasonOverlay?.classList.contains('show') && e.target === reasonOverlay) {
     reasonOverlay.classList.remove('show');

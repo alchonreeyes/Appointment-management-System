@@ -2,27 +2,49 @@
 session_start();
 require_once __DIR__ . '/../database.php';
 
-
-
 // 2. HANDLE FORM SUBMISSION
 $success_msg = '';
 $error_msg = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
+if (!isset($_SESSION['id']) || $_SESSION['role'] !== 'admin') {
+    header("Location: ../../public/login.php");
+    exit();
+}
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     
     $name = trim($_POST['product_name']);
     $brand = trim($_POST['brand']);
     $gender = $_POST['gender'];
     
-    // --- NEW LOGIC FOR LENS TYPE (Radio + Other) ---
+    // --- LOGIC FOR LENS TYPE (Radio + Other) ---
     $lens_type = $_POST['lens_type'] ?? '';
     if ($lens_type === 'Other') {
-        // If "Other" is checked, grab the text from the specific input
         $lens_type = trim($_POST['lens_type_other']);
+    }
+
+    // --- NEW LOGIC FOR FRAME TYPE (Checkboxes + Other) ---
+    $frame_type = '';
+    if (isset($_POST['frame_type']) && is_array($_POST['frame_type'])) {
+        $frame_types = $_POST['frame_type'];
+        
+        // Check if "Other" is selected
+        if (in_array('Other', $frame_types)) {
+            // Remove "Other" from array and add the custom text
+            $frame_types = array_filter($frame_types, function($ft) {
+                return $ft !== 'Other';
+            });
+            
+            // Add the custom frame type if provided
+            if (!empty($_POST['frame_type_other'])) {
+                $frame_types[] = trim($_POST['frame_type_other']);
+            }
+        }
+        
+        // Join all selected frame types with comma
+        $frame_type = implode(', ', $frame_types);
     }
     // -----------------------------------------------
 
-    $frame_type = $_POST['frame_type'];
     $desc = trim($_POST['description']);
     $price = 0; 
     $stock = 0; 
@@ -31,6 +53,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     if (empty($name) || empty($brand) || empty($desc) || empty($lens_type)) {
         $error_msg = "Please fill in all required fields (including Lens Type).";
     } 
+    elseif (empty($frame_type)) {
+        $error_msg = "Please select at least one Frame Type.";
+    }
     elseif (!isset($_FILES['main_image']) || $_FILES['main_image']['error'] !== UPLOAD_ERR_OK) {
         $error_msg = "Main product image is required.";
     } 
@@ -147,10 +172,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
         
         textarea { resize: vertical; min-height: 100px; }
 
-        /* --- NEW STYLES FOR CHECKLIST (RADIO) --- */
+        /* --- STYLES FOR CHECKLIST (RADIO) --- */
         .lens-options-container {
             display: grid;
-            grid-template-columns: 1fr 1fr; /* 2 columns layout */
+            grid-template-columns: 1fr 1fr;
             gap: 10px;
             background: #f9f9f9;
             padding: 15px;
@@ -170,15 +195,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
             width: 16px;
             height: 16px;
             cursor: pointer;
-            accent-color: #991010; /* Colors the radio button red */
+            accent-color: #991010;
         }
         
-        .other-input-container {
-            grid-column: 1 / -1; /* Span full width */
-            margin-top: 10px;
-            display: none; /* Hidden by default */
+        /* --- STYLES FOR FRAME TYPE CHECKBOXES --- */
+        .frame-options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #eee;
         }
-        /* ---------------------------------------- */
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+            accent-color: #991010;
+        }
+
+        .other-input-container {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+            display: none;
+        }
 
         .image-upload-box {
             border: 2px dashed #ccc;
@@ -249,40 +299,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
                     <label>Lens Type *</label>
                     <div class="lens-options-container">
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Single Vision" onclick="toggleOther(false)"> Single Vision
+                            <input type="radio" name="lens_type" value="Single Vision" onclick="toggleLensOther(false)"> Single Vision
                         </label>
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Bifocal" onclick="toggleOther(false)"> Bifocal
+                            <input type="radio" name="lens_type" value="Bifocal" onclick="toggleLensOther(false)"> Bifocal
                         </label>
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Progressive" onclick="toggleOther(false)"> Progressive
+                            <input type="radio" name="lens_type" value="Progressive" onclick="toggleLensOther(false)"> Progressive
                         </label>
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Photochromic" onclick="toggleOther(false)"> Photochromic
+                            <input type="radio" name="lens_type" value="Photochromic" onclick="toggleLensOther(false)"> Photochromic
                         </label>
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Blue Light" onclick="toggleOther(false)"> Blue Light
+                            <input type="radio" name="lens_type" value="Blue Light" onclick="toggleLensOther(false)"> Blue Light
                         </label>
                         <label class="radio-item">
-                            <input type="radio" name="lens_type" value="Reading" onclick="toggleOther(false)"> Reading
+                            <input type="radio" name="lens_type" value="Reading" onclick="toggleLensOther(false)"> Reading
                         </label>
                         
                         <label class="radio-item" style="font-weight: bold; color: #991010;">
-                            <input type="radio" name="lens_type" value="Other" onclick="toggleOther(true)"> Other / Custom
+                            <input type="radio" name="lens_type" value="Other" onclick="toggleLensOther(true)"> Other / Custom
                         </label>
 
-                        <div class="other-input-container" id="otherInputBox">
-                            <input type="text" name="lens_type_other" id="otherTextField" placeholder="Type specific lens type here...">
+                        <div class="other-input-container" id="lensOtherInputBox">
+                            <input type="text" name="lens_type_other" id="lensOtherTextField" placeholder="Type specific lens type here...">
                         </div>
                     </div>
                 </div>
+
+                <!-- NEW FRAME TYPE CHECKBOXES -->
                 <div class="form-group full">
-                    <label>Frame Type *</label>
-                    <select name="frame_type">
-                        <option value="Full Rim">Full Rim</option>
-                        <option value="Half Rim">Half Rim</option>
-                        <option value="Rimless">Rimless</option>
-                    </select>
+                    <label>Frame Type * (Select one or more)</label>
+                    <div class="frame-options-container">
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="frame_type[]" value="Aluminum" onclick="toggleFrameOther()"> Aluminum
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="frame_type[]" value="Carbon Fiber" onclick="toggleFrameOther()"> Carbon Fiber
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="frame_type[]" value="Memory Metal" onclick="toggleFrameOther()"> Memory Metal
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="frame_type[]" value="Plastic" onclick="toggleFrameOther()"> Plastic
+                        </label>
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="frame_type[]" value="Titanium" onclick="toggleFrameOther()"> Titanium
+                        </label>
+                        
+                        <label class="checkbox-item" style="font-weight: bold; color: #991010;">
+                            <input type="checkbox" name="frame_type[]" value="Other" id="frameOtherCheckbox" onclick="toggleFrameOther()"> Other / Custom
+                        </label>
+
+                        <div class="other-input-container" id="frameOtherInputBox">
+                            <input type="text" name="frame_type_other" id="frameOtherTextField" placeholder="Type specific frame type here...">
+                        </div>
+                    </div>
                 </div>
 
                 <div class="form-group full">
@@ -322,22 +394,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
 </div>
 
 <script>
-    // Toggle the "Other" text field
-    function toggleOther(show) {
-        const box = document.getElementById('otherInputBox');
-        const input = document.getElementById('otherTextField');
+    // Toggle the Lens Type "Other" text field
+    function toggleLensOther(show) {
+        const box = document.getElementById('lensOtherInputBox');
+        const input = document.getElementById('lensOtherTextField');
         if (show) {
             box.style.display = 'block';
-            input.setAttribute('required', 'required'); // Make it required if "Other" is picked
+            input.setAttribute('required', 'required');
             input.focus();
         } else {
             box.style.display = 'none';
             input.removeAttribute('required');
-            input.value = ''; // Clear it if they switch back
+            input.value = '';
         }
     }
 
-    // Image Previews (Same as before)
+    // Toggle the Frame Type "Other" text field
+    function toggleFrameOther() {
+        const checkbox = document.getElementById('frameOtherCheckbox');
+        const box = document.getElementById('frameOtherInputBox');
+        const input = document.getElementById('frameOtherTextField');
+        
+        if (checkbox.checked) {
+            box.style.display = 'block';
+            input.setAttribute('required', 'required');
+            input.focus();
+        } else {
+            box.style.display = 'none';
+            input.removeAttribute('required');
+            input.value = '';
+        }
+    }
+
+    // Image Previews
     function previewSingle(input, targetId) {
         const container = document.getElementById(targetId);
         container.innerHTML = '';

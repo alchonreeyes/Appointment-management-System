@@ -1,13 +1,11 @@
 <?php
-// Location: EYE MASTER/admin/admin_dashboard-action.php
-
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 
 // ======================================================================
 // 1. SESSION CHECK
 // ======================================================================
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     header('Location: ../../public/login.php'); 
     exit;
 }

@@ -766,7 +766,7 @@ p {
 .preference-option-image:hover img,
 .product-card:hover img,
 .modal-body img:hover {
-    transform: scale(2.5); /* PALAKIHIN NG 2.5x (Adjust mo kung sobrang laki) */
+    transform: scale(6.5); /* PALAKIHIN NG 2.5x (Adjust mo kung sobrang laki) */
     z-index: 9999;         /* Siguraduhing nasa ibabaw siya ng lahat ng text/divs */
     box-shadow: 0 15px 30px rgba(0,0,0,0.4); /* Lagyan ng shadow para umangat */
     border-radius: 8px;    /* Pakinisin ang kanto */

@@ -595,6 +595,7 @@ function openModal(productId) {
             const thumbsContainer = document.getElementById('modalThumbnailsContainer');
             thumbsContainer.innerHTML = ''; 
 
+            // fetch the image path to see image on browisng product
             const cleanPath = (path) => path.replace('../photo/', '../mod/photo/');
 
             if (data.gallery_images && data.gallery_images.length > 0) {
@@ -622,7 +623,7 @@ function openModal(productId) {
                 }
             } else {
                  mainDisplay.style.display = 'none';
-                 mainDisplay.alt = "No image available";
+                 mainDisplay.alt = "No image available founded";
             }
         })
         .catch(err => {

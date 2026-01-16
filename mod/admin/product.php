@@ -5,7 +5,7 @@ session_start();
 require_once __DIR__ . '/../database.php';
 
 // =======================================================
-// 1. INAYOS NA SECURITY CHECK (para sa mysqli at user_role)
+// 1. INAYOS NA SECURITY CHECK
 // =======================================================
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     if (isset($_POST['action'])) {
@@ -18,10 +18,9 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 // =======================================================
-// 2. DETERMINE ACTIVE TABLE (Products, ServiceS, or Schedule)
+// 2. DETERMINE ACTIVE TABLE
 // =======================================================
-$activeTable = $_GET['table'] ?? 'products'; // Default to 'products'
-// --- FIX: Pinagsama ang 'slots' at 'closures' sa 'schedule' ---
+$activeTable = $_GET['table'] ?? 'products';
 if (!in_array($activeTable, ['products', 'services', 'schedule'])) {
     $activeTable = 'products';
 }
@@ -49,10 +48,10 @@ if (isset($_POST['action'])) {
             $nameColumn = 'service_name';
             $dbTable = 'services';
             break;
-        case 'schedule': // --- FIX: Pinagsamang logic ---
+        case 'schedule':
             $idColumn = 'id';
             $nameColumn = 'schedule_date';
-            $dbTable = 'schedule_settings'; // BAGONG TABLE
+            $dbTable = 'schedule_settings';
             break;
     }
 
@@ -75,15 +74,13 @@ if (isset($_POST['action'])) {
                 exit;
             }
             
-            // --- NEW: FETCH GALLERY IMAGES IF PRODUCT ---
             if ($table === 'products') {
                 $galStmt = $conn->prepare("SELECT image_path FROM product_gallery WHERE product_id = ?");
                 $galStmt->bind_param("i", $id);
                 $galStmt->execute();
                 $gallery = $galStmt->get_result()->fetch_all(MYSQLI_ASSOC);
-                $item['gallery'] = $gallery; // Add gallery data to the response
+                $item['gallery'] = $gallery;
             }
-            // --------------------------------------------
 
             echo json_encode(['success' => true, 'data' => $item, 'table' => $table]);
 
@@ -91,7 +88,6 @@ if (isset($_POST['action'])) {
         exit;
     }
 
-// Function to handle image upload (only for products)
     function handleImageUpload() {
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
             $uploadDir = __DIR__ . '/../photo/';
@@ -99,8 +95,8 @@ if (isset($_POST['action'])) {
                 mkdir($uploadDir, 0777, true);
             }
             $fileName = uniqid() . '_' . basename($_FILES['image']['name']);
-            $targetPath = '../photo/' . $fileName; // Path to store in DB
-            $fullTargetPath = $uploadDir . $fileName; // Path to move file
+            $targetPath = '../photo/' . $fileName; 
+            $fullTargetPath = $uploadDir . $fileName;
 
             $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
             $fileType = mime_content_type($_FILES['image']['tmp_name']);
@@ -121,7 +117,6 @@ if (isset($_POST['action'])) {
 
     if ($action === 'addItem') {
         if ($table === 'products') {
-            // ... (Product logic - walang pagbabago) ...
             $name = trim($_POST['product_name'] ?? '');
             $desc = trim($_POST['description'] ?? '');
             $gender = trim($_POST['gender'] ?? 'Unisex');
@@ -154,67 +149,46 @@ if (isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Database error during add.']);
             }
 
-        // --- START: MODIFIED 'addItem' FOR 'schedule' ---
         } elseif ($table === 'schedule') {
             
-            $slot_type = $_POST['slot_type'] ?? 'open'; // 'open' or 'closure'
             $schedule_date = trim($_POST['schedule_date'] ?? '');
+            $reason = trim($_POST['reason'] ?? 'Store Closure');
+            $time_from = trim($_POST['time_from'] ?? '');
+            $time_to = trim($_POST['time_to'] ?? '');
 
             if (!$schedule_date) {
                 echo json_encode(['success' => false, 'message' => 'Server validation failed: Date is required.']);
                 exit;
             }
 
-            try {
-                if ($slot_type === 'closure') {
-                    // --- LOGIC TO ADD A CLOSURE ---
-                    $reason = trim($_POST['reason'] ?? 'Store Closure');
-                    
-                    $stmt_insert = $conn->prepare("
-                        INSERT INTO schedule_settings (schedule_date, status, reason, time_from, time_to)
-                        VALUES (?, 'Closed', ?, NULL, NULL)
-                        ON DUPLICATE KEY UPDATE
-                        status = 'Closed', reason = VALUES(reason), time_from = NULL, time_to = NULL
-                    ");
-                    $stmt_insert->bind_param("ss", $schedule_date, $reason);
-                    $stmt_insert->execute();
-
-                    echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
-                
-                } else {
-                    // --- LOGIC TO ADD AN OPEN SLOT ---
-                    $time_from = trim($_POST['time_from'] ?? '');
-                    $time_to = trim($_POST['time_to'] ?? '');
-
-                    if (!$time_from || !$time_to) {
-                        echo json_encode(['success' => false, 'message' => 'Server validation failed: Time From and Time To are required.']);
-                        exit;
-                    }
-
-                    if (strtotime($time_from) >= strtotime($time_to)) {
-                         echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
-                        exit;
-                    }
-
-                    $stmt_insert = $conn->prepare("
-                        INSERT INTO schedule_settings (schedule_date, status, time_from, time_to, reason)
-                        VALUES (?, 'Open', ?, ?, NULL)
-                        ON DUPLICATE KEY UPDATE
-                        status = 'Open', time_from = VALUES(time_from), time_to = VALUES(time_to), reason = NULL
-                    ");
-                    $stmt_insert->bind_param("sss", $schedule_date, $time_from, $time_to);
-                    $stmt_insert->execute();
-
-                    echo json_encode(['success' => true, 'message' => 'Slot added successfully.']);
+            if (!empty($time_from) && !empty($time_to)) {
+                if (strtotime($time_from) >= strtotime($time_to)) {
+                    echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+                    exit;
                 }
+            } else {
+                $time_from = null;
+                $time_to = null;
+            }
+
+            try {
+                $stmt_insert = $conn->prepare("
+                    INSERT INTO schedule_settings (schedule_date, status, reason, time_from, time_to)
+                    VALUES (?, 'Closed', ?, ?, ?)
+                    ON DUPLICATE KEY UPDATE
+                    status = 'Closed', reason = VALUES(reason), time_from = VALUES(time_from), time_to = VALUES(time_to)
+                ");
+                $stmt_insert->bind_param("sssss", $schedule_date, $reason, $time_from, $time_to);
+                $stmt_insert->execute();
+
+                echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
+                
             } catch (Exception $e) {
-                error_log("AddSlot/Closure error: " . $e->getMessage());
+                error_log("AddClosure error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during add.']);
             }
-        // --- END: MODIFIED 'addItem' ---
         
         } else {
-            // ... (Service logic - walang pagbabago) ...
             $name = trim($_POST['service_name'] ?? '');
             $desc = trim($_POST['description'] ?? '');
             if (!$name || !$desc) {
@@ -243,7 +217,6 @@ if (isset($_POST['action'])) {
 
     if ($action === 'editItem') {
         if ($table === 'products') {
-            // ... (Product logic - walang pagbabago) ...
             $id = $_POST['product_id'] ?? '';
             $name = trim($_POST['product_name'] ?? '');
             $desc = trim($_POST['description'] ?? '');
@@ -281,19 +254,29 @@ if (isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Database error during update.']);
             }
         
-        // --- START: MODIFIED 'editItem' FOR 'schedule' ---
         } elseif ($table === 'schedule') {
             $id = $_POST['id'] ?? '';
-            $slot_type = $_POST['slot_type'] ?? 'open'; // 'open' or 'closure'
             $schedule_date = trim($_POST['schedule_date'] ?? '');
+            $reason = trim($_POST['reason'] ?? 'Store Closure');
+            $time_from = trim($_POST['time_from'] ?? '');
+            $time_to = trim($_POST['time_to'] ?? '');
 
             if (!$id || !$schedule_date) {
                 echo json_encode(['success' => false, 'message' => 'Server validation failed: ID and Date are required.']);
                 exit;
             }
             
+            if (!empty($time_from) && !empty($time_to)) {
+                if (strtotime($time_from) >= strtotime($time_to)) {
+                    echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+                    exit;
+                }
+            } else {
+                $time_from = null;
+                $time_to = null;
+            }
+
             try {
-                // Check kung ang BAGONG date ay conflict (maliban sa sarili niya)
                 $stmt_check = $conn->prepare("SELECT id FROM schedule_settings WHERE schedule_date = ? AND id != ?");
                 $stmt_check->bind_param("si", $schedule_date, $id);
                 $stmt_check->execute();
@@ -302,57 +285,26 @@ if (isset($_POST['action'])) {
                     exit;
                 }
 
-                if ($slot_type === 'closure') {
-                    // --- LOGIC TO UPDATE TO A CLOSURE ---
-                    $reason = trim($_POST['reason'] ?? 'Store Closure');
-                    
-                    $stmt_update = $conn->prepare("
-                        UPDATE schedule_settings
-                        SET schedule_date = ?, status = 'Closed', reason = ?, time_from = NULL, time_to = NULL
-                        WHERE id = ?
-                    ");
-                    $stmt_update->bind_param("ssi", $schedule_date, $reason, $id);
-                    $stmt_update->execute();
+                $stmt_update = $conn->prepare("
+                    UPDATE schedule_settings
+                    SET schedule_date = ?, status = 'Closed', reason = ?, time_from = ?, time_to = ?
+                    WHERE id = ?
+                ");
+                $stmt_update->bind_param("ssssi", $schedule_date, $reason, $time_from, $time_to, $id);
+                $stmt_update->execute();
 
-                    echo json_encode(['success' => true, 'message' => 'Schedule updated to Store Closure.']);
+                echo json_encode(['success' => true, 'message' => 'Store closure updated successfully.']);
                 
-                } else {
-                    // --- LOGIC TO UPDATE TO AN OPEN SLOT ---
-                    $time_from = trim($_POST['time_from'] ?? '');
-                    $time_to = trim($_POST['time_to'] ?? '');
-
-                    if (!$time_from || !$time_to) {
-                        echo json_encode(['success' => false, 'message' => 'Server validation failed: Time From and Time To are required.']);
-                        exit;
-                    }
-                    
-                    if (strtotime($time_from) >= strtotime($time_to)) {
-                         echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
-                        exit;
-                    }
-
-                    $stmt_update = $conn->prepare("
-                        UPDATE schedule_settings
-                        SET schedule_date = ?, status = 'Open', time_from = ?, time_to = ?, reason = NULL
-                        WHERE id = ?
-                    ");
-                    $stmt_update->bind_param("ssssi", $schedule_date, $time_from, $time_to, $id);
-                    $stmt_update->execute();
-
-                    echo json_encode(['success' => true, 'message' => 'Schedule updated to Open Slot.']);
-                }
             } catch (Exception $e) {
-                error_log("EditSlot/Closure error: " . $e->getMessage());
-                if ($conn->errno == 1062) { // Duplicate entry
+                error_log("EditClosure error: " . $e->getMessage());
+                if ($conn->errno == 1062) { 
                       echo json_encode(['success' => false, 'message' => 'Cannot move schedule: The new date already has a setting.']);
                  } else {
                     echo json_encode(['success' => false, 'message' => 'Database error during update.']);
                  }
             }
-        // --- END: MODIFIED 'editItem' FOR 'schedule' ---
 
         } else {
-            // ... (Service logic - walang pagbabago) ...
             $id = $_POST['service_id'] ?? '';
             $name = trim($_POST['service_name'] ?? '');
             $desc = trim($_POST['description'] ?? '');
@@ -398,12 +350,10 @@ if (isset($_POST['action'])) {
                 if ($stmt_del->affected_rows > 0 && $imagePath && $imagePath !== 'default.jpg' && file_exists($imagePath)) {
                     @unlink($imagePath);
                 }
-            // --- FIX: Simplified remove logic ---
-            } elseif ($table === 'schedule') { // Pinagsama na
+            } elseif ($table === 'schedule') {
                 $stmt_del = $conn->prepare("DELETE FROM schedule_settings WHERE id = ?");
                 $stmt_del->bind_param("i", $id);
                 $stmt_del->execute();
-            // --- END FIX ---
             } else {
                 $stmt_del = $conn->prepare("DELETE FROM services WHERE service_id = ?");
                 $stmt_del->bind_param("i", $id);
@@ -426,7 +376,6 @@ $search = trim($_GET['search'] ?? '');
 $params = [];
 $paramTypes = "";
 if ($activeTable === 'products') {
-    // ... (Product query - walang pagbabago) ...
     $query = "SELECT * FROM products WHERE 1=1";
     if ($brandFilter !== 'All') {
         $query .= " AND brand = ?";
@@ -443,7 +392,6 @@ if ($activeTable === 'products') {
     $query .= " ORDER BY product_name ASC";
 
 } elseif ($activeTable === 'schedule') {
-    // --- FIX: Query from new table, combined ---
     $query = "SELECT * FROM schedule_settings WHERE 1=1";
      if ($search !== '') {
         $query .= " AND (schedule_date LIKE ? OR reason LIKE ?)";
@@ -452,10 +400,9 @@ if ($activeTable === 'products') {
         $params[] = $searchTerm;
         $paramTypes .= "ss";
     }
-    $query .= " ORDER BY schedule_date DESC, status ASC";
+    $query .= " ORDER BY schedule_date DESC";
 
 } else {
-    // ... (Services query - walang pagbabago) ...
     $query = "SELECT * FROM services WHERE 1=1";
     if ($search !== '') {
         $query .= " AND (service_name LIKE ? OR service_id LIKE ?)";
@@ -481,7 +428,6 @@ try {
 
 // --- STATS COUNT ---
 if ($activeTable === 'products') {
-    // ... (Product stats - walang pagbabago) ...
     $countSql = "SELECT
         COALESCE(COUNT(DISTINCT brand), 0) AS total_brands,
         COALESCE(COUNT(*), 0) AS total
@@ -501,12 +447,9 @@ if ($activeTable === 'products') {
         $countParamTypes .= "ss";
     }
 } elseif ($activeTable === 'schedule') {
-    // --- FIX: Stats from new table ---
     $countSql = "SELECT
-        COALESCE(COUNT(*), 0) AS total,
-        COALESCE(COUNT(CASE WHEN status = 'Open' THEN 1 END), 0) AS total_open,
-        COALESCE(COUNT(CASE WHEN status = 'Closed' THEN 1 END), 0) AS total_closed
-        FROM schedule_settings WHERE 1=1";
+        COALESCE(COUNT(*), 0) AS total_closures
+        FROM schedule_settings WHERE status = 'Closed'";
     $countParams = [];
     $countParamTypes = "";
     if ($search !== '') {
@@ -517,7 +460,6 @@ if ($activeTable === 'products') {
         $countParamTypes .= "ss";
     }
 } else {
-    // ... (Services stats - walang pagbabago) ...
     $countSql = "SELECT COUNT(*) AS total FROM services WHERE 1=1";
     $countParams = [];
     $countParamTypes = "";
@@ -542,7 +484,6 @@ try {
 }
 $brands = [];
 if ($activeTable === 'products') {
-    // ... (Brands fetch - walang pagbabago) ...
     try {
         $catQuery = "SELECT DISTINCT brand FROM products WHERE brand IS NOT NULL AND brand != '' ORDER BY brand";
         $stmt_cat = $conn->prepare($catQuery);
@@ -554,21 +495,15 @@ if ($activeTable === 'products') {
     }
 }
 
-// --- FIX: Renamed and combined date fetching ---
-$existingSlotDates = [];
+// --- Fetch Schedule Dates for Calendar Highlighting (Only Closures) ---
 $closureDates = [];
 try {
-    // Get all schedule dates from the new table
-    $scheduleQuery = "SELECT schedule_date, status FROM schedule_settings";
+    $scheduleQuery = "SELECT schedule_date FROM schedule_settings WHERE status = 'Closed'";
     $stmt_schedule = $conn->prepare($scheduleQuery);
     $stmt_schedule->execute();
     $result = $stmt_schedule->get_result();
     while ($row = $result->fetch_assoc()) {
-        if ($row['status'] === 'Open') {
-            $existingSlotDates[] = $row['schedule_date'];
-        } else {
-            $closureDates[] = $row['schedule_date'];
-        }
+        $closureDates[] = $row['schedule_date'];
     }
 } catch (Exception $e) {
     error_log("Fetch Schedule Dates error: " . $e->getMessage());
@@ -589,16 +524,25 @@ try {
 body { background:#f8f9fa; color:#223; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
-header { display:flex; align-items:center; background:#fff; padding:12px 20px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
+/* UPDATED: PADDING 75px LEFT AND RIGHT */
+header { display:flex; align-items:center; background:#fff; padding:12px 75px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
-.container { padding:20px 20px 40px 75px; max-width:1400px; margin:0 auto; }
+
+/* UPDATED: PADDING 75px LEFT AND RIGHT */
+.container { padding:20px 75px 40px 75px; max-width:100%; margin:0 auto; }
+
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
-.table-toggle { display:flex; gap:8px; margin-bottom:16px; flex-wrap: wrap; }
+
+/* UPDATED: RIGHT ALIGN BUTTONS */
+.table-toggle { display:flex; gap:8px; margin-bottom:16px; flex-wrap: wrap; justify-content: flex-end; }
+
 .toggle-btn { padding:10px 20px; border-radius:8px; border:2px solid #e6e9ee; background:#fff; cursor:pointer; font-weight:700; transition:all .2s; }
 .toggle-btn.active { background:#dc3545; color:#fff; border-color:#dc3545; }
 .toggle-btn:hover:not(.active) { background:#f8f9fa; border-color:#dc3545; }
@@ -617,26 +561,77 @@ input#formScheduleDate {
     cursor: pointer;
 }
 
-/* --- START: CSS PARA SA SEARCH BAR (NASA KALIWA) --- */
+/* UPDATED: Search Input - Long (333px) and Left-Aligned */
+#searchInput {
+    width: 333px; 
+    margin-left: 0; 
+}
+
+/* UPDATED: Button Group to align all buttons to the right */
+.filters .button-group {
+    margin-left: auto; /* This pushes the entire group to the right */
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
 
 .filters .add-btn {
-    /* Ilipat ang margin-left sa "Add" button para itulak SIYA sa kanan */
-    margin-left: auto; 
     padding-top: 9px;
     padding-bottom: 9px;
     font-size: 14px;
-    margin-top: 0; 
-    margin-bottom: 0;
+    margin: 0; 
 }
-/* --- END: CSS PARA SA SEARCH BAR --- */
+
+
+/* UPDATED: Table Layout Fixed for "Pantay-Pantay" columns */
+#itemsTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 14px;
+    min-width: 1000px;
+    table-layout: fixed; /* Forces fixed widths */
+}
+
+/* UPDATED: Text truncation for table cells to fit */
+#itemsTable th, #itemsTable td {
+    padding: 12px 15px; 
+    border-bottom: 1px solid #f3f6f9;
+    vertical-align: middle;
+    white-space: nowrap; /* Keeps text on one line */
+    overflow: hidden;    /* Hides overflow */
+    text-overflow: ellipsis; /* Adds ... */
+}
 
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
 .add-btn { background:#28a745; color:#fff; padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
 .add-btn:hover { background:#218838; transform:translateY(-1px); }
-.stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:18px; }
-.stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
-.stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
-.stat-card p { color:#6b7f86; font-size:13px; }
+
+/* UPDATED: STATS CARD STYLE - CENTERED AND WIDER */
+.stats { 
+    display:flex; /* Changed from grid to flex */
+    gap:16px; 
+    margin-bottom:18px; 
+    flex-wrap: wrap; 
+    justify-content: center; /* Center the cards */
+}
+
+.stat-card { 
+    background:#fff; 
+    border:1px solid #e6e9ee; 
+    border-radius:10px; 
+    padding:18px 24px; /* More padding */
+    text-align:center; 
+    
+    /* WIDER SETTINGS */
+    flex: 1 1 300px; /* Start at 300px width */
+    max-width: 500px; /* Cap width at 500px */
+    min-width: 250px; 
+}
+
+.stat-card h3 { margin-bottom:6px; font-size:24px; color:#21303a; }
+.stat-card p { color:#6b7f86; font-size:14px; font-weight: 600; }
+
 .action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
 .view { background:#1d4ed8; }
@@ -750,44 +745,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 }
 /* --- END: CSS PARA SA CALENDAR --- */
 
-.slot-type-group {
-    display: flex;
-    gap: 15px;
-    margin-bottom: 18px;
-}
-.slot-type-option {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 15px;
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    cursor: pointer;
-    flex-grow: 1;
-    transition: all 0.2s ease;
-}
-.slot-type-option input[type="radio"] {
-    width: 18px;
-    height: 18px;
-    accent-color: var(--primary-red);
-}
-.slot-type-option label {
-    font-weight: 600;
-    color: var(--text-dark);
-    margin: 0;
-    font-size: 15px;
-    text-transform: none; 
-    letter-spacing: 0; 
-}
-.slot-type-option:hover {
-    background-color: var(--light-bg);
-}
-.slot-type-option.selected {
-    border-color: var(--primary-red);
-    background-color: #fff2f2;
-    box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.2);
-}
-
 /* --- START: CSS PARA SA ACTION LOADER (KINOPYA MULA SA APPOINTMENT.PHP) --- */
 #actionLoader {
     display: none; 
@@ -835,6 +792,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 @media (max-width: 1000px) {
   .vertical-bar { display: none; }
+  /* Reset padding for mobile */
   header { padding: 12px 20px; justify-content: space-between; }
   .logo-section { margin-right: 0; }
   .container { padding: 20px; }
@@ -847,17 +805,15 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 }
 @media (max-width: 600px) { 
     .filters { flex-direction: column; align-items: stretch; } 
+    #searchInput { width: 100%; } /* Full width on mobile */
     .form-grid { grid-template-columns: 1fr; }
-    .slot-type-group { flex-direction: column; gap: 10px; }
+    .filters .button-group { margin-left: 0; width: 100%; flex-direction: column; }
+    .filters .add-btn { width: 100%; }
 }
 </style>
 </head>
 <body>
 
-<!-- <div id="loader-overlay">
-    <div class="loader-spinner"></div>
-    <p class="loader-text">Loading Products & Services...</p>
-</div> -->
 <div id="main-content" style="display: none;">
 
     <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
@@ -922,29 +878,31 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
         
-       <?php if ($activeTable === 'products'): ?>
-    <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">
-        ➕ Add New Product
-    </button>
+        <div class="button-group">
+           <?php if ($activeTable === 'products'): ?>
+            <button type="button" class="add-btn" onclick="window.location.href='add_product.php'">
+                ➕ Add New Product
+            </button>
 
-<?php elseif ($activeTable === 'services'): ?>
-    <button type="button" class="add-btn" onclick="openAddModal()">
-        ➕ Add New Service
-    </button>
-        <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='services.php'">
-        ➕ Customize Forms of Service
-    </button>
-    <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='particulars.php'">
-        📋 Manage Particulars
-    </button>
+            <?php elseif ($activeTable === 'services'): ?>
+            <button type="button" class="add-btn" onclick="openAddModal()">
+                ➕ Add New Service
+            </button>
+                <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='services.php'">
+                ➕ Customize Forms of Service
+            </button>
+            <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='particulars.php'">
+                📋 Manage Particulars
+            </button>
 
 
-<?php else: ?>
-    <button type="button" class="add-btn" onclick="openAddModal()">
-        ➕ Add New Schedule
-    </button>
-<?php endif; ?>
-</form>
+            <?php else: ?>
+            <button type="button" class="add-btn" onclick="openAddModal()">
+                ➕ Set Store Closure
+            </button>
+            <?php endif; ?>
+        </div>
+    </form>
     
       <div id="content-wrapper">
           <div class="stats">
@@ -952,9 +910,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Products</p></div>
                 <div class="stat-card"><h3><?= $stats['total_brands'] ?? 0 ?></h3><p>Total Brands</p></div>
             <?php elseif ($activeTable === 'schedule'): ?>
-                <div class="stat-card"><h3><?= $stats['total_open'] ?? 0 ?></h3><p>Open Slot Days</p></div>
-                <div class="stat-card"><h3><?= $stats['total_closed'] ?? 0 ?></h3><p>Closure Days</p></div>
-                <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Schedules Set</p></div>
+                <div class="stat-card"><h3><?= $stats['total_closures'] ?? 0 ?></h3><p>Total Scheduled Closures</p></div>
             <?php else: // Para sa services ?>
                 <div class="stat-card"><h3><?= $stats['total'] ?? 0 ?></h3><p>Total Services</p></div>
             <?php endif; ?>
@@ -971,7 +927,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:140px;">Brand</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Lens Type</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Frame Type</th>
-                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -995,7 +951,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['lens_type']) ?></td>
                     <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['frame_type']) ?></td>
                     <td style="padding:12px 8px;vertical-align:middle;">
-                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
                         <button class="action-btn view" onclick="viewDetails('<?= $item['product_id'] ?>')">View</button>
                         <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
                         <button class="action-btn remove" onclick="openRemoveModal('<?= $item['product_id'] ?>', '<?= htmlspecialchars(addslashes($item['product_name'])) ?>')">Remove</button>
@@ -1015,9 +971,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Date</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
-                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Details</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Reason</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:150px;">Time</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Status</th>
-                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1035,25 +992,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                       </span>
                     </td>
                     
-                    <?php if ($item['status'] === 'Open'): ?>
-                        <td style="padding:12px 8px;vertical-align:middle;">
+                    <td style="padding:12px 8px;vertical-align:middle;color:#b91c1c;">
+                        <?= htmlspecialchars($item['reason'] ?? 'N/A') ?>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                        <?php if ($item['time_from'] && $item['time_to']): ?>
                             <?= htmlspecialchars(date("g:i A", strtotime($item['time_from']))) ?> - 
                             <?= htmlspecialchars(date("g:i A", strtotime($item['time_to']))) ?>
-                        </td>
-                        <td style="padding:12px 8px;vertical-align:middle;">
-                          <span class="badge available">Open</span>
-                        </td>
-                    <?php else: // Closed ?>
-                        <td style="padding:12px 8px;vertical-align:middle;color:#b91c1c;">
-                            <?= htmlspecialchars($item['reason'] ?? 'N/A') ?>
-                        </td>
-                        <td style="padding:12px 8px;vertical-align:middle;">
-                          <span class="badge closure">Closed</span>
-                        </td>
-                    <?php endif; ?>
+                        <?php else: ?>
+                            <span style="color:#666;">Whole Day</span>
+                        <?php endif; ?>
+                    </td>
+                    <td style="padding:12px 8px;vertical-align:middle;">
+                      <span class="badge closure">Closed</span>
+                    </td>
                     
                     <td style="padding:12px 8px;vertical-align:middle;">
-                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
                         <button class="action-btn view" onclick="viewDetails('<?= $item['id'] ?>')">View</button>
                         <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
                         <button class="action-btn remove" onclick="openRemoveModal('<?= $item['id'] ?>', 'Schedule on <?= htmlspecialchars(addslashes($item['schedule_date'])) ?>')">Remove</button>
@@ -1061,7 +1016,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     </td>
                   </tr>
                 <?php endforeach; else: ?>
-                  <tr><td colspan="6" style="padding:30px;color:#677a82;text-align:center;">No schedules found.</td></tr>
+                  <tr><td colspan="7" style="padding:30px;color:#677a82;text-align:center;">No closures found.</td></tr>
                 <?php endif; ?>
               </tbody>
             </table>
@@ -1073,7 +1028,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Service Name</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">ID</th>
                   <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:200px;">Description</th>
-                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:center;">Actions</th>
+                  <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:220px;text-align:right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1090,7 +1045,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     </td>
                     <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars(substr($item['description'] ?? 'N/A', 0, 50)) ?><?= strlen($item['description'] ?? '') > 50 ? '...' : '' ?></td>
                     <td style="padding:12px 8px;vertical-align:middle;">
-                      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;">
                         <button class="action-btn view" onclick="viewDetails('<?= $item['service_id'] ?>')">View</button>
                         <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
                         <button class="action-btn remove" onclick="openRemoveModal('<?= $item['service_id'] ?>', '<?= htmlspecialchars(addslashes($item['service_name'])) ?>')">Remove</button>
@@ -1172,7 +1127,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     <script>
     const currentTable = '<?= $activeTable ?>';
     // --- FIX: Pass both arrays to JS ---
-    const existingSlotDates = <?= json_encode($existingSlotDates) ?>;
     const closureDates = <?= json_encode($closureDates) ?>;
     
     let currentFlatpickrInstance = null;
@@ -1277,7 +1231,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     </div>
 
     <div class="detail-section">
-      <!-- MAIN IMAGE -->
       <div class="detail-row">
         <span class="detail-label">Main Cover Image</span>
         <img src="${d.image_path || 'default.jpg'}" alt="Product" 
@@ -1287,7 +1240,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       </div>
     </div>
 
-    <!-- GALLERY SECTION (Inserted Here) -->
     ${galleryHTML}
 
     <div class="detail-row" style="grid-column: 1 / -1;">
@@ -1310,43 +1262,28 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                  return d.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             };
             
-            if(d.status === 'Open') {
-                document.querySelector('#detailTitle').innerHTML = '📅 Slot Details';
-                contentHTML = `
-                <div class="detail-section" style="grid-column: 1 / -1;">
-                  <div class="detail-row">
-                    <span class="detail-label">Date</span>
-                    <div class="detail-value">${formatDate(d.schedule_date)}</div>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Time From</span>
-                    <div class="detail-value">${formatTime(d.time_from)}</div>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Time To</span>
-                    <div class="detail-value">${formatTime(d.time_to)}</div>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <div class="detail-value">Open</div>
-                  </div>
-                </div>
-              `;
-            } else { // 'Closed'
-                document.querySelector('#detailTitle').innerHTML = '🚫 Store Closure Details';
-                contentHTML = `
-                <div class="detail-section" style="grid-column: 1 / -1;">
-                  <div class="detail-row">
-                    <span class="detail-label">Closure Date</span>
-                    <div class="detail-value">${formatDate(d.schedule_date)}</div>
-                  </div>
-                  <div class="detail-row">
-                    <span class="detail-label">Reason</span>
-                    <div class="detail-value" style="white-space: pre-wrap;">${d.reason || 'N/A'}</div>
-                  </div>
-                </div>
-              `;
+            document.querySelector('#detailTitle').innerHTML = '🚫 Store Closure Details';
+            let timeDisplay = 'Whole Day';
+            if (d.time_from && d.time_to) {
+                timeDisplay = `${formatTime(d.time_from)} - ${formatTime(d.time_to)}`;
             }
+
+            contentHTML = `
+            <div class="detail-section" style="grid-column: 1 / -1;">
+              <div class="detail-row">
+                <span class="detail-label">Closure Date</span>
+                <div class="detail-value">${formatDate(d.schedule_date)}</div>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Closure Time</span>
+                <div class="detail-value">${timeDisplay}</div>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Reason</span>
+                <div class="detail-value" style="white-space: pre-wrap;">${d.reason || 'N/A'}</div>
+              </div>
+            </div>
+          `;
         } else { // Para sa services
           document.querySelector('#detailTitle').innerHTML = '🛠️ Service Details';
           document.getElementById('detailId').textContent = '#' + d.service_id;
@@ -1387,7 +1324,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       let title = 'Add New ';
       if (currentTable === 'products') title += 'Product';
       else if (currentTable === 'services') title += 'Service';
-      else if (currentTable === 'schedule') title += 'Schedule (Slot / Closure)';
+      else if (currentTable === 'schedule') title += 'Store Closure';
       document.getElementById('formTitle').textContent = title;
       
       document.getElementById('itemForm').reset();
@@ -1402,7 +1339,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     }
     
     function openEditModal(itemData) {
-      document.getElementById('formTitle').textContent = `Edit ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Schedule')}`;
+      document.getElementById('formTitle').textContent = `Edit ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Store Closure')}`;
       document.getElementById('formTable').value = currentTable;
       
       populateFormFields(itemData);
@@ -1490,46 +1427,29 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
       } else if (currentTable === 'schedule') {
         
-        const isEditing = (data !== null);
-        const currentStatus = isEditing ? data.status : 'Open'; 
-        
+        // --- MODIFIED SCHEDULE FORM FIELDS (NO RADIOS, JUST CLOSURE) ---
         fieldsHTML = `
           <div class="form-grid">
             <div class="form-group full-width">
-                <label>Schedule Type *</label>
-                <div class="slot-type-group">
-                    <div class="slot-type-option ${currentStatus === 'Open' ? 'selected' : ''}" id="slot-type-open-wrapper">
-                        <input type="radio" id="formSlotTypeOpen" name="slot_type" value="open" ${currentStatus === 'Open' ? 'checked' : ''}>
-                        <label for="formSlotTypeOpen">📅 Open Slot</label>
-                    </div>
-                    <div class="slot-type-option ${currentStatus === 'Closed' ? 'selected' : ''}" id="slot-type-closure-wrapper">
-                        <input type="radio" id="formSlotTypeClosure" name="slot_type" value="closure" ${currentStatus === 'Closed' ? 'checked' : ''}>
-                        <label for="formSlotTypeClosure">🚫 Store Closure</label>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group full-width">
-              <label for="formScheduleDate">Date *</label>
+              <label for="formScheduleDate">Closure Date *</label>
               <input type="text" id="formScheduleDate" required 
                      value="${data ? data.schedule_date : ''}" 
-                     placeholder="Pumili ng petsa..."
+                     placeholder="Select date to close..."
                      readonly="readonly"> 
               <div id="date-helper-message"></div>
             </div>
 
-            <div id="openSlotFields" class="form-grid full-width" style="display: ${currentStatus === 'Open' ? 'grid' : 'none'};">
-                <div class="form-group">
-                  <label for="formTimeFrom">Time From *</label>
-                  <input type="time" id="formTimeFrom" required value="${data && data.time_from ? data.time_from : ''}">
-                </div>
-                <div class="form-group">
-                  <label for="formTimeTo">Time To *</label>
-                  <input type="time" id="formTimeTo" required value="${data && data.time_to ? data.time_to : ''}">
-                </div>
+            <div class="form-group">
+              <label for="formTimeFrom">Time From (Optional)</label>
+              <input type="time" id="formTimeFrom" value="${data && data.time_from ? data.time_from : ''}">
+              <small style="color: #64748b; font-size: 11px;">Leave empty for whole day</small>
+            </div>
+            <div class="form-group">
+              <label for="formTimeTo">Time To (Optional)</label>
+              <input type="time" id="formTimeTo" value="${data && data.time_to ? data.time_to : ''}">
             </div>
             
-            <div id="closureFields" class="form-group full-width" style="display: ${currentStatus === 'Closed' ? 'block' : 'none'};">
+            <div class="form-group full-width">
                 <label for="formReason">Reason for Closure *</label>
                 <textarea id="formReason" rows="3" placeholder="e.g., Holiday, Maintenance, etc.">${data && data.reason ? data.reason : ''}</textarea>
             </div>
@@ -1573,9 +1493,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             originalDate = data ? data.schedule_date : null;
 
             if (data) {
-                disableDates = [...closureDates, ...existingSlotDates].filter(d => d !== originalDate);
+                disableDates = [...closureDates].filter(d => d !== originalDate);
             } else {
-                disableDates = [...closureDates, ...existingSlotDates];
+                disableDates = [...closureDates];
             }
         }
 
@@ -1589,43 +1509,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     if (closureDates.includes(date)) {
                         dayElem.classList.add('flatpickr-closed');
                         dayElem.title = (date === originalDate) ? "Editing this closure" : "Store is closed";
-                    } else if (existingSlotDates.includes(date)) {
-                        dayElem.classList.add('flatpickr-hasslots');
-                        dayElem.title = (date === originalDate) ? "Editing this slot" : "Date already has slots";
                     }
                 }
             });
-        }
-        
-        if (currentTable === 'schedule') {
-            const openRadio = document.getElementById('formSlotTypeOpen');
-            const closureRadio = document.getElementById('formSlotTypeClosure');
-            const openWrapper = document.getElementById('slot-type-open-wrapper');
-            const closureWrapper = document.getElementById('slot-type-closure-wrapper');
-            const openFields = document.getElementById('openSlotFields');
-            const closureFields = document.getElementById('closureFields');
-
-            const toggleSlotFields = () => {
-                if (!openRadio || !closureRadio) return; 
-                if (openRadio.checked) {
-                    openFields.style.display = 'grid';
-                    closureFields.style.display = 'none';
-                    openWrapper.classList.add('selected');
-                    closureWrapper.classList.remove('selected');
-                } else {
-                    openFields.style.display = 'none';
-                    closureFields.style.display = 'block';
-                    openWrapper.classList.remove('selected');
-                    closureWrapper.classList.add('selected');
-                }
-            };
-
-            openRadio?.addEventListener('change', toggleSlotFields);
-            closureRadio?.addEventListener('change', toggleSlotFields);
-            openWrapper?.addEventListener('click', () => { if(openRadio) { openRadio.checked = true; toggleSlotFields(); } });
-            closureWrapper?.addEventListener('click', () => { if(closureRadio) { closureRadio.checked = true; toggleSlotFields(); } });
-            
-            toggleSlotFields(); 
         }
         
         if (currentTable === 'products') {
@@ -1706,45 +1592,37 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           formData.append('image', imageFile);
         }
       } else if (table === 'schedule') {
+        // --- MODIFIED SAVE LOGIC FOR CLOSURE ONLY ---
         const schedule_date = document.getElementById('formScheduleDate').value;
-        const slot_type_radio = document.querySelector('input[name="slot_type"]:checked');
         
-        if (!slot_type_radio) {
-            showToast('Please select a schedule type (Open or Closed).', 'error');
-            return;
-        }
         if (!schedule_date) {
             showToast('Please select a date.', 'error');
             return;
         }
         
-        const slot_type = slot_type_radio.value;
-        formData.append('slot_type', slot_type);
-        
-        if (slot_type === 'open') {
-            const time_from = document.getElementById('formTimeFrom').value;
-            const time_to = document.getElementById('formTimeTo').value;
-            
-            if (!time_from || !time_to) {
-                showToast('Please fill in Time From and Time To.', 'error');
-                return;
-            }
-            if (time_from >= time_to) {
+        const reason = document.getElementById('formReason').value.trim();
+        if (!reason) {
+            showToast('Please fill in a Reason for the closure.', 'error');
+            return;
+        }
+
+        const time_from = document.getElementById('formTimeFrom').value;
+        const time_to = document.getElementById('formTimeTo').value;
+
+        // If user entered times, validate them
+        if (time_from && time_to) {
+             if (time_from >= time_to) {
                 showToast('Time From must be earlier than Time To.', 'error');
                 return;
             }
-            formData.append('schedule_date', schedule_date);
-            formData.append('time_from', time_from);
-            formData.append('time_to', time_to);
-        } else { // 'closure'
-            const reason = document.getElementById('formReason').value.trim();
-            if (!reason) {
-                showToast('Please fill in a Reason for the closure.', 'error');
-                return;
-            }
-            formData.append('schedule_date', schedule_date);
-            formData.append('reason', reason);
         }
+
+        formData.append('schedule_date', schedule_date);
+        formData.append('reason', reason);
+        // We always send slot_type='closure' implicitly via logic
+        formData.append('slot_type', 'closure');
+        formData.append('time_from', time_from);
+        formData.append('time_to', time_to);
         
         if (id) {
             formData.append('id', id);
@@ -1813,12 +1691,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
     function confirmRemove() {
       const id = document.getElementById('removeItemId').value;
-    
+      
       if (!id) {
         showToast('Could not find ID', 'error');
         return;
       }
-    
+      
       fetch('product.php', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},

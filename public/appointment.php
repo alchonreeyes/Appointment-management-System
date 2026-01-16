@@ -214,10 +214,11 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
           <option value="">Select Time</option>
           <option value="10:00">10:00 AM</option>
           <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+          <option value="13:00">1:00 PM</option>
+          <option value="14:00">2:00 PM</option>
+          <option value="15:00">3:00 PM</option>
+          <option value="16:00">4:00 PM</option>
+          <option value="17:00">5:00 PM</option>
         </select>
       </div>
     </div>
@@ -246,10 +247,11 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
           <option value="">Select Time</option>
           <option value="10:00">10:00 AM</option>
           <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+          <option value="13:00">1:00 PM</option>
+          <option value="14:00">2:00 PM</option>
+          <option value="15:00">3:00 PM</option>
+          <option value="16:00">4:00 PM</option>
+          <option value="17:00">5:00 PM</option>
         </select>
       </div>
     </div>
@@ -278,10 +280,11 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
           <option value="">Select Time</option>
           <option value="10:00">10:00 AM</option>
           <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+          <option value="13:00">1:00 PM</option>
+          <option value="14:00">2:00 PM</option>
+          <option value="15:00">3:00 PM</option>
+          <option value="16:00">4:00 PM</option>
+          <option value="17:00">5:00 PM</option>
         </select>
       </div>
     </div>
@@ -680,5 +683,8 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         }
     }
 </script>
+<script>
+    
+    </script>
 </body>
 </html>

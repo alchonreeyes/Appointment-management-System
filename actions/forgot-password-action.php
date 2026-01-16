@@ -32,7 +32,7 @@ if (isset($_POST['send_reset'])) {
             $mail->Host = 'smtp.gmail.com';
             $mail->SMTPAuth = true;
             $mail->Username = 'alchonreyez@gmail.com';
-            $mail->Password = 'fojwnzlcxrkqquhs';
+            $mail->Password = 'sdgpjusyveqfzxti';
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
             $mail->setFrom('alchonreyez@gmail.com', 'EyeMaster Clinic');

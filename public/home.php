@@ -245,7 +245,6 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <p class="text-center">No partner brands found.</p>
     <?php endif; ?>
 </section>
-
 <section class="section-padding" style="background: #f4f4f4;">
     <div class="text-center">
         <h2 class="section-title">Eye Master Optical Clinic</h2>
@@ -255,44 +254,266 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="bento-grid">
         <div class="bento-box promo-box">
             <div class="bento-content">
-                
                 <div class="big-text">Free Vision Screening</div>
                 <p>Drop in for a complimentary vision check — no appointment needed for quick screenings.</p>
                 <a href="book_appointment.php" class="bento-btn">Book Now</a>
             </div>
         </div>
 
-        <div class="bento-box img-box" style="background-image: url('../assets/src/hero-img(4).jpg');">
-            <div class="overlay-text">
-                <h3>Visit Our Clinic</h3>
-                <p>State-of-the-art equipment for precise eye exams.</p>
-            </div>
+        <!-- UPDATED: Changed onclick to onmouseenter/onmouseleave -->
+        <div class="bento-box tip-box frame-type-card" 
+             onmouseenter="showMaterialInfo('plastics')" 
+             onmouseleave="hideMaterialInfo()">
+            <h3>Medical Certificate</h3>
+            <br>
+            <p>An official document issued by our optometrists certifying your visual health and fitness after a clinical eye exam.</p>
+            <br>
+            <small style="color: #999; font-size: 0.8rem;">Hover for details</small>
         </div>
 
-        <div class="bento-box tip-box">
-            <div class="icon-top">👁️</div>
-            <h3>Color Vision Test</h3>
-            <p>Trouble seeing colors? We offer Ishihara Color Testing.</p>
-            <a href="services.php" style="color: #d94032; font-weight: bold; text-decoration: none;">Learn More &rarr;</a>
+        <div class="bento-box tip-box frame-type-card" 
+             onmouseenter="showMaterialInfo('titanium')" 
+             onmouseleave="hideMaterialInfo()">
+            <h3>The Ishihara Test</h3>
+            <br>
+            <p>A type of color vision test used to check if a person has color blindness, especially red-green color deficiency.</p>
+            <br>
+            <small style="color: #999; font-size: 0.8rem;">Hover for details</small>
         </div>
 
-        <div class="bento-box img-box" style="background-image: url('../assets/src/pink-glasses.jpg');">
-            <div class="overlay-text">
-                <h3>Confidence in Every Frame</h3>
-                <p>Gender-inclusive eyewear designed to flatter every face and boost everyday confidence.</p>
-            </div>
+        <div class="bento-box tip-box frame-type-card" 
+             onmouseenter="showMaterialInfo('stainless')" 
+             onmouseleave="hideMaterialInfo()">
+            <h3>Full-Rim Lens</h3>
+            <br>
+            <p>A type of eyewear where the *entire edge of the lens is completely surrounded by a frame*.</p>
+            <br>
+            <small style="color: #999; font-size: 0.8rem;">Hover for details</small>
         </div>
 
-        <div class="bento-box feature-box">
-            <h3>New Collection</h3>
-            <p>Anti-Radiation Lenses available now.</p>
-            <img src="../assets/src/hero-img(2).jpg" alt="Glasses">
+        <div class="bento-box tip-box frame-type-card" 
+             onmouseenter="showMaterialInfo('memory')" 
+             onmouseleave="hideMaterialInfo()">
+            <h3>Memory Metal</h3>
+            <p>Flexible & returns to shape</p>
+            <small style="color: #999; font-size: 0.8rem;">Hover for details</small>
         </div>
     </div>
 </section>
+<!-- MOVE MODAL HTML HERE - BEFORE THE SCRIPT -->
+<div id="hoverModal" class="hover-modal">
+    <div class="hover-modal-content">
+        <h3 id="modalTitle"></h3>
+        <div id="modalBody"></div>
+    </div>
+</div>
+<script>
 
-<?php include '../includes/footer.php'; ?>
-<script src="../actions/home-imageCarousel.js"></script>
+const hoverModal = document.getElementById('hoverModal');
+const modalTitle = document.getElementById('modalTitle');
+const modalBody = document.getElementById('modalBody');
+let scrollInterval = null;
+let scrollTimeout = null;
 
+// Store all the frame material data
+const frameMaterials = {
+    plastics: {
+        title: 'Medical Certificate',
+        content: `
+            <p>An official document certifying your visual health and fitness after a clinical eye exam.</p>
+            
+            <p><strong>What it includes:</strong></p>
+            <ul>
+                <li>Visual acuity results (e.g., 20/20)</li>
+                <li>Color vision assessment</li>
+                <li>Medical fitness certification</li>
+            </ul>
+            
+            <p><strong>Common uses:</strong></p>
+            <ul>
+                <li>LTO License applications</li>
+                <li>Employment requirements</li>
+                <li>School/sports clearances</li>
+            </ul>
+        `
+    },
+    titanium: {
+        title: 'Ishihara Test',
+        content: `
+            <p>A type of color vision test used to check if a person has color blindness, especially red-green color deficiency. Named after Dr. Shinobu Ishihara, the Japanese ophthalmologist who created it.</p>
+
+            <p><strong>How the test works:</strong></p>
+            <ul>
+                <li>You are shown several plates (circles made of many colored dots).</li>
+                <li>Inside each circle is a number or shape made of dots in a slightly different color.</li>
+                <li>People with normal color vision can see the number clearly.</li>
+                <li>People with color blindness may see a different number or not see any number at all.</li>
+            </ul>
+
+            <p><strong>What it detects:</strong></p>
+            <ul>
+                <li>Mostly red-green color blindness (most common)</li>
+                <li>May also help screen other color vision problems</li>
+            </ul>
+
+            <p><strong>Where it is used:</strong></p>
+            <ul>
+                <li>Eye clinics</li>
+                <li>School screenings</li>
+                <li>Driver's license or job medical exams</li>
+                <li>Military or aviation exams</li>
+            </ul>
+        `
+    },
+    stainless: {
+        title: 'Full-Rim Lens',
+        content: `
+            <p>A type of eyewear where the entire edge of the lens is completely surrounded by a frame.</p>
+            
+            <p><strong>Characteristics:</strong></p>
+            <ul>
+                <li><strong>Durability:</strong> Offers maximum protection and support for lenses.</li>
+                <li><strong>Versatility:</strong> Available in various materials and styles.</li>
+                <li><strong>Lens Security:</strong> Lenses are firmly held in place, reducing risk of damage.</li>
+            </ul>
+            
+            <p><strong>Benefits:</strong></p>
+            <ul>
+                <li>Best option for stronger prescriptions</li>
+                <li>Wide range of frame styles available</li>
+                <li>Provides excellent lens protection</li>
+                <li>Suitable for all face shapes</li>
+            </ul>
+        `
+    },
+    memory: {
+        title: 'Memory Metal',
+        content: `
+            <p>Advanced frame material that can bend and return to its original shape, offering exceptional flexibility and durability.</p>
+            
+            <p><strong>Key Features:</strong></p>
+            <ul>
+                <li><strong>Flexibility:</strong> Can bend significantly without breaking</li>
+                <li><strong>Shape Recovery:</strong> Returns to original form automatically</li>
+                <li><strong>Lightweight:</strong> Comfortable for all-day wear</li>
+                <li><strong>Durability:</strong> Highly resistant to damage</li>
+            </ul>
+            
+            <p><strong>Ideal For:</strong></p>
+            <ul>
+                <li>Active users and athletes</li>
+                <li>Children and teenagers</li>
+                <li>People who are hard on their glasses</li>
+                <li>Those seeking maximum comfort</li>
+            </ul>
+        `
+    }
+};
+
+// NEW: Auto-scroll function
+function startAutoScroll() {
+    const content = document.querySelector('.hover-modal-content');
+    if (!content) return;
+    
+    let scrollDirection = 1; // 1 = down, -1 = up
+    let isPaused = false;
+    
+    scrollInterval = setInterval(() => {
+        if (isPaused) return;
+        
+        const maxScroll = content.scrollHeight - content.clientHeight;
+        const currentScroll = content.scrollTop;
+        
+        // Check if we've reached the bottom
+        if (currentScroll >= maxScroll && scrollDirection === 1) {
+            isPaused = true;
+            setTimeout(() => {
+                scrollDirection = -1; // Change to scroll up
+                isPaused = false;
+            }, 3000); // Pause for 3 seconds at bottom
+        }
+        
+        // Check if we've reached the top
+        else if (currentScroll <= 0 && scrollDirection === -1) {
+            isPaused = true;
+            setTimeout(() => {
+                scrollDirection = 1; // Change to scroll down
+                isPaused = false;
+            }, 3000); // Pause for 3 seconds at top
+        }
+        
+        // Scroll slowly
+        else {
+            content.scrollTop += scrollDirection * 10; // 1px per interval = slow scroll
+        }
+        
+    }, 30); // Update every 30ms for smooth scrolling
+}
+
+// NEW: Stop auto-scroll function
+function stopAutoScroll() {
+    if (scrollInterval) {
+        clearInterval(scrollInterval);
+        scrollInterval = null;
+    }
+    if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+        scrollTimeout = null;
+    }
+}
+
+// Show modal on HOVER
+function showMaterialInfo(materialKey) {
+    const material = frameMaterials[materialKey];
+    if (!material) return;
+    
+    modalTitle.textContent = material.title;
+    modalBody.innerHTML = material.content;
+    hoverModal.style.display = 'flex';
+    
+    // Reset scroll position to top
+    const content = document.querySelector('.hover-modal-content');
+    if (content) {
+        content.scrollTop = 0;
+    }
+    
+    // Start auto-scrolling after 2 seconds delay (so user can start reading)
+    scrollTimeout = setTimeout(() => {
+        startAutoScroll();
+    }, 2000);
+}
+
+// Hide modal when mouse leaves
+function hideMaterialInfo() {
+    hoverModal.style.display = 'none';
+    stopAutoScroll(); // Stop scrolling when modal closes
+}
+
+// Close modal when clicking outside
+hoverModal.addEventListener('click', function(e) {
+    if (e.target === hoverModal) {
+        hideMaterialInfo();
+    }
+});
+
+// Close modal with ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideMaterialInfo();
+    }
+});
+
+// NEW: Pause auto-scroll when user manually scrolls or hovers over content
+const modalContent = document.querySelector('.hover-modal-content');
+if (modalContent) {
+    modalContent.addEventListener('wheel', function() {
+        stopAutoScroll(); // Stop auto-scroll if user manually scrolls
+    });
+    
+    modalContent.addEventListener('touchstart', function() {
+        stopAutoScroll(); // Stop auto-scroll if user touches (mobile)
+    });
+}
+</script>
 </body>
 </html>
