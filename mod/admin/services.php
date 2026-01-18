@@ -185,7 +185,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
         .btn-primary:hover { background: #2563eb; transform: translateY(-2px); }
         .btn-success { background: #10b981; color: white; font-size: 16px; }
         .btn-danger { background: #ef4444; color: white; padding: 8px 16px; }
-        .btn-edit { background: #f59e0b; color: white; padding: 8px 16px; }
+        .btn-edit { background: #10b981; color: white; padding: 8px 16px; }
         
         .services-table { width: 100%; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .services-table thead { background: #004aad; color: white; }

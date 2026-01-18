@@ -150,43 +150,86 @@ if (isset($_POST['action'])) {
             }
 
         } elseif ($table === 'schedule') {
-            
-            $schedule_date = trim($_POST['schedule_date'] ?? '');
-            $reason = trim($_POST['reason'] ?? 'Store Closure');
-            $time_from = trim($_POST['time_from'] ?? '');
-            $time_to = trim($_POST['time_to'] ?? '');
+    
+    // LOG 1: What data did we receive?
+    error_log("=== ADD SCHEDULE DEBUG ===");
+    error_log("POST data: " . print_r($_POST, true));
+    error_log("FILES data: " . print_r($_FILES, true));
+    
+    $schedule_date = trim($_POST['schedule_date'] ?? '');
+    $reason = trim($_POST['reason'] ?? '');
+    $time_from = trim($_POST['time_from'] ?? '');
+    $time_to = trim($_POST['time_to'] ?? '');
+    
+    // LOG 2: After trimming
+    error_log("schedule_date: [$schedule_date]");
+    error_log("reason: [$reason]");
+    error_log("time_from: [$time_from]");
+    error_log("time_to: [$time_to]");
 
-            if (!$schedule_date) {
-                echo json_encode(['success' => false, 'message' => 'Server validation failed: Date is required.']);
-                exit;
-            }
+    // Validation
+    if (!$schedule_date) {
+        error_log("ERROR: Missing schedule_date");
+        echo json_encode(['success' => false, 'message' => 'Server validation failed: Date is required.']);
+        exit;
+    }
+    
+    if (!$reason) {
+        error_log("ERROR: Missing reason");
+        echo json_encode(['success' => false, 'message' => 'Server validation failed: Reason is required.']);
+        exit;
+    }
 
-            if (!empty($time_from) && !empty($time_to)) {
-                if (strtotime($time_from) >= strtotime($time_to)) {
-                    echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
-                    exit;
-                }
-            } else {
-                $time_from = null;
-                $time_to = null;
-            }
+    // Convert empty strings to NULL for database
+    $time_from = (!empty($time_from)) ? $time_from : null;
+    $time_to = (!empty($time_to)) ? $time_to : null;
+    
+    // LOG 3: After NULL conversion
+    error_log("time_from after NULL check: " . ($time_from === null ? 'NULL' : $time_from));
+    error_log("time_to after NULL check: " . ($time_to === null ? 'NULL' : $time_to));
 
-            try {
-                $stmt_insert = $conn->prepare("
-                    INSERT INTO schedule_settings (schedule_date, status, reason, time_from, time_to)
-                    VALUES (?, 'Closed', ?, ?, ?)
-                    ON DUPLICATE KEY UPDATE
-                    status = 'Closed', reason = VALUES(reason), time_from = VALUES(time_from), time_to = VALUES(time_to)
-                ");
-                $stmt_insert->bind_param("sssss", $schedule_date, $reason, $time_from, $time_to);
-                $stmt_insert->execute();
+    // Validate times if both provided
+    if ($time_from !== null && $time_to !== null) {
+        if ($time_from >= $time_to) {
+            error_log("ERROR: Time validation failed");
+            echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
+            exit;
+        }
+    }
 
-                echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
-                
-            } catch (Exception $e) {
-                error_log("AddClosure error: " . $e->getMessage());
-                echo json_encode(['success' => false, 'message' => 'Database error during add.']);
-            }
+    try {
+        error_log("LOG 4: Attempting database insert...");
+        
+        $stmt_insert = $conn->prepare("
+            INSERT INTO schedule_settings (schedule_date, status, reason, time_from, time_to)
+            VALUES (?, 'Closed', ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+            status = 'Closed', reason = VALUES(reason), time_from = VALUES(time_from), time_to = VALUES(time_to)
+        ");
+        
+        if (!$stmt_insert) {
+            error_log("ERROR: Prepare failed: " . $conn->error);
+            echo json_encode(['success' => false, 'message' => 'Database prepare error: ' . $conn->error]);
+            exit;
+        }
+        
+        $stmt_insert->bind_param("ssss", $schedule_date, $reason, $time_from, $time_to);
+        
+        error_log("LOG 5: Executing query...");
+        if (!$stmt_insert->execute()) {
+            error_log("ERROR: Execute failed: " . $stmt_insert->error);
+            echo json_encode(['success' => false, 'message' => 'Database execute error: ' . $stmt_insert->error]);
+            exit;
+        }
+        
+        error_log("LOG 6: Success! Affected rows: " . $stmt_insert->affected_rows);
+        echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
+        
+    } catch (Exception $e) {
+        error_log("EXCEPTION: " . $e->getMessage());
+        echo json_encode(['success' => false, 'message' => 'Exception: ' . $e->getMessage()]);
+    }
+
         
         } else {
             $name = trim($_POST['service_name'] ?? '');
@@ -834,7 +877,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php" class="active">💊 Product & Services</a>
-        <a href="account.php">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
       </nav>
     </header>
@@ -1592,43 +1634,53 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           formData.append('image', imageFile);
         }
       } else if (table === 'schedule') {
-        // --- MODIFIED SAVE LOGIC FOR CLOSURE ONLY ---
-        const schedule_date = document.getElementById('formScheduleDate').value;
-        
-        if (!schedule_date) {
-            showToast('Please select a date.', 'error');
+    // --- MODIFIED SAVE LOGIC FOR CLOSURE ONLY ---
+    const schedule_date = document.getElementById('formScheduleDate').value;
+    
+    console.log('=== SAVE SCHEDULE DEBUG ===');
+    console.log('schedule_date:', schedule_date);
+    
+    if (!schedule_date) {
+        showToast('Please select a date.', 'error');
+        return;
+    }
+    
+    const reason = document.getElementById('formReason').value.trim();
+    console.log('reason:', reason);
+    
+    if (!reason) {
+        showToast('Please fill in a Reason for the closure.', 'error');
+        return;
+    }
+
+    const time_from = document.getElementById('formTimeFrom').value;
+    const time_to = document.getElementById('formTimeTo').value;
+    
+    console.log('time_from:', time_from);
+    console.log('time_to:', time_to);
+
+    // If user entered times, validate them
+    if (time_from && time_to) {
+         if (time_from >= time_to) {
+            showToast('Time From must be earlier than Time To.', 'error');
             return;
         }
-        
-        const reason = document.getElementById('formReason').value.trim();
-        if (!reason) {
-            showToast('Please fill in a Reason for the closure.', 'error');
-            return;
-        }
+    }
 
-        const time_from = document.getElementById('formTimeFrom').value;
-        const time_to = document.getElementById('formTimeTo').value;
-
-        // If user entered times, validate them
-        if (time_from && time_to) {
-             if (time_from >= time_to) {
-                showToast('Time From must be earlier than Time To.', 'error');
-                return;
-            }
-        }
-
-        formData.append('schedule_date', schedule_date);
-        formData.append('reason', reason);
-        // We always send slot_type='closure' implicitly via logic
-        formData.append('slot_type', 'closure');
-        formData.append('time_from', time_from);
-        formData.append('time_to', time_to);
-        
-        if (id) {
-            formData.append('id', id);
-        }
-        
-      } else { // Para sa services
+    formData.append('schedule_date', schedule_date);
+    formData.append('reason', reason);
+    formData.append('time_from', time_from || '');
+    formData.append('time_to', time_to || '');
+    
+    console.log('FormData contents:');
+    for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+    }
+    
+    if (id) {
+        formData.append('id', id);
+    }
+} else { // Para sa services
         const name = document.getElementById('formServiceName').value.trim();
         const description = document.getElementById('formDescription').value.trim();
         let errors = [];

@@ -143,7 +143,7 @@ require_once __DIR__ . '/../../config/encryption_util.php';
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
-        <a href="account.php">👤 Account</a>
+        
         <a href="profile.php">🔍 Profile</a>
     </nav>
 </header>

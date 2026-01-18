@@ -1,5 +1,4 @@
 <?php
-// Create this new file: /actions/get-closed-dates.php
 header('Content-Type: application/json');
 require_once '../config/db.php';
 
@@ -7,11 +6,13 @@ try {
     $db = new Database();
     $pdo = $db->getConnection();
     
-    // Fetch all closed dates from schedule_settings
+    // âœ… ONLY fetch dates where ENTIRE day is closed (time_from and time_to are NULL)
     $stmt = $pdo->prepare("
         SELECT schedule_date, reason 
         FROM schedule_settings 
-        WHERE status = 'Closed'
+        WHERE status = 'Closed' 
+          AND time_from IS NULL 
+          AND time_to IS NULL
         ORDER BY schedule_date ASC
     ");
     $stmt->execute();
@@ -32,3 +33,4 @@ try {
         'message' => 'Error fetching closed dates: ' . $e->getMessage()
     ]);
 }
+?>

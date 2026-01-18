@@ -5,11 +5,20 @@ require_once __DIR__ . '/../database.php';
 // 2. HANDLE FORM SUBMISSION
 $success_msg = '';
 $error_msg = '';
-
-if (!isset($_SESSION['id']) || $_SESSION['role'] !== 'admin') {
-    header("Location: ../../public/login.php");
-    exit();
+// =======================================================
+// 1. INAYOS NA SECURITY CHECK
+// =======================================================
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+    if (isset($_POST['action'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+    } else {
+        header('Location: ../../public/login.php');
+    }
+    exit;
 }
+
+
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     
     $name = trim($_POST['product_name']);

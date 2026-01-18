@@ -183,11 +183,30 @@ try {
         if (empty($date) || empty($time)) continue;
         
         // Check closed dates
-        $checkClosed = $pdo->prepare("SELECT status FROM schedule_settings WHERE schedule_date = ? AND status = 'Closed'");
-        $checkClosed->execute([$date]);
-        if ($checkClosed->fetch()) {
-            throw new Exception("Sorry, the clinic is closed on " . date('F j, Y', strtotime($date)) . ".");
-        }
+        // Check closed dates and times
+$checkClosed = $pdo->prepare("
+    SELECT time_from, time_to 
+    FROM schedule_settings 
+    WHERE schedule_date = ? AND status = 'Closed'
+");
+$checkClosed->execute([$date]);
+$closure = $checkClosed->fetch(PDO::FETCH_ASSOC);
+
+if ($closure) {
+    // If time_from and time_to are NULL, entire day is closed
+    if ($closure['time_from'] === null && $closure['time_to'] === null) {
+        throw new Exception("Sorry, the clinic is closed on " . date('F j, Y', strtotime($date)) . ".");
+    }
+    
+    // Check if appointment time falls within closure range
+    $timeFrom = $closure['time_from'];
+    $timeTo = $closure['time_to'];
+    $checkTime = $time . ':00';
+    
+    if ($checkTime >= $timeFrom && $checkTime <= $timeTo) {
+        throw new Exception("Sorry, the clinic is closed from " . date('g:i A', strtotime($timeFrom)) . " to " . date('g:i A', strtotime($timeTo)) . " on " . date('F j, Y', strtotime($date)) . ".");
+    }
+}
 
         // ✅ ATOMIC CHECK: Lock the row for this slot
         $checkSlot = $pdo->prepare("

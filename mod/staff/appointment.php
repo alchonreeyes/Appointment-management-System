@@ -1058,7 +1058,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         <a href="appointment.php" class="active">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
-        <a href="account.php">👤 Account</a>
+        
         <a href="profile.php">🔍 Profile</a>
     </nav>
     </header>

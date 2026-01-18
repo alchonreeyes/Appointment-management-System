@@ -18,8 +18,39 @@ try {
 
     // All possible times
     $allTimes = ['10:00', '11:00', '13:30', '14:30', '15:30', '16:30'];
+    $unavailableTimes = [];
 
-    // Get booked times for this date
+    // 1. Check if entire day is closed
+    $checkClosed = $pdo->prepare("
+        SELECT time_from, time_to 
+        FROM schedule_settings 
+        WHERE schedule_date = ? AND status = 'Closed'
+    ");
+    $checkClosed->execute([$date]);
+    $closure = $checkClosed->fetch(PDO::FETCH_ASSOC);
+
+    if ($closure) {
+        // If time_from and time_to are NULL, entire day is closed
+        if ($closure['time_from'] === null && $closure['time_to'] === null) {
+            $unavailableTimes = $allTimes;
+        } else {
+            // Partial closure - disable times within the range
+            $timeFrom = $closure['time_from'];
+            $timeTo = $closure['time_to'];
+            
+            foreach ($allTimes as $time) {
+                // Convert to comparable format (HH:MM:SS)
+                $checkTime = $time . ':00';
+                
+                // If time falls within closure range, mark as unavailable
+                if ($checkTime >= $timeFrom && $checkTime <= $timeTo) {
+                    $unavailableTimes[] = $time;
+                }
+            }
+        }
+    }
+
+    // 2. Get fully booked times for this date
     $stmt = $pdo->prepare("
         SELECT appointment_time 
         FROM appointment_slots 
@@ -28,18 +59,22 @@ try {
     $stmt->execute([$service_id, $date]);
     $bookedTimes = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Convert to array of unavailable times
-    $unavailableTimes = array_map(function($time) {
-        return date('H:i', strtotime($time));
-    }, $bookedTimes);
+    // Add booked times to unavailable list
+    foreach ($bookedTimes as $time) {
+        $formattedTime = date('H:i', strtotime($time));
+        if (!in_array($formattedTime, $unavailableTimes)) {
+            $unavailableTimes[] = $formattedTime;
+        }
+    }
 
-    // Check if all times are booked
+    // Check if all times are unavailable
     $allBooked = count($unavailableTimes) >= count($allTimes);
 
     echo json_encode([
         'success' => true,
         'unavailable_times' => $unavailableTimes,
-        'all_booked' => $allBooked
+        'all_booked' => $allBooked,
+        'closure_info' => $closure // For debugging
     ]);
 
 } catch (Exception $e) {

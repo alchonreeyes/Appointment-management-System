@@ -459,7 +459,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         <a href="appointment.php" >📅 Appointments</a>
         <a href="patient_record.php" class="active">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
-        <a href="account.php">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
       </nav>
     </header>
