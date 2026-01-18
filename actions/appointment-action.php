@@ -4,6 +4,78 @@ header('Content-Type: application/json');
 include '../config/db.php';
 require_once __DIR__ . '/../config/encryption_util.php'; 
 
+// ========================================
+// HELPER FUNCTION: Suspend spammer and clean up
+// ========================================
+function suspendSpammer($pdo, $client_id, $bookingsToCancel, $reason) {
+    $pdo->beginTransaction();
+    
+    try {
+        if (empty($bookingsToCancel)) {
+            throw new Exception("No bookings to cancel");
+        }
+        
+        // 1. Cancel all flagged appointments
+        $cancelIds = array_column($bookingsToCancel, 'appointment_id');
+        $placeholders = str_repeat('?,', count($cancelIds) - 1) . '?';
+        
+        $pdo->prepare("
+            UPDATE appointments 
+            SET status_id = 5, 
+                reason_cancel = ?
+            WHERE appointment_id IN ($placeholders)
+        ")->execute(array_merge([$reason], $cancelIds));
+        
+        // 2. Restore all slots
+        foreach ($bookingsToCancel as $booking) {
+            $pdo->prepare("
+                UPDATE appointment_slots 
+                SET used_slots = GREATEST(used_slots - 1, 0)
+                WHERE service_id = ? 
+                  AND appointment_date = ? 
+                  AND appointment_time = ?
+            ")->execute([
+                $booking['service_id'],
+                $booking['appointment_date'],
+                $booking['appointment_time']
+            ]);
+        }
+        
+        // 3. Suspend account
+        $pdo->prepare("
+            UPDATE clients 
+            SET account_status = 'suspended' 
+            WHERE client_id = ?
+        ")->execute([$client_id]);
+        
+        // 4. Log incident
+        $pdo->prepare("
+            INSERT INTO spam_log (client_id, booking_count, detection_time, ip_address, reason)
+            VALUES (?, ?, NOW(), ?, ?)
+        ")->execute([
+            $client_id, 
+            count($bookingsToCancel), 
+            $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            $reason
+        ]);
+        
+        $pdo->commit();
+        
+        echo json_encode([
+            'success' => false, 
+            'message' => '⚠️ Your account has been suspended due to unusual booking activity. All recent appointments have been cancelled. Please contact the clinic to resolve this issue.'
+        ]);
+        
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        error_log("Suspend spammer error: " . $e->getMessage());
+        echo json_encode([
+            'success' => false, 
+            'message' => 'System error. Please contact the clinic.'
+        ]);
+    }
+}
+
 try {
     $db = new Database();
     $pdo = $db->getConnection();
@@ -41,96 +113,118 @@ try {
     }
 
     // ========================================
-    // 4. COOLDOWN CHECK (15 Minutes)
+    // 4. IMPROVED ANTI-SPAM DETECTION
     // ========================================
-    $cooldown_seconds = 60; // 1 minute
-if (isset($_SESSION['last_appointment_time'])) {
-    $time_passed = time() - $_SESSION['last_appointment_time'];
-    $time_remaining = $cooldown_seconds - $time_passed;
-    if ($time_remaining > 0) {
-        $seconds_left = $time_remaining;
-        echo json_encode(['success' => false, 'message' => "Please wait $seconds_left second(s) before booking again."]);
+
+    // 🔥 CHECK 1: Cooldown between bookings (30 seconds)
+    $cooldown_seconds = 30;
+    if (isset($_SESSION['last_appointment_time'])) {
+        $time_passed = time() - $_SESSION['last_appointment_time'];
+        $time_remaining = $cooldown_seconds - $time_passed;
+        if ($time_remaining > 0) {
+            echo json_encode([
+                'success' => false, 
+                'message' => "Please wait $time_remaining second(s) before booking again."
+            ]);
+            exit;
+        }
+    }
+
+    // 🔥 CHECK 2: Rapid booking detection (5+ appointments in 5 minutes)
+    $checkRapid = $pdo->prepare("
+        SELECT appointment_id, appointment_date, appointment_time, service_id, created_at
+        FROM appointments 
+        WHERE client_id = ? 
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+          AND status_id IN (1, 2)
+        ORDER BY created_at DESC
+    ");
+    $checkRapid->execute([$client_id]);
+    $rapidBookings = $checkRapid->fetchAll(PDO::FETCH_ASSOC);
+    $rapidCount = count($rapidBookings);
+
+    // 🚨 INSTANT SPAM: 5+ appointments in 5 minutes
+    if ($rapidCount >= 5) {
+        error_log("🚨 RAPID SPAM: Client ID $client_id booked $rapidCount appointments in 5 minutes");
+        suspendSpammer($pdo, $client_id, $rapidBookings, "Rapid booking spam: $rapidCount appointments in 5 minutes");
         exit;
     }
-}
+
+    // 🔥 CHECK 3: Daily slot hoarding (15+ appointments in 24 hours)
+    $checkDaily = $pdo->prepare("
+        SELECT appointment_id, appointment_date, appointment_time, service_id, created_at
+        FROM appointments 
+        WHERE client_id = ? 
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+          AND status_id IN (1, 2)
+        ORDER BY created_at DESC
+    ");
+    $checkDaily->execute([$client_id]);
+    $dailyBookings = $checkDaily->fetchAll(PDO::FETCH_ASSOC);
+    $dailyCount = count($dailyBookings);
+
+    // 🚨 SLOT HOARDING: 15+ appointments in 24 hours
+    if ($dailyCount >= 15) {
+        error_log("🚨 SLOT HOARDING: Client ID $client_id has $dailyCount appointments in 24 hours");
+        suspendSpammer($pdo, $client_id, $dailyBookings, "Slot hoarding: $dailyCount appointments in 24 hours");
+        exit;
+    }
+
+    // 🔥 CHECK 4: Pattern detection - Same time slots being booked repeatedly
+    $checkPattern = $pdo->prepare("
+        SELECT appointment_time, COUNT(*) as time_count
+        FROM appointments 
+        WHERE client_id = ? 
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+          AND status_id IN (1, 2)
+        GROUP BY appointment_time
+        HAVING time_count >= 3
+    ");
+    $checkPattern->execute([$client_id]);
+    $suspiciousPatterns = $checkPattern->fetchAll(PDO::FETCH_ASSOC);
+
+    // 🚨 PATTERN SPAM: Booking same time slot 3+ times in 2 hours
+    if (count($suspiciousPatterns) > 0) {
+        error_log("🚨 PATTERN SPAM: Client ID $client_id booking same time slots repeatedly");
+        
+        // Get all their recent bookings for cancellation
+        $checkRecent = $pdo->prepare("
+            SELECT appointment_id, appointment_date, appointment_time, service_id
+            FROM appointments 
+            WHERE client_id = ? 
+              AND created_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+              AND status_id IN (1, 2)
+        ");
+        $checkRecent->execute([$client_id]);
+        $recentBookings = $checkRecent->fetchAll(PDO::FETCH_ASSOC);
+        
+        suspendSpammer($pdo, $client_id, $recentBookings, "Suspicious pattern: Booking same time slots repeatedly");
+        exit;
+    }
+
+    // 🔥 CHECK 5: Normal limit - Max 6 appointments per 2 hours (WITH SUSPENSION)
+    $checkTwoHour = $pdo->prepare("
+        SELECT appointment_id, appointment_date, appointment_time, service_id, created_at
+        FROM appointments 
+        WHERE client_id = ? 
+          AND created_at >= DATE_SUB(NOW(), INTERVAL 2 HOUR)
+          AND status_id IN (1, 2)
+        ORDER BY created_at DESC
+    ");
+    $checkTwoHour->execute([$client_id]);
+    $twoHourBookings = $checkTwoHour->fetchAll(PDO::FETCH_ASSOC);
+    $twoHourCount = count($twoHourBookings);
+
+    if ($twoHourCount >= 6) {
+        error_log("🚨 EXCESSIVE BOOKING: Client ID $client_id has $twoHourCount appointments in 2 hours");
+        suspendSpammer($pdo, $client_id, $twoHourBookings, "Excessive booking: $twoHourCount appointments in 2 hours");
+        exit;
+    }
 
     // ========================================
-// 5. ANTI-SPAM: Detect Aggressive Booking
-// ========================================
-// Check bookings in last 10 minutes
-$checkAggressive = $pdo->prepare("
-    SELECT appointment_id, appointment_date, appointment_time, service_id
-    FROM appointments 
-    WHERE client_id = ? 
-      AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)
-      AND status_id IN (1, 2)
-    ORDER BY created_at DESC
-");
-$checkAggressive->execute([$client_id]);
-$recentBookings = $checkAggressive->fetchAll(PDO::FETCH_ASSOC);
-$recentCount = count($recentBookings);
-
-
-// If 6+ bookings in 10 minutes = SPAMMER
-// (3 appointments per booking × 2 bookings = 6 appointments)
-if ($recentCount >= 6) {
-    
-    // 1. Cancel all their recent appointments
-    $cancelIds = array_column($recentBookings, 'appointment_id');
-    $placeholders = str_repeat('?,', count($cancelIds) - 1) . '?';
-    
-    $pdo->prepare("
-        UPDATE appointments 
-        SET status_id = 5, reason_cancel = 'Auto-cancelled: Suspicious activity detected'
-        WHERE appointment_id IN ($placeholders)
-    ")->execute($cancelIds);
-    
-  // 2. Restore all slots they took
-    foreach ($recentBookings as $booking) {
-        $pdo->prepare("
-            UPDATE appointment_slots 
-            SET used_slots = used_slots - 1 
-            WHERE service_id = ? 
-              AND appointment_date = ? 
-              AND appointment_time = ?
-              AND used_slots > 0
-        ")->execute([
-            $booking['service_id'],
-            $booking['appointment_date'],
-            $booking['appointment_time']
-        ]);
-    }
-    
-    // 3. Suspend the account
-    $pdo->prepare("UPDATE clients SET account_status = 'suspended' WHERE client_id = ?")
-        ->execute([$client_id]);
-    
-    echo json_encode([
-        'success' => false, 
-        'message' => 'Account suspended: Suspicious booking activity detected. All recent appointments have been cancelled. Please contact the clinic to resolve this issue.'
-    ]);
-    exit;
-}
-// Normal check: Max 3 appointments per hour
-$checkDaily = $pdo->prepare("
-    SELECT COUNT(*) as daily_count 
-    FROM appointments 
-    WHERE client_id = ? 
-      AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)
-      AND status_id IN (1, 2)
-");
-$checkDaily->execute([$client_id]);
-$dailyCount = $checkDaily->fetch()['daily_count'];
-
-if ($dailyCount >= 3) {
-    echo json_encode([
-        'success' => false, 
-        'message' => 'You can only book 3 appointments per hour. Please try again later.'
-    ]);
-    exit;
-    
-}
-
+    // 6. ENCRYPT SENSITIVE DATA
+    // ========================================
+    // ... rest of your code continues here
     // ========================================
     // 6. ENCRYPT SENSITIVE DATA
     // ========================================
