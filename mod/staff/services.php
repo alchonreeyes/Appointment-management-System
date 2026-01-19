@@ -10,7 +10,7 @@ try {
 }
 
 // 2. SECURITY CHECK
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     if (isset($_POST['action'])) {
         header('Content-Type: application/json');
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -383,6 +383,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
           
                 <th>Actions</th>
             </tr>
+
         </thead>
         <tbody>
     <?php foreach ($services as $service): ?>
@@ -551,7 +552,7 @@ async function deleteService(serviceId) {
     } else {
         alert('❌ ' + json.message);
     }
-}
+}   
 
 // Open Form Builder
 async function openFormBuilder(serviceId) {

@@ -662,7 +662,7 @@ p {
 }
 
 /* Text Label - LARGER font */
-..shape-label-text {
+.shape-label-text {
     font-size: 13px;
     font-weight: 600;
     color: #333;
