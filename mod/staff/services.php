@@ -368,7 +368,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <div class="container">
     <div class="header">
         <h1>📋 Service Management</h1>
-        <i class="fas fa-plus"></i> <a href="product.php">
+        <i class="fas fa-plus" style="color: white;"></i> <a href="product.php">
         <button class="btn btn-primary" >
                 Back
             </button>

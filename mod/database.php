@@ -1,16 +1,16 @@
 <?php
 // Configuration for the database connection
-$servername = "localhost";
-$username = "root";
-$password = ""; // Your XAMPP MySQL password (usually blank)
-$dbname = "capstone"; // Ito ang database mo base sa .sql file
+// Use environment variables or define constants for easy credential management
+$servername = getenv('DB_SERVER') ?: "localhost";
+$username = getenv('DB_USER') ?: "root";
+$password = getenv('DB_PASS') ?: "";
+$dbname = getenv('DB_NAME') ?: "capstone";
 
 // Create connection using mysqli
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 // Check connection
 if ($conn->connect_error) {
-    // Show a detailed error for debugging
     die("Connection failed: " . $conn->connect_error);
 }
 

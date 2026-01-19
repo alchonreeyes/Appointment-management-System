@@ -380,7 +380,6 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <tr>
                 <th>Service Name</th>
                 <th>Description</th>
-          
                 <th>Actions</th>
             </tr>
         </thead>
@@ -551,7 +550,7 @@ async function deleteService(serviceId) {
     } else {
         alert('❌ ' + json.message);
     }
-}
+}   
 
 // Open Form Builder
 async function openFormBuilder(serviceId) {

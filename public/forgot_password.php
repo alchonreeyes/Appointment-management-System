@@ -49,7 +49,7 @@ if (isset($_SESSION['client_id'])) {
 
         /* Card Header (Red Area) */
         .card-header {
-            background-color: #D94032; /* The specific red tone */
+            background-color: red; /* The specific red tone */
             color: white;
             text-align: center;
             padding: 40px 20px;
