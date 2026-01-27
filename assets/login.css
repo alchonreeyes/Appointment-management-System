@@ -69,8 +69,10 @@ body {
     letter-spacing: 0.5px;
 }
 
+/* ✅ Updated to include text type for when password is visible */
 .input-group input[type="email"],
-.input-group input[type="password"] {
+.input-group input[type="password"],
+.input-group input[type="text"] { 
     width: 100%;
     padding: 14px 0;
     border: none;
@@ -86,6 +88,7 @@ body {
     outline: none;
     border-bottom-color: #f51f1f;
 }
+
 
 .input-group input::placeholder {
     color: #ccc;

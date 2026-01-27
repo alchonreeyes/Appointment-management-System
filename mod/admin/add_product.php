@@ -86,7 +86,15 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
             
             if ($stmt->execute()) {
                 $new_product_id = $conn->insert_id; 
+                // Generate Reference ID: BRAND-YEAR-ID (e.g., AIR-2026-030)
+$brand_prefix = strtoupper(substr($brand, 0, 3)); // First 3 letters of brand
+$year = date('Y');
+$ref_id = $brand_prefix . '-' . $year . '-' . str_pad($new_product_id, 3, '0', STR_PAD_LEFT);
 
+// Update the product with reference_id
+$update_ref = $conn->prepare("UPDATE products SET reference_id = ? WHERE product_id = ?");
+$update_ref->bind_param("si", $ref_id, $new_product_id);
+$update_ref->execute();
                 // D. HANDLE GALLERY IMAGES
                 if (isset($_FILES['gallery_images'])) {
                     $g_files = $_FILES['gallery_images'];

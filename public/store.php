@@ -11,6 +11,21 @@ session_start();
     <link rel="stylesheet" href="../assets/navbar.css">
     <link rel="stylesheet" href="../assets/store.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+    html {
+        height: 100%;
+    }
+    
+    body {
+        min-height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .store-container {
+        flex: 1;
+    }
+</style>
 </head>
 <body>
 

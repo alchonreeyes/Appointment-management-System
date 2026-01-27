@@ -1,15 +1,30 @@
 <?php
-// browse.php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "capstone";
+// browse.php - Database Configuration with Environment Support
+
+// Detect environment
+$isLocal = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === 'localhost:80' || $_SERVER['HTTP_HOST'] === '127.0.0.1');
+
+if ($isLocal) {
+    // LOCAL DEVELOPMENT
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "capstone";
+} else {
+    // INFINITYFREE PRODUCTION
+    $servername = "sql100.infinityfree.com";
+    $username = "if0_40958419";
+    $password = "TQa6Uyin3H";
+    $dbname = "if0_40958419_capstone";
+}
 
 $conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
 }
+
+$conn->set_charset("utf8mb4");
 
 // 1. CAPTURE THE SEARCH TERM
 $searchTerm = isset($_GET['search']) ? trim($_GET['search']) : '';

@@ -3,7 +3,12 @@ session_start();
 
 // 1. DATABASE CONNECTION (PDO)
 try {
-    $conn = new PDO("mysql:host=localhost;dbname=capstone;charset=utf8mb4", "root", "");
+    $server = "sql100.infinityfree.com";
+    $dbname = "if0_40958419_capstone";
+    $username = "if0_40958419";
+    $password = "TQa6Uyin3H";
+    
+    $conn = new PDO("mysql:host=$server;dbname=$dbname;charset=utf8mb4", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Connection failed: " . $e->getMessage());

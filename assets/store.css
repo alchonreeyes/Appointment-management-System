@@ -6,19 +6,20 @@
     padding: 0;
     box-sizing: border-box;
 }
-
 body {
     background-color: #f9f9f9;
-    font-family: 'Poppins', sans-serif; /* Modern Font */
+    font-family: 'Poppins', sans-serif;
     color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
 }
-
 .store-container {
     max-width: 1200px;
     margin: 0 auto;
     padding: 40px 20px;
+    flex: 1; /* NEW: Pushes footer to bottom */
 }
-
 /* Breadcrumb */
 .breadcrumb {
     font-size: 0.9rem;
@@ -62,17 +63,16 @@ body {
     margin: 0 auto;
 }
 
-/* Main Layout (Grid) */
 .store-content {
     display: grid;
-    grid-template-columns: 350px 1fr; /* Details Left, Map Right */
+    grid-template-columns: 350px 1fr;
     gap: 30px;
     background: white;
     border-radius: 15px;
     overflow: hidden;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    margin: 0 10px; /* NEW: Adds margin on very small screens */
 }
-
 /* Left Side: Store Info Card */
 .store-details {
     padding: 40px;
@@ -168,8 +168,6 @@ body {
     border: 0;
     display: block;
 }
-
-/* Responsive */
 @media (max-width: 900px) {
     .store-content {
         grid-template-columns: 1fr; /* Stack on smaller screens */
@@ -179,6 +177,21 @@ body {
         min-height: 300px;
     }
     .store-details {
-        padding: 30px;
+        padding: 30px 25px; /* Better side padding */
+    }
+}
+
+/* Extra padding fix for very small phones */
+@media (max-width: 480px) {
+    .store-details {
+        padding: 25px 20px; /* Even more breathing room */
+    }
+    
+    .info-text p {
+        word-wrap: break-word; /* Prevent text overflow */
+    }
+    
+    .page-title {
+        font-size: 2rem; /* Smaller title on phones */
     }
 }

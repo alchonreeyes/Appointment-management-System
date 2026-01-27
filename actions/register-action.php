@@ -79,11 +79,11 @@ try {
     $encrypted_address = encrypt_data($address);
     $encrypted_occupation = encrypt_data($occupation);
 
-    // ✅ Generate secure token
+    // Generate secure token
     $verification_token = bin2hex(random_bytes(32));
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-    // ✅ Insert with token (NOT code)
+    // Insert with token
     $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password_hash, phone_number, address, verification_token, is_verified)
                            VALUES (?, ?, ?, ?, ?, ?, 0)");
     $stmt->execute([$encrypted_full_name, $email, $hashedPassword, $encrypted_phone_number, $encrypted_address, $verification_token]);
@@ -94,7 +94,7 @@ try {
                            VALUES (?, ?, ?, ?)");
     $stmt->execute([$userId, $gender, $age, $encrypted_occupation]);
 
-    // ✅ Send email with link
+    // Send email with verification link
     $mail = new PHPMailer(true); 
     try {
         $mail->isSMTP();
@@ -110,8 +110,7 @@ try {
         $mail->isHTML(true);
         $mail->Subject = 'Verify your EyeMaster account';
         
-        // ✅ Fix typo (was $$verification_link)
-        $verification_link = "http://localhost/appointment-management-system/public/verify_email.php?token=" . $verification_token;
+        $verification_link = "http://eyemasteropticalclinic.great-site.net/public/verify_email.php?token=" . $verification_token;
 
         $mail->Body = "
             <div style='font-family:Arial, sans-serif; background:#f8f9fa; padding:20px; border-radius:10px;'>
@@ -132,12 +131,13 @@ try {
             throw new Exception("Email sending failed");
         }
 
-        // ✅ Don't set email in session - use token instead
-        $_SESSION['success'] = "Please check your email and click the verification link to activate your account.";
+        // ✅ SET MESSAGE TO SHOW ON LOGIN PAGE ONLY
+        $_SESSION['registration_success'] = "Registration successful! Please check your email and click the verification link to activate your account.";
         header("Location: ../public/login.php");
         exit;
 
     } catch (Exception $e) {
+        // Rollback: Delete created records if email fails
         try {
             $deleteClient = $pdo->prepare("DELETE FROM clients WHERE user_id = ?");
             $deleteClient->execute([$userId]);
@@ -149,7 +149,7 @@ try {
         }
 
         error_log("Mailer Error: " . $mail->ErrorInfo);
-        $_SESSION['error'] = "Registration failed: " . $e->getMessage();
+        $_SESSION['error'] = "Registration failed: Unable to send verification email. Please try again.";
         header("Location: ../public/register.php");
         exit;
     }

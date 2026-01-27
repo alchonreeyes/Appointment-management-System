@@ -1,20 +1,29 @@
 <?php
 // filter_products.php - FINAL COMBINED SEARCH AND FILTER LOGIC
 header('Content-Type: application/json');
+$isLocal = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1');    
 
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "capstone";
+if ($isLocal) {
+    // LOCAL DEVELOPMENT
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "capstone";
+} else {
+    // INFINITYFREE PRODUCTION
+    $servername = "sql100.infinityfree.com";
+    $username = "if0_40958419";
+    $password = "TQa6Uyin3H";
+    $dbname = "if0_40958419_capstone";
+}
 
-// Using exception handling for connection errors
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try {
     $conn = new mysqli($servername, $username, $password, $dbname);
+    $conn->set_charset("utf8mb4");
 } catch (Exception $e) {
-    die(json_encode(['success' => false, 'error' => 'Connection failed']));
+    die(json_encode(['error' => 'Connection failed: ' . $e->getMessage()]));
 }
-
 // 1. Get filter parameters from POST and decode JSON
 $genders = isset($_POST['genders']) ? json_decode($_POST['genders'], true) : [];
 $brands = isset($_POST['brands']) ? json_decode($_POST['brands'], true) : [];

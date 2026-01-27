@@ -2,13 +2,20 @@
 // 1. Start the session once at the top of the page
 session_start(); 
 
-// 2. We DELETE the line: include '../actions/register-action.php';
-
-// 3. CRITICAL SESSION LOCK (Use segmented key)
+// 2. CRITICAL SESSION LOCK (Use segmented key)
 if (isset($_SESSION['client_id'])) {
     header("Location: home.php"); 
     exit(); 
 }
+
+// ✅ CLEAR UNWANTED MESSAGES (only show registration-specific errors)
+// Remove success messages - they should only appear on login.php
+unset($_SESSION['registration_success']);
+unset($_SESSION['verification_success']);
+unset($_SESSION['password_reset_success']);
+
+// Only keep registration error if it exists
+$registration_error = isset($_SESSION['error']) ? $_SESSION['error'] : null;
 ?>
 
 
@@ -48,16 +55,10 @@ if (isset($_SESSION['client_id'])) {
         </div>
     </div>
 
-    <!-- ✅ ALERTS MUST BE HERE (INSIDE signup-body, BEFORE form) -->
-    <?php if (isset($_SESSION['error'])): ?>
+    <!-- ✅ ONLY SHOW REGISTRATION ERRORS HERE -->
+    <?php if ($registration_error): ?>
         <div class="alert alert-error">
-            ❌ <?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
-        </div>
-    <?php endif; ?>
-
-    <?php if (isset($_SESSION['success'])): ?>
-        <div class="alert alert-success">
-            ✅ <?= htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
+            ❌ <?= htmlspecialchars($registration_error); unset($_SESSION['error']); ?>
         </div>
     <?php endif; ?>
 
@@ -291,14 +292,14 @@ if (isset($_SESSION['client_id'])) {
         // Progress Bar Update
 const form = document.getElementById('signupForm');
 const progressBar = document.getElementById('progressBar');
-const inputs = form.querySelectorAll('input[required], select[required]'); // ✅ Add select
+const inputs = form.querySelectorAll('input[required], select[required]');
 
 function updateProgress() {
     let filled = 0;
     inputs.forEach(input => {
         if (input.type === 'checkbox') {
             if (input.checked) filled++;
-        } else if (input.tagName === 'SELECT') { // ✅ Handle select
+        } else if (input.tagName === 'SELECT') {
             if (input.value !== '') filled++;
         } else {
             if (input.value.trim() !== '') filled++;
@@ -326,27 +327,21 @@ form.addEventListener('submit', function(e) {
         return false;
     }
 
-    // ✅ ADD LOADING STATE
     submitBtn.disabled = true;
     submitBtn.innerHTML = '⏳ Creating Account...';
     submitBtn.style.opacity = '0.6';
 });
-        // FILE: register.php (inside <script>)
 
 // Phone Number Input Filter
 const phoneInput = document.querySelector('input[name="phone_number"]');
 
 phoneInput.addEventListener('input', function() {
-    // 1. Remove non-digit characters
     this.value = this.value.replace(/[^0-9]/g, '');
     
-    // 2. Format as 09XXXXXXXXX and ensure length
     if (this.value.length > 11) {
         this.value = this.value.slice(0, 11);
     }
 });
-
-// ... rest of your existing script code ...
     </script>
     <div id="termsModal" class="modal-overlay">
     <div class="modal-content">
@@ -396,25 +391,20 @@ phoneInput.addEventListener('input', function() {
 </div>
 
 <script>
-    // Buksan ang Modal
     function openModal(event, modalId) {
-        event.preventDefault(); // Pigilan ang pag-jump ng link
+        event.preventDefault();
         document.getElementById(modalId).style.display = "block";
     }
 
-    // Isara ang Modal
     function closeModal(modalId) {
         document.getElementById(modalId).style.display = "none";
     }
 
-    // 'Short-cut' function: Pag-click ng button sa loob ng modal, 
-    // automatic naiche-check yung checkbox at sasara ang modal.
     function acceptAndClose(checkboxId, modalId) {
         document.getElementById(checkboxId).checked = true;
         closeModal(modalId);
     }
 
-    // Isara ang modal kapag kinlick ang background (dark area)
     window.onclick = function(event) {
         if (event.target.classList.contains('modal-overlay')) {
             event.target.style.display = "none";

@@ -2,17 +2,26 @@
 // get_product.php
 // Ensure no whitespace before this tag!
 header('Content-Type: application/json');
+$isLocal = ($_SERVER['HTTP_HOST'] === 'localhost' || $_SERVER['HTTP_HOST'] === '127.0.0.1');    
 
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "capstone";
+if ($isLocal) {
+    // LOCAL DEVELOPMENT
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "capstone";
+} else {
+    // INFINITYFREE PRODUCTION
+    $servername = "sql100.infinityfree.com";
+    $username = "if0_40958419";
+    $password = "TQa6Uyin3H";
+    $dbname = "if0_40958419_capstone";
+}
 
-// Create connection and enable error reporting for debugging
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try {
     $conn = new mysqli($servername, $username, $password, $dbname);
-    $conn->set_charset("utf8mb4"); // Set charset just in case
+    $conn->set_charset("utf8mb4");
 } catch (Exception $e) {
     die(json_encode(['error' => 'Connection failed: ' . $e->getMessage()]));
 }

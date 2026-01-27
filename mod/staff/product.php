@@ -425,13 +425,14 @@ if ($activeTable === 'products') {
         $params[] = $brandFilter;
         $paramTypes .= "s";
     }
-    if ($search !== '') {
-        $query .= " AND (product_name LIKE ? OR product_id LIKE ?)";
-        $searchTerm = "%{$search}%";
-        $params[] = $searchTerm;
-        $params[] = $searchTerm;
-        $paramTypes .= "ss";
-    }
+       if ($search !== '') {
+    $query .= " AND (product_name LIKE ? OR reference_id LIKE ? OR brand LIKE ?)";
+    $searchTerm = "%{$search}%";
+    $params[] = $searchTerm;
+    $params[] = $searchTerm;
+    $params[] = $searchTerm;
+    $paramTypes .= "sss";
+}
     $query .= " ORDER BY product_name ASC";
 
 } elseif ($activeTable === 'schedule') {
@@ -984,9 +985,9 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                         </div>
                       </div>
                     </td>
-                    <td style="padding:12px 8px;vertical-align:middle;">
+                   <td style="padding:12px 8px;vertical-align:middle;">
                       <span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;">
-                        <?= htmlspecialchars($item['product_id']) ?>
+                        <?= htmlspecialchars($item['reference_id']) ?>
                       </span>
                     </td>
                     <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($item['brand']) ?></td>
@@ -1235,9 +1236,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }
         const d = payload.data;
         const table = payload.table;
-        
-        document.getElementById('detailId').textContent = '#' + (d.id || d.product_id || d.service_id);
-        
+               // For products, show reference_id; for others, show primary ID
+if (table === 'products') {
+    document.getElementById('detailId').textContent = d.reference_id || '#' + d.product_id;
+} else {
+    document.getElementById('detailId').textContent = '#' + (d.id || d.service_id);
+}
         let contentHTML = '';
         
         if (table === 'products') {
@@ -1403,9 +1407,15 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         const imgDisplay = isEditingProduct ? 'block' : 'none'; 
 
         fieldsHTML = `
-          <div class="form-grid">
-            <div class="form-group">
-              <label for="formProductName">Product Name *</label>
+  <div class="form-grid">
+    ${data ? `
+    <div class="form-group">
+      <label>Reference ID (Auto-Generated)</label>
+      <input type="text" value="${data.reference_id}" readonly style="background:#f0f0f0; cursor:not-allowed;">
+    </div>
+    ` : ''}
+    <div class="form-group">
+      <label for="formProductName">Product Name *</label>
               <input type="text" id="formProductName" required value="${data ? data.product_name : ''}">
             </div>
             <div class="form-group">

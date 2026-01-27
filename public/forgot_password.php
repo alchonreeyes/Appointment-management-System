@@ -1,14 +1,15 @@
-<?php 
+<?php
 session_start();
 
-// <<< CRITICAL SESSION LOCK (Rule A) >>>
-if (isset($_SESSION['client_id'])) {
-    // Redirect authenticated client to their home page
-    header("Location: home.php"); 
-    exit(); 
+// ✅ NEW: Check if user came from login with unverified email
+$show_verification_modal = false;
+$user_email = '';
+
+if (isset($_GET['unverified']) && isset($_GET['email'])) {
+    $show_verification_modal = true;
+    $user_email = $_GET['email'];
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -239,6 +240,231 @@ if (isset($_SESSION['client_id'])) {
 </div>
 
 <?php include '../includes/footer.php'; ?>
+
+<!-- Verification Required Modal -->
+<?php if ($show_verification_modal): ?>
+<div id="verificationModal" class="modal-overlay active">
+    <div class="modal-card">
+        <div class="modal-icon">⚠️</div>
+        <h2>Email Not Verified</h2>
+        <p>Your email <strong><?= htmlspecialchars($user_email) ?></strong> has not been verified yet.</p>
+        <p>You must verify your email before resetting your password.</p>
+        <p style="margin-top: 15px; color: #666; font-size: 14px;">Would you like us to resend the verification email?</p>
+        
+        <div class="modal-buttons">
+            <button class="btn-secondary" onclick="window.location.href='login.php'">No, Go Back</button>
+            <button class="btn-primary" onclick="resendVerification()">Yes, Resend Email</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Error/Success Messages -->
+<?php if (isset($_SESSION['error'])): ?>
+<div class="alert-overlay" id="alertOverlay">
+    <div class="alert-box error">
+        <strong>❌ Error</strong>
+        <p><?= htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?></p>
+        <button onclick="closeAlert()">Close</button>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php if (isset($_SESSION['success'])): ?>
+<div class="alert-overlay" id="alertOverlay">
+    <div class="alert-box success">
+        <strong>✅ Success</strong>
+        <p><?= htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?></p>
+        <button onclick="closeAlert()">Close</button>
+    </div>
+</div>
+<?php endif; ?>
+
+<style>
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(3px);
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.modal-card {
+    background: white;
+    padding: 40px 30px;
+    border-radius: 12px;
+    max-width: 450px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-icon {
+    font-size: 60px;
+    margin-bottom: 15px;
+}
+
+.modal-card h2 {
+    color: #991b1b;
+    margin-bottom: 15px;
+    font-size: 22px;
+}
+
+.modal-card p {
+    color: #666;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 25px;
+    justify-content: center;
+}
+
+.btn-primary, .btn-secondary {
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+.btn-secondary:hover {
+    background: #d1d5db;
+}
+
+/* Alert Overlay Styles */
+.alert-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.alert-box {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 400px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    text-align: center;
+}
+
+.alert-box.error {
+    border-top: 4px solid #dc2626;
+}
+
+.alert-box.success {
+    border-top: 4px solid #16a34a;
+}
+
+.alert-box strong {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+.alert-box p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.alert-box button {
+    background: #2563eb;
+    color: white;
+    padding: 10px 25px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.alert-box button:hover {
+    background: #1d4ed8;
+}
+</style>
+
+<script>
+function resendVerification() {
+    const email = "<?= htmlspecialchars($user_email) ?>";
+    
+    // Show loading
+    const btn = document.querySelector('.btn-primary');
+    btn.textContent = 'Sending...';
+    btn.disabled = true;
+    
+    // Send request to resend verification
+    fetch('../actions/resend_verification.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'email=' + encodeURIComponent(email)
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ Verification email sent! Please check your inbox.');
+            window.location.href = 'login.php';
+        } else if (data.blocked) {
+            alert('⛔ Your IP has been blocked due to too many requests.');
+            window.location.href = 'login.php';
+        } else {
+            alert('❌ ' + data.message);
+            btn.textContent = 'Yes, Resend Email';
+            btn.disabled = false;
+        }
+    })
+    .catch(err => {
+        alert('Network error. Please try again.');
+        btn.textContent = 'Yes, Resend Email';
+        btn.disabled = false;
+    });
+}
+
+function closeAlert() {
+    document.getElementById('alertOverlay').style.display = 'none';
+}
+</script>
 
 </body>
 </html>

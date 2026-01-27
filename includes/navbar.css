@@ -49,7 +49,12 @@ nav {
     color: #004aad;
     cursor: pointer;
     padding: 5px;
-    z-index: 1001;
+    z-index: 999; /* Below mobile menu */
+    transition: color 0.3s ease;
+}
+
+.hamburger:hover {
+    color: #007aff;
 }
 
 /* Logo container */
@@ -58,7 +63,6 @@ nav {
     display: inline-block;
     flex-shrink: 0;
     align-items: center;
-    
     padding-left: 20px;
 }
 
@@ -107,16 +111,15 @@ nav {
     color: #007aff;
 }
 
-/* Remove the old .search input styles and use this */
-
+/* Search Group */
 .search-group {
     display: flex;
     align-items: center;
     background: #fff;
     border: 1px solid #ccc;
-    border-radius: 25px; /* Pill shape */
+    border-radius: 25px;
     padding: 2px 5px;
-    width: 380px; /* Wider to fit the dropdown */
+    width: 380px;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
@@ -125,7 +128,6 @@ nav {
     box-shadow: 0 0 5px rgba(0, 74, 173, 0.2);
 }
 
-/* The Dropdown Area */
 .search-select-wrapper {
     position: relative;
     border-right: 1px solid #eee;
@@ -134,7 +136,7 @@ nav {
 }
 
 .search-select {
-    appearance: none; /* Remove default arrow */
+    appearance: none;
     -webkit-appearance: none;
     border: none;
     background: transparent;
@@ -154,19 +156,17 @@ nav {
     pointer-events: none;
 }
 
-/* The Text Input */
 .search-group input {
     border: none;
     outline: none;
     padding: 8px 12px;
-    flex: 1; /* Takes remaining space */
+    flex: 1;
     font-size: 13px;
     background: transparent;
 }
 
-/* The Search Button */
 .search-btn {
-    background: #004aad; /* Your brand color */
+    background: #004aad;
     color: white;
     border: none;
     width: 32px;
@@ -181,17 +181,6 @@ nav {
 
 .search-btn:hover {
     background: #003080;
-}
-
-/* Responsive tweaks for Tablet */
-@media (max-width: 1200px) {
-    .search-group {
-        width: 280px;
-    }
-    .search-select {
-        padding-right: 20px;
-        padding-left: 10px;
-    }
 }
 
 /* Right section (user + book button) */
@@ -339,20 +328,117 @@ nav {
     display: block;
 }
 
-/* Add these styles to your existing navbar.css file */
+/* ============================================
+   MOBILE NAVIGATION MENU STYLES
+   ============================================ */
+.mobile-nav-menu {
+    position: fixed;
+    top: 0;
+    left: -100%; /* Start completely off screen */
+    width: 85%; /* Responsive width */
+    max-width: 320px; /* Maximum width */
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 15px rgba(0,0,0,0.2);
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Smooth easing */
+    z-index: 1002;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
 
-/* Mobile Navigation Sections */
-.mobile-nav-section {
+.mobile-nav-menu.active {
+    left: 0;
+}
+
+.mobile-nav-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     padding: 15px 20px;
+    border-bottom: 2px solid #e0e0e0;
+    background: #f8f9fa;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.mobile-nav-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #333;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: color 0.2s ease, transform 0.2s ease;
+    margin-left: auto;
+}
+
+.mobile-nav-close:hover {
+    color: #004aad;
+    transform: rotate(90deg);
+}
+
+.mobile-nav-content {
+    padding: 0;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+/* Mobile Navigation Links */
+.mobile-nav-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.mobile-nav-links li {
+    margin: 0;
+}
+
+.mobile-nav-links li a {
+    display: block;
+    padding: 18px 20px;
+    text-decoration: none;
+    color: #004aad;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.mobile-nav-links li a:hover {
+    background: #f5f7fa;
+    padding-left: 25px;
+}
+
+.mobile-nav-links li a::after {
+    content: '›';
+    position: absolute;
+    right: 20px;
+    font-size: 20px;
+    color: #004aad;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.mobile-nav-links li a:hover::after {
+    opacity: 1;
+}
+
+/* Mobile Navigation Sections (Filters) */
+.mobile-nav-section {
+    padding: 20px;
     border-bottom: 1px solid #e0e0e0;
 }
 
 .mobile-nav-section h4 {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     color: #004aad;
     text-transform: uppercase;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     letter-spacing: 0.5px;
 }
 
@@ -363,12 +449,12 @@ nav {
 }
 
 .mobile-filter-list li {
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .mobile-filter-list li a {
     display: block;
-    padding: 8px 12px;
+    padding: 10px 12px;
     color: #333;
     text-decoration: none;
     font-size: 14px;
@@ -377,146 +463,63 @@ nav {
 }
 
 .mobile-filter-list li a:hover {
-    background-color: #f0f0f0;
+    background-color: #e8f0fe;
     color: #004aad;
-    transform: translateX(5px);
+    padding-left: 16px;
 }
 
-/* Adjust mobile nav content to accommodate filters */
-.mobile-nav-content {
-    max-height: calc(100vh - 60px);
-    overflow-y: auto;
-}
-
-/* Style for empty states */
-.mobile-filter-list li:not(:has(a)) {
-    color: #999;
-    font-style: italic;
-    padding: 8px 12px;
-    font-size: 14px;
-}
-/* ============================================
-   MOBILE NAVIGATION MENU STYLES
-   ============================================ */
-.mobile-nav-menu {
-    position: fixed;
-    top: 0;
-    left: -300px;
-    width: 300px;
-    height: 100vh;
-    background: white;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-    transition: left 0.3s ease;
-    z-index: 1002;
-    overflow-y: auto;
-}
-
-.mobile-nav-menu.active {
-    left: 0;
-}
-
-.mobile-nav-header {
-    display: flex;
-    justify-content: flex-end;
-    padding: 15px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.mobile-nav-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #333;
-    cursor: pointer;
-    padding: 5px;
-}
-
-.mobile-nav-content {
-    padding: 20px;
-}
-
-.mobile-nav-links {
-    list-style: none;
-    padding: 0;
-    margin: 0 0 30px 0;
-}
-
-.mobile-nav-links li {
-    margin: 0;
-}
-
-.mobile-nav-links li a {
-    display: block;
-    padding: 15px 10px;
-    text-decoration: none;
-    color: #004aad;
-    font-size: 16px;
-    font-weight: 500;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.2s ease;
-}
-
-.mobile-nav-links li a:hover {
-    background: #f5f5f5;
-}
-
-.mobile-nav-search {
-    margin-bottom: 30px;
-}
-
-.mobile-nav-search input {
-    width: 100%;
-    height: 40px;
-    border-radius: 20px;
-    border: 1px solid #aaa;
-    padding: 0 15px;
-    font-size: 14px;
-}
-
+/* Mobile User Section */
 .mobile-nav-user {
-    border-top: 2px solid #e0e0e0;
-    padding-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
 }
 
 .mobile-nav-link {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 10px;
+    gap: 15px;
+    padding: 14px 12px;
     text-decoration: none;
     color: #333;
     font-size: 15px;
-    transition: background 0.2s ease;
-    border-radius: 5px;
+    transition: all 0.2s ease;
+    border-radius: 6px;
+    margin-bottom: 8px;
 }
 
 .mobile-nav-link:hover {
-    background: #f5f5f5;
+    background: white;
+    padding-left: 16px;
 }
 
 .mobile-nav-link i {
     font-size: 18px;
     color: #004aad;
-    width: 20px;
+    width: 24px;
+    text-align: center;
 }
 
 .mobile-nav-book-btn {
     display: block;
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     color: white;
-    padding: 12px;
-    border-radius: 5px;
+    padding: 14px;
+    border-radius: 8px;
     text-decoration: none;
     text-align: center;
     font-weight: bold;
     margin-top: 20px;
-    transition: background 0.3s ease;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
 }
 
 .mobile-nav-book-btn:hover {
-    background: #003080;
+    background: linear-gradient(135deg, #c0392b 0%, #a93226 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
 }
 
+/* Mobile Navigation Overlay */
 .mobile-nav-overlay {
     position: fixed;
     top: 0;
@@ -526,8 +529,9 @@ nav {
     background: rgba(0,0,0,0.5);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.4s;
     z-index: 1001;
+    backdrop-filter: blur(2px);
 }
 
 .mobile-nav-overlay.active {
@@ -535,13 +539,31 @@ nav {
     visibility: visible;
 }
 
+/* Scrollbar styling for mobile nav */
+.mobile-nav-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.mobile-nav-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.mobile-nav-content::-webkit-scrollbar-thumb {
+    background: #004aad;
+    border-radius: 3px;
+}
+
+.mobile-nav-content::-webkit-scrollbar-thumb:hover {
+    background: #003080;
+}
+
 /* ============================================
    RESPONSIVE BREAKPOINTS
    ============================================ */
 
-/* Tablet and below - Start showing adjustments */
+/* Tablet and below */
 @media (max-width: 1200px) {
-.nav-section {
+    .nav-section {
         gap: 15px;
     }
     
@@ -549,8 +571,13 @@ nav {
         gap: 15px;
     }
     
-    .search input {
-        width: 200px;
+    .search-group {
+        width: 280px;
+    }
+    
+    .search-select {
+        padding-right: 20px;
+        padding-left: 10px;
     }
 }
 
@@ -563,8 +590,8 @@ nav {
         gap: 10px;
     }
     
-    .search input {
-        width: 180px;
+    .search-group {
+        width: 240px;
     }
 }
 
@@ -592,7 +619,7 @@ nav {
 
     /* Adjust nav section for mobile */
     .nav-section {
-        padding: 10px 15px;
+        padding: 12px 15px;
         gap: 15px;
     }
 
@@ -606,6 +633,7 @@ nav {
     }
 
     .logo img {
+        width: 60px;
         max-width: 120px;
     }
 
@@ -614,16 +642,23 @@ nav {
         font-size: 11px;
         padding: 5px 15px;
     }
+
+    /* Ensure mobile menu is wider on tablets */
+    .mobile-nav-menu {
+        width: 75%;
+        max-width: 350px;
+    }
 }
 
 /* Extra small devices */
 @media (max-width: 480px) {
     .mobile-nav-menu {
-        width: 280px;
-        left: -280px;
+        width: 90%;
+        max-width: 300px;
     }
 
     .logo img {
+        width: 50px;
         max-width: 100px;
     }
 
@@ -631,4 +666,30 @@ nav {
         font-size: 10px;
         padding: 5px 10px;
     }
+
+    .hamburger {
+        font-size: 22px;
+    }
+
+    /* Adjust mobile nav padding for smaller screens */
+    .mobile-nav-section {
+        padding: 15px;
+        
+    }
+
+    .mobile-nav-user {
+        padding: 15px;
+    }
+
+    .mobile-nav-links li a {
+        padding: 16px 15px;
+        font-size: 15px;
+    }
+}
+
+/* Prevent body scroll when mobile menu is open */
+body.mobile-nav-open {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
 }

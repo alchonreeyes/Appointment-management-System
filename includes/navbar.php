@@ -61,9 +61,12 @@ try {
 
             <!-- Logo container with dropdown (Desktop Only) -->
             <div class="logo-container">
-                <div class="logo">
-                    <img src="../mod/photo/LOGO.jpg" alt="Logo">
-                </div>
+                <a href="../public/home.php">
+
+                    <div class="logo">
+                        <img src="../mod/photo/LOGO.jpg" alt="Logo">
+                    </div>
+                </a>
                 
                 <!-- Dynamic Dropdown for desktop only -->
                 <div class="dropdown">
@@ -207,27 +210,16 @@ try {
                 </ul>
             </div>
             
-            <div class="mobile-nav-section">
-                <h4>Lens Types</h4>
-                <ul class="mobile-filter-list">
-                    <?php if (!empty($lensTypes)): ?>
-                        <?php foreach ($lensTypes as $lensType): ?>
-                            <li><a href="../public/browse.php?lens_type=<?= urlencode($lensType) ?>"><?= htmlspecialchars($lensType) ?></a></li>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <li>No lens types available</li>
-                    <?php endif; ?>
-                </ul>
-            </div>
+            
                
             <!-- Mobile Search -->
-            <div class="mobile-nav-search">
+            <!-- <div class="mobile-nav-search">
                 <input type="text" placeholder="I'm looking for.....">
             </div>
-
+ -->
             <!-- Mobile User Section -->
             <div class="mobile-nav-user">
-                <?php if (!isset($_SESSION['user_id'])): ?>
+                <?php if (!isset($_SESSION['client_id'])): ?>
                     <a href="../public/login.php" class="mobile-nav-link">
                         <i class="fa-regular fa-user"></i> Sign In & Sign Up
                     </a>
@@ -257,35 +249,112 @@ try {
     <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
 
     <script>
-        // Mobile navigation toggle functionality
-        const hamburger = document.getElementById('hamburger');
-        const mobileNavMenu = document.getElementById('mobileNavMenu');
-        const closeMobileNav = document.getElementById('closeMobileNav');
-        const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+      // Mobile navigation toggle functionality
+const hamburger = document.getElementById('hamburger');
+const mobileNavMenu = document.getElementById('mobileNavMenu');
+const closeMobileNav = document.getElementById('closeMobileNav');
+const mobileNavOverlay = document.getElementById('mobileNavOverlay');
 
-        function openMobileNav() {
-            mobileNavMenu.classList.add('active');
-            mobileNavOverlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
+function openMobileNav() {
+    mobileNavMenu.classList.add('active');
+    mobileNavOverlay.classList.add('active');
+    document.body.classList.add('mobile-nav-open');
+    document.body.style.overflow = 'hidden';
+}
 
-        function closeMobileNavFunc() {
-            mobileNavMenu.classList.remove('active');
-            mobileNavOverlay.classList.remove('active');
-            document.body.style.overflow = '';
-        }
+function closeMobileNavFunc() {
+    mobileNavMenu.classList.remove('active');
+    mobileNavOverlay.classList.remove('active');
+    document.body.classList.remove('mobile-nav-open');
+    document.body.style.overflow = '';
+}
 
-        hamburger.addEventListener('click', openMobileNav);
-        closeMobileNav.addEventListener('click', closeMobileNavFunc);
-        mobileNavOverlay.addEventListener('click', closeMobileNavFunc);
+// Event listeners
+if (hamburger) {
+    hamburger.addEventListener('click', openMobileNav);
+}
 
-        function handleSearch(e) {
-            e.preventDefault();
-            const query = document.getElementById('searchQuery').value.trim();
-            if (query) {
-                window.location.href = `../public/browse.php?search=${encodeURIComponent(query)}`;
-            }
-        }
+if (closeMobileNav) {
+    closeMobileNav.addEventListener('click', closeMobileNavFunc);
+}
+
+if (mobileNavOverlay) {
+    mobileNavOverlay.addEventListener('click', closeMobileNavFunc);
+}
+
+// Close mobile nav when clicking on any link
+const mobileNavLinks = document.querySelectorAll('.mobile-nav-links a, .mobile-filter-list a, .mobile-nav-link');
+mobileNavLinks.forEach(link => {
+    link.addEventListener('click', () => {
+        // Add a small delay for better UX
+        setTimeout(closeMobileNavFunc, 200);
+    });
+});
+
+// Prevent body scroll when menu is open
+let scrollPosition = 0;
+
+function preventBodyScroll() {
+    scrollPosition = window.pageYOffset;
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollPosition}px`;
+    document.body.style.width = '100%';
+}
+
+function allowBodyScroll() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    window.scrollTo(0, scrollPosition);
+}
+
+// Update open function
+function openMobileNavImproved() {
+    preventBodyScroll();
+    mobileNavMenu.classList.add('active');
+    mobileNavOverlay.classList.add('active');
+    document.body.classList.add('mobile-nav-open');
+}
+
+// Update close function
+function closeMobileNavImproved() {
+    mobileNavMenu.classList.remove('active');
+    mobileNavOverlay.classList.remove('active');
+    document.body.classList.remove('mobile-nav-open');
+    allowBodyScroll();
+}
+
+// Replace the simple functions with improved ones
+if (hamburger) {
+    hamburger.removeEventListener('click', openMobileNav);
+    hamburger.addEventListener('click', openMobileNavImproved);
+}
+
+if (closeMobileNav) {
+    closeMobileNav.removeEventListener('click', closeMobileNavFunc);
+    closeMobileNav.addEventListener('click', closeMobileNavImproved);
+}
+
+if (mobileNavOverlay) {
+    mobileNavOverlay.removeEventListener('click', closeMobileNavFunc);
+    mobileNavOverlay.addEventListener('click', closeMobileNavImproved);
+}
+
+// Handle escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileNavMenu.classList.contains('active')) {
+        closeMobileNavImproved();
+    }
+});
+
+// Search functionality
+function handleSearch(e) {
+    e.preventDefault();
+    const query = document.getElementById('searchQuery').value.trim();
+    if (query) {
+        window.location.href = `../public/browse.php?search=${encodeURIComponent(query)}`;
+    }
+}
     </script>
 </body>
 </html>

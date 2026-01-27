@@ -77,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $update_client_stmt->execute([
             $birth_date, $gender, $age, $suffix, $encrypted_occupation, $user_id
         ]);
+        // return noting
         
         $pdo->commit();
         $_SESSION['success_message'] = "Profile updated successfully!";

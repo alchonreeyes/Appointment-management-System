@@ -7,20 +7,18 @@ class Database {
     protected $pdo;
 
     public function __construct() {
-        // Detect if running on Localhost or Live Server
         $whitelist = array('127.0.0.1', '::1', 'localhost');
         if (in_array($_SERVER['SERVER_NAME'], $whitelist)) {
-            // XAMPP SETTINGS
             $this->server = "localhost";
             $this->dbname = "capstone";
             $this->username = "root";
             $this->password = "";
         } else {
-            // INFINITYFREE SETTINGS (Fill these from your Client Area)
-            $this->server = "sql300.infinityfree.com"; 
-            $this->dbname = "if0_38294_capstone";
-            $this->username = "if0_38294";
-            $this->password = "YourVpanelPassword";
+            // DOUBLE CHECK THIS HOSTNAME in your Client Area!
+            $this->server = "sql100.infinityfree.com"; 
+            $this->dbname = "if0_40958419_capstone";
+            $this->username = "if0_40958419";  // Update with correct username from InfinityFree panel
+            $this->password = "TQa6Uyin3H";  // Update with correct password from InfinityFree panel
         }
 
         try {       
@@ -29,6 +27,7 @@ class Database {
             $this->pdo->exec("SET time_zone = '+08:00'");
             date_default_timezone_set('Asia/Manila');
         } catch (PDOException $e) {
+            // On the live site, this will tell you exactly why it's failing
             die("Error connecting: " . $e->getMessage());
         }
     }
@@ -37,14 +36,10 @@ class Database {
         return $this->pdo;
     }
 }
-?>
 
-<?php
-// FILE: config/mailer_settings.php
-
-// Define PHPMailer Credentials securely
+// Mailer Settings (Keep these here or in a separate file)
 define('SMTP_HOST', 'smtp.gmail.com');
-define('SMTP_USERNAME', 'alchonreyez@gmail.com'); // Your Gmail
-define('SMTP_PASSWORD', 'urwbzscfmaynltzx'); // Your App Password
+define('SMTP_USERNAME', 'alchonreyez@gmail.com');
+define('SMTP_PASSWORD', 'urwbzscfmaynltzx'); 
 define('SMTP_PORT', 587);
 ?>

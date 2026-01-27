@@ -655,24 +655,21 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     }
     
     const detailLabels = {
-        'full_name': 'Patient Name', 'status_name': 'Status', 'service_name': 'Service',
-        'staff_name': 'Staff Assigned', 'appointment_date': 'Date', 'appointment_time': 'Time',
+        'full_name': 'Patient Name', 'staff_name': 'Staff Assigned',
         'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
         'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
         'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
         'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
         'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
         'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
-        'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason',
-        'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)',
+        'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason'
     };
     const detailDisplayOrder = [
-        'full_name', 'status_name', 'service_name', 'staff_name',
-        'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number',
+        'full_name', 'staff_name',
+        'age', 'gender', 'phone_number',
         'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
         'certificate_purpose', 'certificate_other', 'ishihara_test_type',
-        'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason',
-        'consent_info', 'consent_reminders', 'consent_terms'
+        'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason'
     ];
 
     function viewHistoryDetails(id) {

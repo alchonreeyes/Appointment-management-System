@@ -79,7 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
             
             if ($stmt->execute()) {
                 $new_product_id = $conn->insert_id; 
+                $brand_prefix = strtoupper(substr($brand, 0, 3)); // First 3 letters of brand
+$year = date('Y');
+$ref_id = $brand_prefix . '-' . $year . '-' . str_pad($new_product_id, 3, '0', STR_PAD_LEFT);
 
+// Update the product with reference_id
+$update_ref = $conn->prepare("UPDATE products SET reference_id = ? WHERE product_id = ?");
+$update_ref->bind_param("si", $ref_id, $new_product_id);
+$update_ref->execute();
                 // D. HANDLE GALLERY IMAGES
                 if (isset($_FILES['gallery_images'])) {
                     $g_files = $_FILES['gallery_images'];

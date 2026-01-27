@@ -23,10 +23,12 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Eye Master - Home</title>
   <link rel="stylesheet" href="../assets/card.css">
   <link rel="stylesheet" href="../assets/home.css"> 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
   <style>
       /* New Section Styles */
       .section-padding { padding: 80px 20px; }

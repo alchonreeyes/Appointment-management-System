@@ -301,9 +301,8 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
     
     <div class="slot-message" id="slot-message-2" style="margin-top: 5px; padding: 5px; border-radius: 4px; font-size: 12px; display: none;"></div>
   </div>
-
-  <div style="text-align: center; margin-bottom: 15px;">
-      <button type="button" id="add-appt-btn" style="background: #f0f9ff; color: #004aad; border: 1px dashed #004aad; width: 100%; padding: 8px; font-size: 13px;">
+<div style="text-align: center; margin-bottom: 15px; display: none;">
+      <button type="button" id="add-appt-btn" style="background: #f0f9ff; color: #004aad; border: 1px dashed #004aad; width: 100%; padding: 8px; font-size: 13px;" disabled>
           + Add Another Appointment
       </button>
   </div>
