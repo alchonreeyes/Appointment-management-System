@@ -3,8 +3,8 @@ class SecurityHelper {
     private $pdo;
     
     // Rate limits
-    const MAX_ATTEMPTS_PER_IP = 2;        // 2 attempts per IP per hour
-    const MAX_ATTEMPTS_PER_EMAIL = 3;     // 3 attempts per email per hour
+    const MAX_ATTEMPTS_PER_IP = 5;        // 5 attempts per IP per hour
+    const MAX_ATTEMPTS_PER_EMAIL = 5;     // 5 attempts per email per hour
     const BAN_DURATION = 3600;             // 1 hour ban
     const PERMANENT_BAN_THRESHOLD = 5;     // 5 violations = permanent ban
     
@@ -60,28 +60,7 @@ class SecurityHelper {
         // 2. Clean old logs (older than 1 hour)
         $this->pdo->prepare("DELETE FROM email_abuse_log WHERE attempt_time < DATE_SUB(NOW(), INTERVAL 1 HOUR)")->execute();
         
-        // 3. Check IP-based rate limit
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) as count 
-            FROM email_abuse_log 
-            WHERE ip_address = ? 
-            AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-        ");
-        $stmt->execute([$ip]);
-        $ipAttempts = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-        
-        if ($ipAttempts >= self::MAX_ATTEMPTS_PER_IP) {
-            // Auto-ban after exceeding limit
-            $this->blockIP($ip, "Exceeded rate limit ($ipAttempts attempts in 1 hour)", false);
-            
-            return [
-                'allowed' => false,
-                'reason' => 'ip_limit',
-                'message' => 'Too many requests from your IP. Your access has been temporarily suspended.'
-            ];
-        }
-        
-        // 4. Check Email-based rate limit
+        // 3. Check Email-based rate limit (PRIMARY CHECK)
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) as count 
             FROM email_abuse_log 
@@ -95,7 +74,27 @@ class SecurityHelper {
             return [
                 'allowed' => false,
                 'reason' => 'email_limit',
-                'message' => 'Too many requests for this email. Please try again later.'
+                'message' => 'Too many requests for this email. Please try again in 1 hour.'
+            ];
+        }
+        
+        // 4. Check IP-based rate limit (SECONDARY CHECK)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as count 
+            FROM email_abuse_log 
+            WHERE ip_address = ? 
+            AND attempt_time > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+        ");
+        $stmt->execute([$ip]);
+        $ipAttempts = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        if ($ipAttempts >= self::MAX_ATTEMPTS_PER_IP) {
+            $this->blockIP($ip, "Exceeded rate limit ($ipAttempts attempts in 1 hour)", false);
+            
+            return [
+                'allowed' => false,
+                'reason' => 'ip_limit',
+                'message' => 'Too many requests from your IP. Access temporarily suspended.'
             ];
         }
         
@@ -120,12 +119,10 @@ class SecurityHelper {
      * Block IP address
      */
     public function blockIP($ip, $reason, $permanent = false) {
-        // Check if IP already has violations
         $stmt = $this->pdo->prepare("SELECT COUNT(*) as violations FROM ip_blacklist WHERE ip_address = ?");
         $stmt->execute([$ip]);
         $violations = $stmt->fetch(PDO::FETCH_ASSOC)['violations'];
         
-        // Permanent ban after threshold
         if ($violations >= self::PERMANENT_BAN_THRESHOLD) {
             $permanent = true;
             $reason = "Multiple violations - Permanent ban";
@@ -145,7 +142,6 @@ class SecurityHelper {
         
         $stmt->execute([$ip, $reason, $expires, $permanent ? 1 : 0]);
         
-        // Log the block
         error_log("IP BLOCKED: $ip - Reason: $reason - Permanent: " . ($permanent ? 'YES' : 'NO'));
     }
 }

@@ -20,41 +20,305 @@ $success_message = '';
 $user = []; 
 
 // =======================================================
-// 3. HANDLE PROFILE UPDATE (PDO + ENCRYPTION + VALIDATION)
+// IMPROVED: RATE LIMITING SYSTEM (Prevents Spam Updates)
+// =======================================================
+function check_rate_limit($pdo, $user_id, $action_type = 'profile_update', $max_attempts = 3, $window_minutes = 60) {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*) as attempt_count, MAX(created_at) as last_attempt 
+        FROM rate_limits 
+        WHERE user_id = ? 
+        AND action_type = ? 
+        AND created_at > DATE_SUB(NOW(), INTERVAL ? MINUTE)
+    ");
+    $stmt->execute([$user_id, $action_type, $window_minutes]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($result['attempt_count'] >= $max_attempts) {
+        $last_attempt = strtotime($result['last_attempt']);
+        $wait_time = $window_minutes - floor((time() - $last_attempt) / 60);
+        return [
+            'allowed' => false, 
+            'wait_time' => max(1, $wait_time),
+            'message' => "Too many updates. Please wait {$wait_time} minute(s) before trying again."
+        ];
+    }
+    
+    return ['allowed' => true];
+}
+
+function log_rate_limit($pdo, $user_id, $action_type = 'profile_update') {
+    $stmt = $pdo->prepare("INSERT INTO rate_limits (user_id, action_type, created_at) VALUES (?, ?, NOW())");
+    $stmt->execute([$user_id, $action_type]);
+}
+
+// =======================================================
+// IMPROVED: CENTRALIZED VALIDATION RULES (Easy to Scale!)
+// =======================================================
+class ValidationRules {
+    private static $rules = [
+        'full_name' => [
+            'required' => true,
+            'min_length' => 3,
+            'max_length' => 100,
+            'pattern' => '/^[a-zA-Z\s\.\-\']+$/',
+            'pattern_message' => 'Full name can only contain letters, spaces, dots, hyphens and apostrophes',
+            'sanitize' => true
+        ],
+        'email' => [
+            'required' => true,
+            'type' => 'email',
+            'readonly' => true // Cannot be changed in profile
+        ],
+        'phone_number' => [
+            'required' => true,
+            'pattern' => '/^09\d{9}$/',
+            'pattern_message' => 'Phone number must be 11 digits starting with 09 (e.g., 09123456789)',
+            'sanitize' => 'phone'
+        ],
+        'age' => [
+            'required' => true,
+            'type' => 'integer',
+            'min' => 1,
+            'max' => 120,
+            'message' => 'Age must be between 1 and 120'
+        ],
+        'gender' => [
+            'required' => true,
+            'readonly' => true
+        ],
+        'occupation' => [
+            'required' => true,
+            'min_length' => 2,
+            'max_length' => 100,
+            'pattern' => '/^[a-zA-Z0-9\s\.\-\/]+$/',
+            'pattern_message' => 'Occupation can only contain letters, numbers, spaces, dots, hyphens and slashes',
+            'sanitize' => true
+        ],
+        'address' => [
+            'required' => false, // Optional field
+            'min_length' => 5,
+            'max_length' => 255,
+            'sanitize' => true
+        ],
+        'birth_date' => [
+            'required' => false,
+            'type' => 'date',
+            'max_date' => 'today',
+            'message' => 'Birth date cannot be in the future'
+        ],
+        'suffix' => [
+            'required' => false,
+            'max_length' => 10,
+            'allowed_values' => ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V', ''],
+            'message' => 'Invalid suffix value'
+        ]
+    ];
+    
+    // ADD NEW FIELDS HERE! Just add to the array above with validation rules
+    // Example for future fields:
+    // 'middle_name' => [
+    //     'required' => false,
+    //     'min_length' => 1,
+    //     'max_length' => 50,
+    //     'pattern' => '/^[a-zA-Z\s\.]+$/',
+    //     'sanitize' => true
+    // ],
+    
+    public static function validate($field_name, $value) {
+        if (!isset(self::$rules[$field_name])) {
+            return ['valid' => true, 'value' => $value]; // No rules defined = valid
+        }
+        
+        $rules = self::$rules[$field_name];
+        $original_value = $value;
+        
+        // Sanitize first if needed
+        if (isset($rules['sanitize'])) {
+            $value = self::sanitize($value, $rules['sanitize']);
+        }
+        
+        // Check if readonly (shouldn't be changed)
+        if (isset($rules['readonly']) && $rules['readonly']) {
+            return ['valid' => true, 'value' => $value, 'readonly' => true];
+        }
+        
+        // Required check
+        if (isset($rules['required']) && $rules['required']) {
+            if (empty($value) && $value !== '0') {
+                return [
+                    'valid' => false, 
+                    'message' => ucfirst(str_replace('_', ' ', $field_name)) . ' is required',
+                    'value' => $value
+                ];
+            }
+        }
+        
+        // If empty and not required, skip other validations
+        if (empty($value) && $value !== '0') {
+            return ['valid' => true, 'value' => $value];
+        }
+        
+        // Type-specific validations
+        if (isset($rules['type'])) {
+            switch ($rules['type']) {
+                case 'email':
+                    if (!filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                        return ['valid' => false, 'message' => 'Invalid email format', 'value' => $value];
+                    }
+                    break;
+                    
+                case 'integer':
+                    if (!is_numeric($value) || intval($value) != $value) {
+                        return ['valid' => false, 'message' => 'Must be a valid number', 'value' => $value];
+                    }
+                    $value = intval($value);
+                    break;
+                    
+                case 'date':
+                    $date = DateTime::createFromFormat('Y-m-d', $value);
+                    if (!$date || $date->format('Y-m-d') !== $value) {
+                        return ['valid' => false, 'message' => 'Invalid date format', 'value' => $value];
+                    }
+                    if (isset($rules['max_date']) && $rules['max_date'] === 'today') {
+                        if ($date > new DateTime()) {
+                            return ['valid' => false, 'message' => $rules['message'] ?? 'Date cannot be in the future', 'value' => $value];
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        // Min/Max validations
+        if (isset($rules['min']) && is_numeric($value) && $value < $rules['min']) {
+            return ['valid' => false, 'message' => $rules['message'] ?? "Minimum value is {$rules['min']}", 'value' => $value];
+        }
+        
+        if (isset($rules['max']) && is_numeric($value) && $value > $rules['max']) {
+            return ['valid' => false, 'message' => $rules['message'] ?? "Maximum value is {$rules['max']}", 'value' => $value];
+        }
+        
+        // Length validations
+        if (isset($rules['min_length']) && strlen($value) < $rules['min_length']) {
+            return ['valid' => false, 'message' => "Minimum length is {$rules['min_length']} characters", 'value' => $value];
+        }
+        
+        if (isset($rules['max_length']) && strlen($value) > $rules['max_length']) {
+            return ['valid' => false, 'message' => "Maximum length is {$rules['max_length']} characters", 'value' => $value];
+        }
+        
+        // Pattern validation
+        if (isset($rules['pattern']) && !preg_match($rules['pattern'], $value)) {
+            return ['valid' => false, 'message' => $rules['pattern_message'] ?? 'Invalid format', 'value' => $value];
+        }
+        
+        // Allowed values check
+        if (isset($rules['allowed_values']) && !in_array($value, $rules['allowed_values'])) {
+            return ['valid' => false, 'message' => $rules['message'] ?? 'Invalid value', 'value' => $value];
+        }
+        
+        return ['valid' => true, 'value' => $value];
+    }
+    
+    private static function sanitize($value, $type) {
+        if ($type === 'phone') {
+            return preg_replace('/\s+/', '', $value); // Remove all spaces
+        }
+        
+        if ($type === true) {
+            return trim(htmlspecialchars($value, ENT_QUOTES, 'UTF-8'));
+        }
+        
+        return trim($value);
+    }
+    
+    public static function getAllRules() {
+        return self::$rules;
+    }
+}
+
+// =======================================================
+// 3. HANDLE PROFILE UPDATE (With Validation & Rate Limiting)
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
-    $email = trim($_POST['email'] ?? ''); 
-    $age = intval($_POST['age'] ?? 0);
-    $gender = trim($_POST['gender'] ?? '');
-    $occupation = trim($_POST['occupation'] ?? '');
-    $birth_date = !empty($_POST['birth_date']) ? $_POST['birth_date'] : null;
-    $suffix = trim($_POST['suffix'] ?? '');
     
-    $full_name = trim($_POST['full_name'] ?? '');
-    $phone_number = trim($_POST['phone_number'] ?? '');
-    $address = trim($_POST['address'] ?? '');
-    
-    // ✅ AGE VALIDATION (1-120 only)
-    if ($age < 1 || $age > 120) {
-        $_SESSION['error_message'] = "Please enter a valid age between 1 and 120.";
+    // STEP 1: Check rate limit
+    $rate_check = check_rate_limit($pdo, $user_id, 'profile_update', 3, 60); // 3 updates per hour
+    if (!$rate_check['allowed']) {
+        $_SESSION['error_message'] = $rate_check['message'];
         header("Location: profile.php");
         exit();
     }
     
-    // ✅ PHONE NUMBER VALIDATION (11 digits, starts with 09)
-    $phone_clean = preg_replace('/\s+/', '', $phone_number);
-    if (!preg_match('/^09\d{9}$/', $phone_clean)) {
-        $_SESSION['error_message'] = "Please enter a valid phone number (09XXXXXXXXX).";
+    // STEP 2: Collect and validate all fields
+    $validated_data = [];
+    $validation_errors = [];
+    
+    $fields_to_validate = ['full_name', 'email', 'phone_number', 'age', 'gender', 'occupation', 'address', 'birth_date', 'suffix'];
+    
+    foreach ($fields_to_validate as $field) {
+        $value = trim($_POST[$field] ?? '');
+        $validation_result = ValidationRules::validate($field, $value);
+        
+        if (!$validation_result['valid']) {
+            $validation_errors[] = $validation_result['message'];
+        } else {
+            $validated_data[$field] = $validation_result['value'];
+        }
+    }
+    
+    // STEP 3: If validation errors, stop and show them
+    if (!empty($validation_errors)) {
+        $_SESSION['error_message'] = "Validation failed: " . implode("; ", $validation_errors);
         header("Location: profile.php");
         exit();
     }
     
-    // ENCRYPT bago i-save sa database
-    $encrypted_full_name = encrypt_data($full_name);
-    $encrypted_phone_number = encrypt_data($phone_number);
-    $encrypted_address = encrypt_data($address);
-    $encrypted_occupation = encrypt_data($occupation);
+    // STEP 4: Check if data actually changed (prevent unnecessary updates)
+    try {
+        $check_stmt = $pdo->prepare("
+            SELECT u.full_name, u.email, u.phone_number, u.address, 
+                   c.age, c.gender, c.occupation, c.birth_date, c.suffix
+            FROM users u
+            LEFT JOIN clients c ON u.id = c.user_id
+            WHERE u.id = ?
+        ");
+        $check_stmt->execute([$user_id]);
+        $current_data = $check_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Decrypt current data
+        $current_data['full_name'] = decrypt_data($current_data['full_name']);
+        $current_data['phone_number'] = decrypt_data($current_data['phone_number']);
+        $current_data['address'] = decrypt_data($current_data['address']);
+        $current_data['occupation'] = decrypt_data($current_data['occupation']);
+        
+        // Compare values
+        $has_changes = false;
+        foreach (['full_name', 'phone_number', 'address', 'occupation', 'age', 'birth_date', 'suffix'] as $field) {
+            if ($current_data[$field] != $validated_data[$field]) {
+                $has_changes = true;
+                break;
+            }
+        }
+        
+        if (!$has_changes) {
+            $_SESSION['error_message'] = "No changes detected. Update cancelled.";
+            header("Location: profile.php");
+            exit();
+        }
+        
+    } catch (Exception $e) {
+        $_SESSION['error_message'] = "Error checking data: " . $e->getMessage();
+        header("Location: profile.php");
+        exit();
+    }
+    
+    // STEP 5: Encrypt sensitive data
+    $encrypted_full_name = encrypt_data($validated_data['full_name']);
+    $encrypted_phone_number = encrypt_data($validated_data['phone_number']);
+    $encrypted_address = encrypt_data($validated_data['address']);
+    $encrypted_occupation = encrypt_data($validated_data['occupation']);
 
+    // STEP 6: Update database with transaction
     try {
         $pdo->beginTransaction();
 
@@ -63,7 +327,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         ");
         $update_user_stmt->execute([
             $encrypted_full_name,
-            $email, 
+            $validated_data['email'], 
             $encrypted_phone_number,
             $encrypted_address,
             $user_id
@@ -75,9 +339,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
             WHERE user_id = ?
         ");
         $update_client_stmt->execute([
-            $birth_date, $gender, $age, $suffix, $encrypted_occupation, $user_id
+            $validated_data['birth_date'], 
+            $validated_data['gender'], 
+            $validated_data['age'], 
+            $validated_data['suffix'], 
+            $encrypted_occupation, 
+            $user_id
         ]);
-        // return noting
+        
+        // STEP 7: Log this update for rate limiting
+        log_rate_limit($pdo, $user_id, 'profile_update');
         
         $pdo->commit();
         $_SESSION['success_message'] = "Profile updated successfully!";
@@ -93,16 +364,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
 }
 
 // =======================================================
-// 4. HANDLE PASSWORD CHANGE
+// 4. HANDLE PASSWORD CHANGE (With Rate Limiting)
 // =======================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    
+    // Check rate limit for password changes (stricter: 2 attempts per hour)
+    $rate_check = check_rate_limit($pdo, $user_id, 'password_change', 2, 60);
+    if (!$rate_check['allowed']) {
+        $_SESSION['error_message'] = $rate_check['message'];
+        header("Location: profile.php");
+        exit();
+    }
+    
     $current_password = $_POST['current_password'];
     $new_password = $_POST['new_password'];
     $confirm_password = $_POST['confirm_password'];
     
-    // Password length validation
-    if (strlen($new_password) < 6) {
-        $_SESSION['error_message'] = "New password must be at least 6 characters.";
+    // Enhanced password validation
+    if (strlen($new_password) < 8) {
+        $_SESSION['error_message'] = "New password must be at least 8 characters.";
+        header("Location: profile.php");
+        exit();
+    }
+    
+    // Check password strength
+    if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/', $new_password)) {
+        $_SESSION['error_message'] = "Password must contain at least one uppercase letter, one lowercase letter, and one number.";
         header("Location: profile.php");
         exit();
     }
@@ -118,6 +405,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
             $stmt_pass = $pdo->prepare($update_password);
             
             if ($stmt_pass->execute([$hashed_password, $user_id])) {
+                log_rate_limit($pdo, $user_id, 'password_change');
                 $_SESSION['success_message'] = "Password changed successfully!";
                 header("Location: profile.php");
                 exit();
@@ -152,10 +440,7 @@ try {
         exit();
     }
     
-    // I-initialize ang $user array para sa HTML
     $user = $user_encrypted;
-
-    // --- CRITICAL DECRYPTION STEP ---
     $user['full_name']    = decrypt_data($user_encrypted['full_name'] ?? '');
     $user['phone_number'] = decrypt_data($user_encrypted['phone_number'] ?? '');
     $user['address']      = decrypt_data($user_encrypted['address'] ?? ''); 
@@ -183,6 +468,9 @@ if (count($name_parts) >= 2) {
 } else {
     $initials = strtoupper(substr($user['full_name'] ?? 'U', 0, 2));
 }
+
+// Get validation rules for frontend
+$validation_rules = ValidationRules::getAllRules();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -216,20 +504,19 @@ if (count($name_parts) >= 2) {
             align-items: center;
             gap: 12px;
             min-width: 300px;
-            border-left: 4px solid;
+            max-width: 500px;
         }
 
         .notification-content.success {
-            border-left-color: #10b981;
+            border-left: 4px solid #10b981;
         }
 
         .notification-content.error {
-            border-left-color: #ef4444;
+            border-left: 4px solid #ef4444;
         }
 
         .notification-icon {
             font-size: 24px;
-            flex-shrink: 0;
         }
 
         .notification-content.success .notification-icon {
@@ -241,8 +528,8 @@ if (count($name_parts) >= 2) {
         }
 
         .notification-text {
+            flex: 1;
             color: #1f2937;
-            font-weight: 500;
             font-size: 14px;
         }
 
@@ -288,6 +575,22 @@ if (count($name_parts) >= 2) {
         .error-text.show {
             display: block;
         }
+        
+        /* Character counter */
+        .char-counter {
+            font-size: 11px;
+            color: #6b7280;
+            text-align: right;
+            margin-top: 2px;
+        }
+        
+        .char-counter.warning {
+            color: #f59e0b;
+        }
+        
+        .char-counter.error {
+            color: #ef4444;
+        }
     </style>
 </head>
 <body>
@@ -326,34 +629,109 @@ if (count($name_parts) >= 2) {
                 <form method="POST" action="" id="profileForm">
                     <div class="ojo-form-grid">
                         <div class="ojo-group">
-                            <label>Full Name</label>
-                            <input type="text" name="full_name" id="full_name" value="<?= htmlspecialchars($user['full_name']) ?>" required>
+                            <label>Full Name *</label>
+                            <input type="text" 
+                                   name="full_name" 
+                                   id="full_name" 
+                                   value="<?= htmlspecialchars($user['full_name']) ?>" 
+                                   maxlength="<?= $validation_rules['full_name']['max_length'] ?>"
+                                   required>
+                            <span class="error-text" id="full_name_error"></span>
+                            <div class="char-counter" id="full_name_counter"></div>
                         </div>
+                        
                         <div class="ojo-group">
-                            <label>Email Address</label>
-                            <input type="email" name="email" value="<?= htmlspecialchars($user['email']) ?>" readonly style="color:#999;">
+                            <label>Email Address *</label>
+                            <input type="email" 
+                                   name="email" 
+                                   value="<?= htmlspecialchars($user['email']) ?>" 
+                                   readonly 
+                                   style="color:#999;"
+                                   title="Email cannot be changed">
                         </div>
+                        
                         <div class="ojo-group">
-                            <label>Phone Number</label>
-                            <input type="text" name="phone_number" id="phone_number" value="<?= htmlspecialchars($user['phone_number']) ?>" maxlength="11" required>
-                            <span class="error-text" id="phone_error">Please enter valid phone (09XXXXXXXXX)</span>
+                            <label>Phone Number *</label>
+                            <input type="text" 
+                                   name="phone_number" 
+                                   id="phone_number" 
+                                   value="<?= htmlspecialchars($user['phone_number']) ?>" 
+                                   maxlength="11" 
+                                   required>
+                            <span class="error-text" id="phone_number_error"></span>
                         </div>
+                        
                         <div class="ojo-group">
-                            <label>Occupation</label>
-                            <input type="text" name="occupation" value="<?= htmlspecialchars($user['occupation']) ?>" required>
+                            <label>Occupation *</label>
+                            <input type="text" 
+                                   name="occupation" 
+                                   id="occupation"
+                                   value="<?= htmlspecialchars($user['occupation']) ?>" 
+                                   maxlength="<?= $validation_rules['occupation']['max_length'] ?>"
+                                   required>
+                            <span class="error-text" id="occupation_error"></span>
+                            <div class="char-counter" id="occupation_counter"></div>
                         </div>
+                        
                         <div class="ojo-group">
-                            <label>Age</label>
-                            <input type="number" name="age" id="age" value="<?= htmlspecialchars($user['age']) ?>" min="1" max="120" required>
-                            <span class="error-text" id="age_error">Age must be between 1 and 120</span>
+                            <label>Age *</label>
+                            <input type="number" 
+                                   name="age" 
+                                   id="age" 
+                                   value="<?= htmlspecialchars($user['age']) ?>" 
+                                   min="<?= $validation_rules['age']['min'] ?>" 
+                                   max="<?= $validation_rules['age']['max'] ?>" 
+                                   required>
+                            <span class="error-text" id="age_error"></span>
                         </div>
+                        
                         <div class="ojo-group">
-                            <label>Gender</label>
-                            <input type="text" name="gender" value="<?= htmlspecialchars($user['gender'] ?? '') ?>" readonly>
+                            <label>Gender *</label>
+                            <input type="text" 
+                                   name="gender" 
+                                   value="<?= htmlspecialchars($user['gender'] ?? '') ?>" 
+                                   readonly
+                                   style="color:#999;"
+                                   title="Gender cannot be changed">
+                        </div>
+                        
+                        <div class="ojo-group">
+                            <label>Address</label>
+                            <input type="text" 
+                                   name="address" 
+                                   id="address"
+                                   value="<?= htmlspecialchars($user['address'] ?? '') ?>" 
+                                   maxlength="<?= $validation_rules['address']['max_length'] ?>">
+                            <span class="error-text" id="address_error"></span>
+                            <div class="char-counter" id="address_counter"></div>
+                        </div>
+                        
+                        <div class="ojo-group">
+                            <label>Birth Date</label>
+                            <input type="date" 
+                                   name="birth_date" 
+                                   id="birth_date"
+                                   value="<?= htmlspecialchars($user['birth_date'] ?? '') ?>"
+                                   max="<?= date('Y-m-d') ?>">
+                            <span class="error-text" id="birth_date_error"></span>
+                        </div>
+                        
+                        <div class="ojo-group">
+                            <label>Suffix</label>
+                            <select name="suffix" id="suffix">
+                                <option value="">None</option>
+                                <?php 
+                                $suffixes = ['Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
+                                foreach ($suffixes as $suf) {
+                                    $selected = ($user['suffix'] == $suf) ? 'selected' : '';
+                                    echo "<option value='$suf' $selected>$suf</option>";
+                                }
+                                ?>
+                            </select>
                         </div>
                     </div>
 
-                    <button type="submit" name="update_profile" class="btn-ojo">SAVE CHANGES</button>
+                    <button type="submit" name="update_profile" class="btn-ojo" id="submitBtn">SAVE CHANGES</button>
                 </form>
 
             </main>
@@ -363,6 +741,9 @@ if (count($name_parts) >= 2) {
     <?php include '../includes/footer.php' ?>
 
     <script>
+        // Pass PHP validation rules to JavaScript
+        const validationRules = <?= json_encode($validation_rules) ?>;
+        
         // Show notification if message exists
         <?php if ($success_message): ?>
             showNotification('<?= addslashes($success_message) ?>', 'success');
@@ -378,10 +759,7 @@ if (count($name_parts) >= 2) {
             const text = document.getElementById('notificationText');
             const icon = content.querySelector('.notification-icon i');
 
-            // Set message
             text.textContent = message;
-
-            // Set type (success or error)
             content.className = 'notification-content ' + type;
             
             if (type === 'success') {
@@ -390,86 +768,157 @@ if (count($name_parts) >= 2) {
                 icon.className = 'fas fa-exclamation-circle';
             }
 
-            // Show modal
             modal.classList.add('show');
 
-            // Auto-hide after 3 seconds
             setTimeout(() => {
                 modal.classList.add('hiding');
                 setTimeout(() => {
                     modal.classList.remove('show', 'hiding');
                 }, 300);
-            }, 3000);
+            }, 5000);
         }
 
-        // Form validation
+        // Validation helper functions
+        function validateField(fieldName, value) {
+            const rules = validationRules[fieldName];
+            if (!rules) return { valid: true };
+            
+            // Required check
+            if (rules.required && (!value || value.trim() === '')) {
+                return { valid: false, message: fieldName.replace('_', ' ').toUpperCase() + ' is required' };
+            }
+            
+            // Skip other validations if empty and not required
+            if (!value && !rules.required) {
+                return { valid: true };
+            }
+            
+            // Min/Max for numbers
+            if (rules.type === 'integer') {
+                const num = parseInt(value);
+                if (isNaN(num)) {
+                    return { valid: false, message: 'Must be a valid number' };
+                }
+                if (rules.min && num < rules.min) {
+                    return { valid: false, message: rules.message || `Minimum value is ${rules.min}` };
+                }
+                if (rules.max && num > rules.max) {
+                    return { valid: false, message: rules.message || `Maximum value is ${rules.max}` };
+                }
+            }
+            
+            // Length checks
+            if (rules.min_length && value.length < rules.min_length) {
+                return { valid: false, message: `Minimum length is ${rules.min_length} characters` };
+            }
+            if (rules.max_length && value.length > rules.max_length) {
+                return { valid: false, message: `Maximum length is ${rules.max_length} characters` };
+            }
+            
+            // Pattern matching
+            if (rules.pattern) {
+                const pattern = new RegExp(rules.pattern.replace(/^\/|\/$/g, ''));
+                if (!pattern.test(value)) {
+                    return { valid: false, message: rules.pattern_message || 'Invalid format' };
+                }
+            }
+            
+            return { valid: true };
+        }
+
+        function showFieldError(fieldName, message) {
+            const input = document.getElementById(fieldName);
+            const error = document.getElementById(fieldName + '_error');
+            
+            if (input && error) {
+                input.classList.add('input-error');
+                error.textContent = message;
+                error.classList.add('show');
+            }
+        }
+
+        function clearFieldError(fieldName) {
+            const input = document.getElementById(fieldName);
+            const error = document.getElementById(fieldName + '_error');
+            
+            if (input && error) {
+                input.classList.remove('input-error');
+                error.classList.remove('show');
+            }
+        }
+
+        // Character counters
+        function updateCharCounter(fieldName) {
+            const input = document.getElementById(fieldName);
+            const counter = document.getElementById(fieldName + '_counter');
+            const rules = validationRules[fieldName];
+            
+            if (!input || !counter || !rules || !rules.max_length) return;
+            
+            const current = input.value.length;
+            const max = rules.max_length;
+            const remaining = max - current;
+            
+            counter.textContent = `${current}/${max} characters`;
+            
+            counter.classList.remove('warning', 'error');
+            if (remaining < 20) {
+                counter.classList.add('warning');
+            }
+            if (remaining < 0) {
+                counter.classList.add('error');
+            }
+        }
+
+        // Form validation on submit
         document.getElementById('profileForm').addEventListener('submit', function(e) {
             let isValid = true;
-
-            // Age validation
-            const ageInput = document.getElementById('age');
-            const ageError = document.getElementById('age_error');
-            const age = parseInt(ageInput.value);
-
-            if (isNaN(age) || age < 1 || age > 120) {
-                e.preventDefault();
-                ageInput.classList.add('input-error');
-                ageError.classList.add('show');
-                isValid = false;
-            } else {
-                ageInput.classList.remove('input-error');
-                ageError.classList.remove('show');
-            }
-
-            // Phone validation
-            const phoneInput = document.getElementById('phone_number');
-            const phoneError = document.getElementById('phone_error');
-            const phone = phoneInput.value.replace(/\s/g, '');
-            const phoneRegex = /^09\d{9}$/;
-
-            if (!phoneRegex.test(phone)) {
-                e.preventDefault();
-                phoneInput.classList.add('input-error');
-                phoneError.classList.add('show');
-                isValid = false;
-            } else {
-                phoneInput.classList.remove('input-error');
-                phoneError.classList.remove('show');
-            }
+            const fieldsToValidate = ['full_name', 'phone_number', 'age', 'occupation', 'address', 'birth_date'];
+            
+            fieldsToValidate.forEach(fieldName => {
+                const input = document.getElementById(fieldName);
+                if (!input) return;
+                
+                const result = validateField(fieldName, input.value);
+                if (!result.valid) {
+                    e.preventDefault();
+                    showFieldError(fieldName, result.message);
+                    isValid = false;
+                } else {
+                    clearFieldError(fieldName);
+                }
+            });
 
             if (!isValid) {
                 showNotification('Please correct the errors before submitting.', 'error');
             }
         });
 
-        // Real-time age validation
-        document.getElementById('age').addEventListener('input', function() {
-            const age = parseInt(this.value);
-            const ageError = document.getElementById('age_error');
-
-            if (this.value && (isNaN(age) || age < 1 || age > 120)) {
-                this.classList.add('input-error');
-                ageError.classList.add('show');
-            } else {
-                this.classList.remove('input-error');
-                ageError.classList.remove('show');
-            }
+        // Real-time validation for all fields
+        ['full_name', 'phone_number', 'age', 'occupation', 'address', 'birth_date'].forEach(fieldName => {
+            const input = document.getElementById(fieldName);
+            if (!input) return;
+            
+            input.addEventListener('input', function() {
+                const result = validateField(fieldName, this.value);
+                if (this.value && !result.valid) {
+                    showFieldError(fieldName, result.message);
+                } else {
+                    clearFieldError(fieldName);
+                }
+                
+                // Update character counter if applicable
+                updateCharCounter(fieldName);
+            });
+            
+            // Initialize character counter
+            updateCharCounter(fieldName);
         });
 
-        // Real-time phone validation
-        document.getElementById('phone_number').addEventListener('input', function() {
-            const phone = this.value.replace(/\s/g, '');
-            const phoneError = document.getElementById('phone_error');
-            const phoneRegex = /^09\d{9}$/;
-
-            if (this.value && !phoneRegex.test(phone)) {
-                this.classList.add('input-error');
-                phoneError.classList.add('show');
-            } else {
-                this.classList.remove('input-error');
-                phoneError.classList.remove('show');
-            }
-        });
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
     </script>
 </body>
 </html>
