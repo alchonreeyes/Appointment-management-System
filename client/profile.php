@@ -76,12 +76,13 @@ class ValidationRules {
             'sanitize' => 'phone'
         ],
         'age' => [
-            'required' => true,
-            'type' => 'integer',
-            'min' => 1,
-            'max' => 120,
-            'message' => 'Age must be between 1 and 120'
-        ],
+    'required' => true,
+    'type' => 'integer',
+    'min' => 1,
+    'max' => 120,
+    'message' => 'Age must be between 1 and 120',
+    'auto_calculated' => true  // Flag that this is auto-calculated
+],
         'gender' => [
             'required' => true,
             'readonly' => true
@@ -101,11 +102,12 @@ class ValidationRules {
             'sanitize' => true
         ],
         'birth_date' => [
-            'required' => false,
-            'type' => 'date',
-            'max_date' => 'today',
-            'message' => 'Birth date cannot be in the future'
-        ],
+    'required' => true,  // Changed from false to true
+    'type' => 'date',
+    'max_date' => 'today',
+    'min_date' => '1900-01-01',  // Added minimum date
+    'message' => 'Birth date cannot be in the future'
+],
         'suffix' => [
             'required' => false,
             'max_length' => 10,
@@ -676,12 +678,15 @@ $validation_rules = ValidationRules::getAllRules();
                         <div class="ojo-group">
                             <label>Age *</label>
                             <input type="number" 
-                                   name="age" 
-                                   id="age" 
-                                   value="<?= htmlspecialchars($user['age']) ?>" 
-                                   min="<?= $validation_rules['age']['min'] ?>" 
-                                   max="<?= $validation_rules['age']['max'] ?>" 
-                                   required>
+       name="age" 
+       id="age" 
+       value="<?= htmlspecialchars($user['age']) ?>" 
+       min="<?= $validation_rules['age']['min'] ?>" 
+       max="<?= $validation_rules['age']['max'] ?>" 
+       readonly
+       style="background-color: #f3f4f6; color: #6b7280; cursor: not-allowed;"
+       title="Age is automatically calculated from birth date"
+       required>
                             <span class="error-text" id="age_error"></span>
                         </div>
                         
@@ -707,7 +712,7 @@ $validation_rules = ValidationRules::getAllRules();
                         </div>
                         
                         <div class="ojo-group">
-                            <label>Birth Date</label>
+                            <label>Birth Date *</label>
                             <input type="date" 
                                    name="birth_date" 
                                    id="birth_date"
@@ -746,6 +751,14 @@ $validation_rules = ValidationRules::getAllRules();
         
         // Show notification if message exists
         <?php if ($success_message): ?>
+            // Auto-calculate age on page load if birth date exists
+document.addEventListener('DOMContentLoaded', function() {
+    const birthDateInput = document.getElementById('birth_date');
+    if (birthDateInput && birthDateInput.value) {
+        // Trigger change event to calculate age
+        birthDateInput.dispatchEvent(new Event('change'));
+    }
+});
             showNotification('<?= addslashes($success_message) ?>', 'success');
         <?php endif; ?>
 
@@ -894,6 +907,29 @@ $validation_rules = ValidationRules::getAllRules();
             }
         });
 
+        // Auto-calculate age from birth date
+        document.getElementById('birth_date').addEventListener('change', function() {
+            const birthDate = new Date(this.value);
+            const today = new Date();
+            
+            if (this.value && birthDate <= today) {
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                
+                // Adjust if birthday hasn't occurred this year
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                
+                // Update age field
+                const ageInput = document.getElementById('age');
+                ageInput.value = age;
+                
+                // Clear any age errors since it's auto-calculated
+                clearFieldError('age');
+            }
+        });
+
         // Real-time validation for all fields
         ['full_name', 'phone_number', 'age', 'occupation', 'address', 'birth_date'].forEach(fieldName => {
             const input = document.getElementById(fieldName);
@@ -903,6 +939,7 @@ $validation_rules = ValidationRules::getAllRules();
                 const result = validateField(fieldName, this.value);
                 if (this.value && !result.valid) {
                     showFieldError(fieldName, result.message);
+                    
                 } else {
                     clearFieldError(fieldName);
                 }
