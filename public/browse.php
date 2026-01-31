@@ -463,8 +463,15 @@ $result = $conn->query($sql);
 
 <script>
 // Initialize Filters
+// Initialize Filters
 const urlParams = new URLSearchParams(window.location.search);
 const initialSearch = urlParams.get('search') || '';
+
+// NEW: Get filter parameters from URL
+const urlBrand = urlParams.get('brand');
+const urlFrameType = urlParams.get('frame_type');
+const urlLensType = urlParams.get('lens_type');
+const urlGender = urlParams.get('gender');
 
 if (initialSearch) {
     document.querySelector('.hero-content h1').textContent = `Results: '${initialSearch}'`;
@@ -472,19 +479,49 @@ if (initialSearch) {
     if(sub) sub.style.display = 'none';
 }
 
-// State Management
+// State Management with URL parameters
 let activeFilters = { 
-    gender: [], 
-    brand: [], 
-    lens: [], 
-    frame: [],
+    gender: urlGender ? [urlGender] : [], 
+    brand: urlBrand ? [urlBrand] : [], 
+    lens: urlLensType ? [urlLensType] : [], 
+    frame: urlFrameType ? [urlFrameType] : [],
     search: initialSearch 
 };
-
 // Setup Listeners
 document.addEventListener('DOMContentLoaded', () => {
+    // NEW: Auto-check checkboxes based on URL parameters
+    if (urlBrand) {
+        const brandCheckbox = document.querySelector(`input[data-filter="brand"][value="${urlBrand}"]`);
+        if (brandCheckbox) {
+            brandCheckbox.checked = true;
+        }
+    }
+    
+    if (urlFrameType) {
+        const frameCheckbox = document.querySelector(`input[data-filter="frame"][value="${urlFrameType}"]`);
+        if (frameCheckbox) {
+            frameCheckbox.checked = true;
+        }
+    }
+    
+    if (urlLensType) {
+        const lensCheckbox = document.querySelector(`input[data-filter="lens"][value="${urlLensType}"]`);
+        if (lensCheckbox) {
+            lensCheckbox.checked = true;
+        }
+    }
+    
+    if (urlGender) {
+        const genderCheckbox = document.querySelector(`input[data-filter="gender"][value="${urlGender}"]`);
+        if (genderCheckbox) {
+            genderCheckbox.checked = true;
+        }
+    }
+    
+    // Apply filters (this will use the URL parameters we set in activeFilters)
     applyFilters(); 
 });
+
 
 document.querySelectorAll('.filter-checkbox').forEach(checkbox => {
     checkbox.addEventListener('change', function() {
@@ -518,6 +555,10 @@ function applyFilters() {
         if (data.success) {
             updateProductGrid(data.products);
             document.getElementById('resultsCount').textContent = `Showing ${data.count} results`;
+            
+            // NEW: Update active filter tags display
+            updateActiveFilterTags();
+            
         } else {
             console.error("Backend Error:", data.error);
             document.getElementById('resultsCount').textContent = `Error loading results.`;
@@ -526,6 +567,45 @@ function applyFilters() {
     .catch(error => console.error('Fetch Error:', error));
 }
 
+// NEW: Function to show active filters as tags
+function updateActiveFilterTags() {
+    const container = document.getElementById('activeFilters');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    const allFilters = [
+        ...activeFilters.gender.map(v => ({type: 'gender', value: v})),
+        ...activeFilters.brand.map(v => ({type: 'brand', value: v})),
+        ...activeFilters.lens.map(v => ({type: 'lens', value: v})),
+        ...activeFilters.frame.map(v => ({type: 'frame', value: v}))
+    ];
+    
+    allFilters.forEach(filter => {
+        const tag = document.createElement('div');
+        tag.className = 'filter-tag';
+        tag.innerHTML = `
+            ${filter.value}
+            <button onclick="removeFilter('${filter.type}', '${filter.value}')">×</button>
+        `;
+        container.appendChild(tag);
+    });
+}
+
+// NEW: Function to remove individual filter
+function removeFilter(type, value) {
+    // Remove from active filters
+    activeFilters[type] = activeFilters[type].filter(v => v !== value);
+    
+    // Uncheck the checkbox
+    const checkbox = document.querySelector(`input[data-filter="${type}"][value="${value}"]`);
+    if (checkbox) {
+        checkbox.checked = false;
+    }
+    
+    // Reapply filters
+    applyFilters();
+}
 // Render Grid
 function updateProductGrid(products) {
     const grid = document.getElementById('productGrid');
@@ -561,15 +641,18 @@ function toggleFilters() {
     document.querySelector('.show-filters-btn').classList.toggle('visible');
 }
 function showFilters() { toggleFilters(); }
-
 function clearAllFilters() {
     document.querySelectorAll('.filter-checkbox').forEach(cb => cb.checked = false);
     activeFilters = { gender: [], brand: [], lens: [], frame: [], search: '' };
+    
+    // NEW: Clear URL parameters and reset page title
     window.history.pushState({}, document.title, window.location.pathname);
     document.querySelector('.hero-content h1').textContent = 'TOP-RATED FRAMES';
+    const sub = document.querySelector('.hero-content h2');
+    if(sub) sub.style.display = 'block';
+    
     applyFilters();
 }
-
 function openModal(productId) {
     document.getElementById('modalTitle').textContent = 'Loading...';
     document.getElementById('modalMainDisplayImg').src = '';

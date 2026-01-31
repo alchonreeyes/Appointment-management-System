@@ -209,7 +209,7 @@
         flex-direction: column;
         align-items: center;
         text-align: center;
-        gap: 12px;
+        gap: 1px;
         flex: 1;
         border-right: 1px solid #eee;
         padding: 0 20px; /* Add padding to icons */
@@ -219,26 +219,26 @@
         border-right: none;
     }
     @media (max-width: 600px) {
-        .service {
-            width: 90%; /* Narrower on mobile */
-            padding: 25px 15px; /* Less padding */
-            gap: 15px; /* Smaller gap */
-            margin: -40px auto 40px auto; /* Less negative margin */
-        }
-        
-        .service-description {
-            padding: 0 10px; /* Reduce padding */
-        }
-        
-        .service-description i {
-            font-size: 2rem; /* Smaller icons on mobile */
-        }
-        
-        .service-description span {
-            font-size: 0.75rem; /* Smaller text */
-            letter-spacing: 0.5px;
-        }
+    .service {
+        width: 100%;              /* ← CHANGED from 90% */
+        padding: 20px 10px;      /* ← CHANGED from 25px 15px */
+        gap: 5px;               /* ← CHANGED from 15px */
+        margin: 40px auto 40px auto;  /* ← REMOVED negative sign */
     }
+    
+    .service-description {
+        padding: 0 0px;          /* ← CHANGED from 0 10px */
+    }
+    
+    .service-description i {
+        font-size: 1.3rem;       /* ← CHANGED from 2rem */
+    }
+    
+    .service-description span {
+        font-size: 1px;      /* ← CHANGED from 0.75rem */
+        letter-spacing: 0.3px;   /* ← CHANGED from 0.5px */
+    }
+}
 
     /* Override specific nth-child styles you had */
     .service-description:nth-child(2) {
@@ -246,7 +246,7 @@
         border-right: 1px solid #eee;
     }
     .service-description i {
-        font-size: 2.5rem; /* Slightly larger icons */
+        font-size: 2.0rem; /* Slightly larger icons */
         color: #d94032;
         margin-bottom: 8px;
         transition: transform 0.3s ease;
@@ -256,7 +256,7 @@
         transform: scale(1.1); /* Hover effect */
     }
     .service-description span {
-        font-size: 0.95rem; /* Slightly smaller text */
+        font-size: 0.8rem; /* Slightly smaller text */
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.8px;

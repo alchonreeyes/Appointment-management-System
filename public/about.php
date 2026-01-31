@@ -49,7 +49,7 @@ include '../config/db.php';
             </div>
             <div class="story-img-container">
                 <img src="../assets/src/hero-img(1).jpg" alt="Clinic Interior">
-                <div class="img-badge">Est. 1960</div>
+                <div class="img-badge">Est. 1960s</div>
                 <!-- image container cards layout -->
             </div>
         </div>

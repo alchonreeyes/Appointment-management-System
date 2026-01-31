@@ -9,7 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$required_fields = ['full_name', 'email', 'password', 'phone_number', 'address', 'gender', 'age', 'occupation'];
+// 1. ADDED 'birth_date' to the required fields array
+$required_fields = ['full_name', 'email', 'password', 'phone_number', 'address', 'gender', 'age', 'occupation', 'birth_date'];
 foreach ($required_fields as $field) {
     if (!isset($_POST[$field])) {
         $_SESSION['error'] = "Missing required field: " . $field;
@@ -53,7 +54,52 @@ $address = trim($_POST['address']);
 $gender = trim($_POST['gender']);
 $age = intval($_POST['age']);
 $occupation = trim($_POST['occupation']);
+// 2. CAPTURED the birth_date from POST
+$birth_date = $_POST['birth_date'];
 
+// ===== ADD THIS ENTIRE VALIDATION BLOCK =====
+// Validate birth_date is not empty
+if (empty($birth_date)) {
+    $_SESSION['error'] = "Birth date is required.";
+    header("Location: ../public/register.php");
+    exit;
+}
+
+// Validate date format (YYYY-MM-DD)
+$dateObj = DateTime::createFromFormat('Y-m-d', $birth_date);
+if (!$dateObj || $dateObj->format('Y-m-d') !== $birth_date) {
+    $_SESSION['error'] = "Invalid birth date format. Please use the date picker.";
+    header("Location: ../public/register.php");
+    exit;
+}
+
+// Check if date is not in the future
+if ($dateObj > new DateTime()) {
+    $_SESSION['error'] = "Birth date cannot be in the future.";
+    header("Location: ../public/register.php");
+    exit;
+}
+
+// Auto-calculate age from birth_date
+$today = new DateTime();
+$calculatedAge = $today->diff($dateObj)->y;
+
+// Validate age requirements (16-100 years)
+if ($calculatedAge < 16) {
+    $_SESSION['error'] = "You must be at least 16 years old to register.";
+    header("Location: ../public/register.php");
+    exit;
+}
+
+if ($calculatedAge > 100) {
+    $_SESSION['error'] = "Invalid birth date. Age cannot exceed 100 years.";
+    header("Location: ../public/register.php");
+    exit;
+}
+
+// Use calculated age instead of POST age
+$age = intval($calculatedAge);
+// ===== END OF VALIDATION BLOCK =====
 $digits = preg_replace('/\D+/', '', $phone_number);
 if (!preg_match('/^09\d{9}$/', $digits)) {
     $_SESSION['error'] = "Invalid phone number format.";
@@ -78,23 +124,23 @@ try {
     $encrypted_phone_number = encrypt_data($phone_number);
     $encrypted_address = encrypt_data($address);
     $encrypted_occupation = encrypt_data($occupation);
+    // 3. ENCRYPTED the birth_date to match your other PII fields
+    $encrypted_birth_date = encrypt_data($birth_date);
 
-    // Generate secure token
     $verification_token = bin2hex(random_bytes(32));
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
-    // Insert with token
     $stmt = $pdo->prepare("INSERT INTO users (full_name, email, password_hash, phone_number, address, verification_token, is_verified)
                            VALUES (?, ?, ?, ?, ?, ?, 0)");
     $stmt->execute([$encrypted_full_name, $email, $hashedPassword, $encrypted_phone_number, $encrypted_address, $verification_token]);
 
     $userId = $pdo->lastInsertId();
 
-    $stmt = $pdo->prepare("INSERT INTO clients (user_id, gender, age, occupation)
-                           VALUES (?, ?, ?, ?)");
-    $stmt->execute([$userId, $gender, $age, $encrypted_occupation]);
+    // 4. UPDATED the clients INSERT statement to include the birth_date column and value
+    $stmt = $pdo->prepare("INSERT INTO clients (user_id, gender, age, occupation, birth_date)
+                           VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$userId, $gender, $age, $encrypted_occupation, $encrypted_birth_date]);
 
-    // Send email with verification link
     $mail = new PHPMailer(true); 
     try {
         $mail->isSMTP();
@@ -131,13 +177,11 @@ try {
             throw new Exception("Email sending failed");
         }
 
-        // ✅ SET MESSAGE TO SHOW ON LOGIN PAGE ONLY
         $_SESSION['registration_success'] = "Registration successful! Please check your email and click the verification link to activate your account.";
         header("Location: ../public/login.php");
         exit;
 
     } catch (Exception $e) {
-        // Rollback: Delete created records if email fails
         try {
             $deleteClient = $pdo->prepare("DELETE FROM clients WHERE user_id = ?");
             $deleteClient->execute([$userId]);

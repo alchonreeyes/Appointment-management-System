@@ -5,7 +5,7 @@ session_start();
 require_once __DIR__ . '/../database.php';
 
 // =======================================================
-// 1. INAYOS NA SECURITY CHECK
+  // 1. INAYOS NA SECURITY CHECK
 // =======================================================
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     if (isset($_POST['action'])) {

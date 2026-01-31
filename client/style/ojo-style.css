@@ -404,3 +404,113 @@ body {
     }
 }
 
+   /* Success/Error Modal Styles */
+        .notification-modal {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        .notification-modal.show {
+            display: block;
+        }
+
+        .notification-content {
+            background: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            max-width: 500px;
+        }
+
+        .notification-content.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification-content.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .notification-icon {
+            font-size: 24px;
+        }
+
+        .notification-content.success .notification-icon {
+            color: #10b981;
+        }
+
+        .notification-content.error .notification-icon {
+            color: #ef4444;
+        }
+
+        .notification-text {
+            flex: 1;
+            color: #1f2937;
+            font-size: 14px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .notification-modal.hiding {
+            animation: slideOutRight 0.3s ease-out;
+        }
+
+        /* Input Error Styling */
+        .input-error {
+            border: 2px solid #ef4444 !important;
+            background-color: #fef2f2 !important;
+        }
+
+        .error-text {
+            color: #ef4444;
+            font-size: 12px;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-text.show {
+            display: block;
+        }
+        
+        /* Character counter */
+        .char-counter {
+            font-size: 11px;
+            color: #6b7280;
+            text-align: right;
+            margin-top: 2px;
+        }
+        
+        .char-counter.warning {
+            color: #f59e0b;
+        }
+        
+        .char-counter.error {
+            color: #ef4444;
+        }

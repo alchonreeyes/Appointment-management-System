@@ -119,60 +119,46 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Step 1: Patient Info -->
              <input type="hidden" name="service_id" value="12">
         <div class="form-step active">
-              <h2>Let's get you scheduled</h2>
+                <h2>Let's get you scheduled</h2>
+               
+                
+                
+                <div class="form-row name-row" id="formFields">
+                    <input type="text" placeholder="Enter Your Name..." name="full_name" required
+                        value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>" disabled>
+                    
+                    <select name="suffix" id="suffix" disabled>
+                        <option value="">Suffix (Optional)</option>
+                        <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
+                        <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
+                        <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
+                    </select>
+                    <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..." disabled> 
+                </div>
 
-      <p style="color:black;">To get started, simply select the type of appointment you need from our list of options</p>
+                <div class="form-row three-cols">
+                    <select name="gender" required disabled>
+                        <option value="">Select Gender...</option>
+                        <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
+                        <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
+                    </select>
+                    
+                    <input type="number" name="age" placeholder="Enter your Age..." required min="1" max="120"
+                        value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>" disabled>
+                    <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
 
-      <div class="form-row name-row">
-    <input type="text" placeholder="Enter Your Name..." name="full_name" required
-           value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>">
-    
-    <select name="suffix" id="suffix">
-      <option value="">Suffix (Optional)</option>
-      <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
-      <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
-      <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
-    </select>
-    <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..."> 
-</div>
+                    <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="11" required
+                        value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>" disabled>
+                    <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+                </div>
 
-<div class="form-row three-cols">
-    <select name="gender" required>
-      <option value="">Select Gender...</option>
-      <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
-      <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
-    </select>
-    
-    <input 
-    type="number" 
-    name="age" 
-    placeholder="Enter your Age..." 
-    required
-    min="1" 
-    max="120"
-    value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>"
->
-<p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
-
-
-<input 
-    type="text" 
-    name="contact_number" 
-    placeholder="0912 345 678" 
-    maxlength="11" 
-    required
-    value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>"
->
-<p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
-</div>
-
-<div class="form-row single">
-    <input type="text" name="occupation" placeholder="Enter your Occupation..." required
-           value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>">
-</div>
-
-            <button type="button" class="next-btn">Next</button>
-        </div>
+                <div class="form-row single">
+                    <input type="text" name="occupation" placeholder="Enter your Occupation..." required
+                        value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>" disabled>
+                    </div>
+                
+                <button type="button" class="next-btn">Next</button>
+            </div>
         
         <!-- Step 2: medical certificate purpose -->
 <div class="form-step">
@@ -303,8 +289,8 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
     
     <div class="slot-message" id="slot-message-2" style="margin-top: 5px; padding: 5px; border-radius: 4px; font-size: 12px; display: none;"></div>
   </div>
-<div style="text-align: center; margin-bottom: 15px; display: none;">
-      <button type="button" id="add-appt-btn" style="background: #f0f9ff; color: #004aad; border: 1px dashed #004aad; width: 100%; padding: 8px; font-size: 13px;" disabled>
+<div style="text-align: center; margin-bottom: 15px; ">
+      <button type="button" id="add-appt-btn" style="background: #f0f9ff; color: #004aad; border: 1px dashed #004aad; width: 100%; padding: 8px; font-size: 13px;" >
           + Add Another Appointment
       </button>
   </div>

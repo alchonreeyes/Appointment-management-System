@@ -292,6 +292,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         $current_data['phone_number'] = decrypt_data($current_data['phone_number']);
         $current_data['address'] = decrypt_data($current_data['address']);
         $current_data['occupation'] = decrypt_data($current_data['occupation']);
+        $current_data['birth_date'] = decrypt_data($current_data['birth_date']);
         
         // Compare values
         $has_changes = false;
@@ -447,6 +448,7 @@ try {
     $user['phone_number'] = decrypt_data($user_encrypted['phone_number'] ?? '');
     $user['address']      = decrypt_data($user_encrypted['address'] ?? ''); 
     $user['occupation']   = decrypt_data($user_encrypted['occupation'] ?? '');  
+    $user['birth_date']   = decrypt_data($user_encrypted['birth_date'] ?? '');  
  
 } catch (Exception $e) {
     $error_message = "Error fetching profile data: " . $e->getMessage();

@@ -1,4 +1,5 @@
 <?php
+session_start();
 include '../config/db.php';
 $db = new Database();
 $pdo = $db->getConnection();
@@ -63,6 +64,410 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
       .p-details { padding: 15px; text-align: center; }
       .p-name { font-weight: 700; margin-bottom: 5px; color: #333; }
       .p-price { color: #d94032; font-weight: 600; }
+      /* Modal Styles - ADD THIS */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh; /* Changed from 100% */
+    background-color: rgba(0,0,0,0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scroll on iOS */
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    width: 90%;
+    max-width: 1000px;
+    border-radius: 12px;
+    display: flex;
+    position: relative;
+    margin: 40px auto;
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #666;
+    z-index: 10;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #000;
+    transform: rotate(90deg);
+}
+
+.modal-left {
+    flex: 1;
+    padding: 40px;
+    background-color: #fafafa;
+    border-radius: 12px 0 0 12px;
+}
+
+.modal-main-display-container {
+    width: 100%;
+    height: 400px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-main-display-container img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.modal-thumbnails-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.thumb-img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.thumb-img:hover,
+.thumb-img.active-thumb {
+    border-color: #000;
+}
+
+.modal-right {
+    flex: 1;
+    padding: 40px;
+}
+
+.modal-category {
+    color: #666;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+
+.modal-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* Specifications Grid */
+.specs-container {
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.specs-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.specs-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.spec-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: white;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.spec-icon {
+    font-size: 1.5rem;
+}
+
+.spec-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.spec-label {
+    font-size: 0.75rem;
+    color: #999;
+    text-transform: uppercase;
+}
+
+.spec-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.prescription-link {
+    color: #000;
+    text-decoration: underline;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: inline-block;
+    transition: color 0.3s ease;
+}
+
+.prescription-link:hover {
+    color: #d94032;
+}
+
+.description-section {
+    margin-top: 20px;
+}
+
+.description-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.modal-description {
+    color: #666;
+    line-height: 1.6;
+}
+
+/* Responsive Modal */
+@media (max-width: 968px) {
+    .modal-content {
+        flex-direction: column;
+    }
+    
+    .modal-left,
+    .modal-right {
+        border-radius: 0;
+    }
+    
+    .modal-left {
+        border-radius: 12px 12px 0 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal {
+        align-items: flex-start; /* Changed from center */
+        padding: 0; /* Remove padding */
+    }
+    
+    .modal-content {
+        width: 100%; /* Changed from 95% */
+        max-width: 100%;
+        margin: 0; /* Changed from 20px auto */
+        max-height: 100vh;
+        overflow-y: auto;
+        border-radius: 0; /* Remove border radius on mobile */
+    }
+    
+    .modal-left,
+    .modal-right {
+        padding: 20px;
+    }
+    
+    .modal-main-display-container {
+        height: 200px; /* Smaller on mobile */
+    }
+    
+    .modal-title {
+        font-size: 1.3rem;
+    }
+    
+    .specs-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    /* Make close button bigger and easier to tap */
+    .modal-close {
+        top: 10px;
+        right: 10px;
+        font-size: 2.5rem;
+        padding: 10px;
+        background: white;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+}
+/* Service Cards - Make them tappable on mobile */
+.service-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.service-card {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    position: relative;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+}
+
+.service-card h3 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.service-card p {
+    color: #666;
+    line-height: 1.6;
+    margin-bottom: 15px;
+}
+
+.service-hover-text {
+    color: #999;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Card Details Overlay (Hidden by default) */
+.card-details-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.card-details-overlay.active {
+    display: flex;
+}
+
+.card-details-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    position: relative;
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.card-details-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.card-details-close:hover {
+    background: #c0392b;
+    transform: rotate(90deg);
+}
+
+.card-details-content h3 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #333;
+    padding-right: 30px;
+}
+
+.card-details-content p {
+    color: #666;
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+/* Mobile specific styles */
+@media (max-width: 768px) {
+    .service-hover-text {
+        display: none; /* Hide "Hover for details" on mobile */
+    }
+    
+    /* Show tap indicator on mobile */
+    .service-card::after {
+        content: "👆 Tap for details";
+        display: block;
+        color: #3498db;
+        font-size: 0.85rem;
+        font-style: italic;
+        margin-top: 10px;
+        text-align: center;
+    }
+    
+    .card-details-content {
+        padding: 25px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .card-details-close {
+        width: 40px;
+        height: 40px;
+        font-size: 1.8rem;
+    }
+}
   </style>
 </head>
 <body>
@@ -87,7 +492,6 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="slide"><img src="../assets/src/hero-img(3).jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
     </div>
 </div>
-
 <div class="service">
     <div class="service-description">
         <i class="fa-solid fa-glasses"></i>
@@ -102,6 +506,14 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <span>Eyewear Warranty</span>
     </div>
 </div>
+
+<style>
+    @media (max-width: 768px) {
+        .service {
+            display: none;
+        }
+    }
+</style>
 
 <section class="section-padding" style="background: #fff;">
     <div class="text-center">
@@ -159,7 +571,7 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="p-details">
                         <div class="p-name"><?= htmlspecialchars($prod['product_name']) ?></div>
                         <div style="font-size: 0.85rem; color: #777; margin-bottom: 5px;"><?= htmlspecialchars($prod['brand']) ?></div>
-                        <a href="browse.php" class="card-btn">View Details</a>
+                       <button class="card-btn" onclick="openModal(<?= $prod['product_id'] ?>)" style="cursor: pointer; border: none; background: #d94032; color: white; padding: 10px 20px; border-radius: 5px;">View Details</button>
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -172,6 +584,67 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <a href="browse.php" class="hero-btn primary" style="background: #333; border-color:#333;">View All Products</a>
     </div>
 </section>
+<!-- Product Modal -->
+<div class="modal" id="productModal">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-left">
+      <div class="modal-main-display-container">
+        <img id="modalMainDisplayImg" src="" alt="Product Image" onerror="this.style.display='none'">
+      </div>
+      <div class="modal-thumbnails-row" id="modalThumbnailsContainer" style="display: none;"></div>
+    </div>
+    <div class="modal-right">
+      <p class="modal-category">Eyeglasses</p>
+      <h2 class="modal-title" id="modalTitle">Product Name</h2>
+      
+      <!-- Specifications Section -->
+      <div class="specs-container">
+        <h3 class="specs-title">SPECIFICATIONS</h3>
+        <div class="specs-grid">
+          <div class="spec-item">
+            <span class="spec-icon">👤</span>
+            <div class="spec-content">
+              <span class="spec-label">GENDER</span>
+              <span class="spec-value" id="specGender">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">🏷️</span>
+            <div class="spec-content">
+              <span class="spec-label">BRAND</span>
+              <span class="spec-value" id="specBrand">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">👓</span>
+            <div class="spec-content">
+              <span class="spec-label">LENS TYPE</span>
+              <span class="spec-value" id="specLensType">-</span>
+            </div>
+          </div>
+          
+          <div class="spec-item">
+            <span class="spec-icon">🖼️</span>
+            <div class="spec-content">
+              <span class="spec-label">FRAME TYPE</span>
+              <span class="spec-value" id="specFrameType">-</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <a href="appointment.php" class="prescription-link">📅 Book An Appointment Now</a>
+      
+      <div class="description-section">
+        <h3 class="description-title">DESCRIPTION</h3>
+        <p id="modalDescription" class="modal-description">Loading description...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <section class="section-padding guide-section">
     <div class="guide-container">
@@ -253,7 +726,8 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <p class="section-subtitle">Latest updates, promos, and clinic moments.</p>
     </div>
 
-    <div class="bento-grid">
+    <!-- Desktop Bento Grid (Hidden on mobile) -->
+    <div class="bento-grid" style="display: none;">
         <div class="bento-box promo-box">
             <div class="bento-content">
                 <div class="big-text">Free Vision Screening</div>
@@ -262,7 +736,6 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
         </div>
 
-        <!-- UPDATED: Changed onclick to onmouseenter/onmouseleave -->
         <div class="bento-box tip-box frame-type-card" 
              onmouseenter="showMaterialInfo('plastics')" 
              onmouseleave="hideMaterialInfo()">
@@ -301,14 +774,190 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <small style="color: #999; font-size: 0.8rem;">Hover for details</small>
         </div>
     </div>
+
+    <!-- Mobile Service Cards Grid (Hidden on desktop) -->
+    <div class="service-cards-grid" style="display: none;">
+        <div class="service-card" onclick="openCardDetails('medical')">
+            <h3>Medical Certificate</h3>
+            <p>An official document issued by our optometrists certifying your visual health and fitness after a clinical eye exam.</p>
+            <span class="service-hover-text">Tap for details</span>
+        </div>
+        
+        <div class="service-card" onclick="openCardDetails('ishihara')">
+            <h3>The Ishihara Test</h3>
+            <p>A type of color vision test used to check if a person has color blindness, especially red-green color deficiency.</p>
+            <span class="service-hover-text">Tap for details</span>
+        </div>
+        
+        <div class="service-card" onclick="openCardDetails('fullrim')">
+            <h3>Full-Rim Lens</h3>
+            <p>A type of eyewear where the *entire edge of the lens is completely surrounded by a frame*.</p>
+            <span class="service-hover-text">Tap for details</span>
+        </div>
+        
+        <div class="service-card" onclick="openCardDetails('memory')">
+            <h3>Memory Metal</h3>
+            <p>Flexible & returns to shape</p>
+            <span class="service-hover-text">Tap for details</span>
+        </div>
+    </div>
+
+    <style>
+        @media (max-width: 768px) {
+            .bento-grid {
+                display: none !important;
+            }
+            .service-cards-grid {
+                display: grid !important;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .bento-grid {
+                display: grid !important;
+            }
+            .service-cards-grid {
+                display: none !important;
+            }
+        }
+    </style>
 </section>
-<!-- MOVE MODAL HTML HERE - BEFORE THE SCRIPT -->
+
+<!-- Hover Modal for Desktop -->
 <div id="hoverModal" class="hover-modal">
     <div class="hover-modal-content">
         <h3 id="modalTitle"></h3>
         <div id="modalBody"></div>
     </div>
 </div>
+
+<!-- Card Details Overlay for Mobile -->
+<div class="card-details-overlay" id="cardDetailsOverlay">
+    <div class="card-details-content" id="cardDetailsContent">
+        <button class="card-details-close" onclick="closeCardDetails()">×</button>
+        <div id="cardDetailsBody"></div>
+    </div>
+</div>
+
+<script>
+// Card details data
+const cardDetailsData = {
+    medical: {
+        title: "Medical Certificate",
+        content: `
+            <h3>Medical Certificate</h3>
+            <p><strong>What is it?</strong></p>
+            <p>An official document issued by our licensed optometrists certifying your visual health and fitness after a comprehensive clinical eye examination.</p>
+            
+            <p><strong>When do you need it?</strong></p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>Employment requirements</li>
+                <li>Driver's license application/renewal</li>
+                <li>School enrollment</li>
+                <li>Medical clearance</li>
+            </ul>
+            
+            <p><strong>What's included?</strong></p>
+            <p>Visual acuity test, eye health assessment, and official certification signed by our optometrist.</p>
+        `
+    },
+    ishihara: {
+        title: "The Ishihara Test",
+        content: `
+            <h3>The Ishihara Test</h3>
+            <p><strong>What is it?</strong></p>
+            <p>A color perception test designed to detect red-green color deficiencies, the most common form of color blindness.</p>
+            
+            <p><strong>How does it work?</strong></p>
+            <p>You'll view a series of plates containing colored dots. Each plate has a number or pattern that's visible to people with normal color vision but difficult or impossible to see for those with color deficiency.</p>
+            
+            <p><strong>Why is it important?</strong></p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li>Required for certain professions (pilots, electricians, etc.)</li>
+                <li>Helps with career planning</li>
+                <li>Important for safety in color-dependent tasks</li>
+            </ul>
+        `
+    },
+    fullrim: {
+        title: "Full-Rim Lens",
+        content: `
+            <h3>Full-Rim Frames</h3>
+            <p><strong>What are they?</strong></p>
+            <p>Eyeglass frames where the frame material completely surrounds the lens on all sides, providing maximum support and durability.</p>
+            
+            <p><strong>Benefits:</strong></p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Durability:</strong> Most sturdy frame style</li>
+                <li><strong>Lens Protection:</strong> Edges are fully protected</li>
+                <li><strong>Style Options:</strong> Available in countless designs and colors</li>
+                <li><strong>Prescription Flexibility:</strong> Works with all lens types and prescriptions</li>
+            </ul>
+            
+            <p><strong>Best for:</strong></p>
+            <p>Strong prescriptions, active lifestyles, or those who want a bold, classic look.</p>
+        `
+    },
+    memory: {
+        title: "Memory Metal",
+        content: `
+            <h3>Memory Metal Frames</h3>
+            <p><strong>What is Memory Metal?</strong></p>
+            <p>A special titanium-based alloy that "remembers" its original shape. If the frames get bent, they automatically return to their original form.</p>
+            
+            <p><strong>Key Features:</strong></p>
+            <ul style="margin-left: 20px; line-height: 1.8;">
+                <li><strong>Super Flexible:</strong> Can bend significantly without breaking</li>
+                <li><strong>Shape Recovery:</strong> Returns to original shape even after extreme bending</li>
+                <li><strong>Lightweight:</strong> Comfortable for all-day wear</li>
+                <li><strong>Hypoallergenic:</strong> Safe for sensitive skin</li>
+                <li><strong>Durable:</strong> Lasts longer than traditional frames</li>
+            </ul>
+            
+            <p><strong>Perfect for:</strong></p>
+            <p>Children, athletes, active individuals, or anyone who needs durable, flexible frames that can withstand daily wear and tear.</p>
+        `
+    }
+};
+
+// Open card details
+function openCardDetails(cardType) {
+    const overlay = document.getElementById('cardDetailsOverlay');
+    const detailsBody = document.getElementById('cardDetailsBody');
+    const cardData = cardDetailsData[cardType];
+    
+    if (cardData) {
+        detailsBody.innerHTML = cardData.content;
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Close card details
+function closeCardDetails() {
+    const overlay = document.getElementById('cardDetailsOverlay');
+    overlay.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close when clicking outside
+document.getElementById('cardDetailsOverlay').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeCardDetails();
+    }
+});
+
+// Close with escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const overlay = document.getElementById('cardDetailsOverlay');
+        if (overlay.classList.contains('active')) {
+            closeCardDetails();
+        }
+    }
+});
+</script>
+
 <script>
 
 const hoverModal = document.getElementById('hoverModal');
@@ -518,5 +1167,123 @@ if (modalContent) {
 }
 </script>
 <?php include '../includes/footer.php'; ?>
+<script>
+function openModal(productId) {
+    // Reset modal content
+    document.getElementById('modalTitle').textContent = 'Loading...';
+    document.getElementById('modalMainDisplayImg').src = '';
+    document.getElementById('modalThumbnailsContainer').innerHTML = '';
+    document.getElementById('modalThumbnailsContainer').style.display = 'none';
+    
+    // Reset specs
+    document.getElementById('specGender').textContent = '-';
+    document.getElementById('specBrand').textContent = '-';
+    document.getElementById('specLensType').textContent = '-';
+    document.getElementById('specFrameType').textContent = '-';
+    document.getElementById('modalDescription').textContent = 'Loading...';
+    
+    // Show modal
+    document.getElementById('productModal').classList.add('active');
+    // Prevent body scroll on mobile
+document.body.style.overflow = 'hidden';
+document.body.style.position = 'fixed';
+document.body.style.width = '100%';
+    // Fetch product details
+    fetch('get_product.php?id=' + productId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert('Error: ' + data.error);
+                closeModal();
+                return;
+            }
+            
+            // Set title
+            document.getElementById('modalTitle').textContent = data.product_name;
+            
+            // Populate Specifications
+            document.getElementById('specGender').textContent = data.gender || 'Unisex';
+            document.getElementById('specBrand').textContent = data.brand || 'N/A';
+            document.getElementById('specLensType').textContent = data.lens_type || 'N/A';
+            document.getElementById('specFrameType').textContent = data.frame_type || 'N/A';
+            
+            // Set description
+            document.getElementById('modalDescription').textContent = data.description || "No description available.";
+            
+            const mainDisplay = document.getElementById('modalMainDisplayImg');
+            const thumbsContainer = document.getElementById('modalThumbnailsContainer');
+            thumbsContainer.innerHTML = ''; 
+
+            // Fix image path
+            const cleanPath = (path) => path.replace('../photo/', '../mod/photo/');
+
+            if (data.gallery_images && data.gallery_images.length > 0) {
+                const firstImage = cleanPath(data.gallery_images[0]);
+                mainDisplay.src = firstImage;
+                mainDisplay.style.display = 'block';
+
+                if (data.gallery_images.length > 1) {
+                    thumbsContainer.style.display = 'flex';
+                    
+                    data.gallery_images.forEach((imgRawPath, index) => {
+                        let imgSrc = cleanPath(imgRawPath);
+                        let thumb = document.createElement('img');
+                        thumb.src = imgSrc;
+                        thumb.classList.add('thumb-img');
+                        if (index === 0) thumb.classList.add('active-thumb');
+
+                        thumb.onclick = function() {
+                            mainDisplay.src = imgSrc;
+                            document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active-thumb'));
+                            this.classList.add('active-thumb');
+                        };
+                        thumbsContainer.appendChild(thumb);
+                    });
+                }
+            } else {
+                mainDisplay.style.display = 'none';
+                mainDisplay.alt = "No image available";
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Failed to fetch product details.");
+            closeModal();
+        });
+}
+
+function closeModal() {
+    document.getElementById('productModal').classList.remove('active');
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+    const modal = document.getElementById('productModal');
+    if (event.target === modal) {
+        closeModal();
+    }
+});
+// Close modal when clicking the backdrop (mobile-friendly)
+document.getElementById('productModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeModal();
+    }
+});
+
+// Close with escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('productModal');
+        if (modal && modal.classList.contains('active')) {
+            closeModal();
+        }
+    }
+});
+</script>
 </body>
 </html>

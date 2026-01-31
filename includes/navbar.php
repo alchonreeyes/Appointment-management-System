@@ -1,3 +1,4 @@
+
 <?php
 // includes/navbar.php
 
@@ -47,8 +48,7 @@ try {
 <body>
     <!-- Top bar -->
     <div class="top-bar">
-        <span>Store Location | Brand</span>
-        <a href="#">Contact Us</a>
+        <a href="../public/store.php">Store Location</a>  <a href="../public/browse.php">Brand</a>
     </div>
 
     <!-- Main nav -->
@@ -147,21 +147,31 @@ try {
             
             <div class="nav-config desktop-config"> 
                 <?php 
-                if (!isset($_SESSION['client_id'])): 
-                ?>
-                    <a href="../public/login.php"><i class="fa-regular fa-user"></i></a>
-                    <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
-                    <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
-                     
-                <?php else: ?>
-                    <div class="user-menu" style="align-items: center; display: flex;">
-                        <a href="../client/profile.php" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
-                            <i class="fa-regular fa-user" style="font-size: 1.6rem;"></i>
-                            <span style="display:inline-block; margin-left:8px; font-size:14px; font-weight:600; line-height:1; vertical-align:middle; color: #004aad;">Profile</span>
-                        </a>
-                    </div>
-                    <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
-                <?php endif; ?>
+// DEBUG: Let's see what session variables exist
+// Remove this after debugging
+// echo '<pre>'; print_r($_SESSION); echo '</pre>';
+
+// Check multiple possible session variable names
+$isLoggedIn = isset($_SESSION['client_id']) || 
+              isset($_SESSION['user_id']) || 
+              isset($_SESSION['id']) ||
+              isset($_SESSION['logged_in']);
+
+if (!$isLoggedIn): 
+?>
+    <a href="../public/login.php"><i class="fa-regular fa-user"></i></a>
+    <a href="../public/login.php" class="signin">Sign In & Sign Up</a>
+    <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
+     
+<?php else: ?>
+    <div class="user-menu" style="align-items: center; display: flex;">
+        <a href="../client/profile.php" style="text-decoration: none; color: inherit; display: flex; align-items: center;">
+            <i class="fa-regular fa-user" style="font-size: 1.6rem;"></i>
+            <span style="display:inline-block; margin-left:8px; font-size:14px; font-weight:600; line-height:1; vertical-align:middle; color: #004aad;">Profile</span>
+        </a>
+    </div>
+    <a href="../public/book_appointment.php" class="book-btn">Book Appointment</a>
+<?php endif; ?>
             </div>
         </div>
     </nav>
