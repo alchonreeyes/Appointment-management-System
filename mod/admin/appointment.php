@@ -1,24 +1,25 @@
 <?php
 // Start session at the very beginning
 session_start();
-// Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+// Ensure database.php is outside the 'admin' folder
 require_once __DIR__ . '/../database.php';
 
-// BAGO: I-load ang PHPMailer gamit ang Composer autoload
+// Load PHPMailer using Composer autoload and Encryption Util
 require_once __DIR__ . '/../../config/encryption_util.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 // Set Timezone to Philippines so "Current Date" is accurate
 date_default_timezone_set('Asia/Manila');
 
-// BAGO: Idagdag ang PHPMailer classes
+// Add PHPMailer classes
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-
 // =======================================================
-// 1. INAYOS NA SECURITY CHECK
+// 1. SECURITY CHECK
 // =======================================================
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     if (isset($_POST['action'])) {
@@ -30,7 +31,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     exit;
 }
 
-
 // =======================================================
 // 3. SERVER-SIDE ACTION HANDLING
 // =======================================================
@@ -41,7 +41,6 @@ if (isset($_POST['action'])) {
     if ($action === 'updateStatus') {
         $id = $_POST['id'] ?? '';
         $newStatusName = $_POST['status_name'] ?? $_POST['status'] ?? '';
-        // BAGO: Kunin ang rason kung meron
         $cancelReason = $_POST['reason'] ?? '';
 
         if (!$id || !$newStatusName) {
@@ -49,16 +48,12 @@ if (isset($_POST['action'])) {
             exit;
         }
 
-        // BAGO: Kung 'Cancel' pero walang rason, bawal
         if ($newStatusName === 'Cancel' && empty($cancelReason)) {
             echo json_encode(['success' => false, 'message' => 'A reason is required for cancellation.']);
             exit;
         }
 
         try {
-            // =======================================================
-            // BAGO: Pilitin nating gumana ang manual error checking
-            // =======================================================
             mysqli_report(MYSQLI_REPORT_OFF);
 
             // Get the status_id from status_name
@@ -77,7 +72,7 @@ if (isset($_POST['action'])) {
             
             $status_id = $result_status->fetch_assoc()['status_id'];
 
-            // INAYOS: Kinukuha na ang email galing sa 'users' table gamit ang client_id
+            // Get email from 'users' table using client_id
             $stmt_current = $conn->prepare("
                 SELECT 
                     a.status_id, 
@@ -109,9 +104,18 @@ if (isset($_POST['action'])) {
             $old_status_id = $current_appt['status_id'];
             $service_id = $current_appt['service_id'];
             $appointment_date = $current_appt['appointment_date'];
+
+            // ==============================================================
+            // SECURITY CHECK FOR PAST DATES (BACKEND)
+            // ==============================================================
+            if (strtotime($appointment_date) < strtotime(date('Y-m-d'))) {
+                echo json_encode(['success' => false, 'message' => 'Cannot edit/update appointments from past dates.']);
+                exit;
+            }
+            // ==============================================================
             
             $client_name = decrypt_data($current_appt['full_name']);
-            $client_email = $current_appt['email']; // Ito ay galing na sa JOIN
+            $client_email = $current_appt['email']; 
             $service_name = $current_appt['service_name'];
             $appointment_time = $current_appt['appointment_time'];
 
@@ -124,7 +128,7 @@ if (isset($_POST['action'])) {
             $old_status_name = $stmt_old_status->get_result()->fetch_assoc()['status_name'];
 
 
-            // ====== SLOT MANAGEMENT LOGIC (MAY ERROR CHECKING) ======
+            // ====== SLOT MANAGEMENT LOGIC ======
             if ($old_status_name === 'Confirmed' && $newStatusName !== 'Confirmed') {
                 $stmt_release = $conn->prepare("
                     UPDATE appointment_slots
@@ -173,7 +177,7 @@ if (isset($_POST['action'])) {
                 $stmt_consume->bind_param("is", $service_id, $appointment_date);
                 $stmt_consume->execute();
             }
-            // ====== END NG SLOT MANAGEMENT ======
+            // ====== END SLOT MANAGEMENT ======
 
 
             // ====== UPDATE APPOINTMENT STATUS ======
@@ -187,23 +191,18 @@ if (isset($_POST['action'])) {
             if ($stmt_update->affected_rows > 0) {
 
                 // ==================================================
-                // LOGIC PARA SA PAG-SEND NG EMAIL
+                // EMAIL SENDING LOGIC
                 // ==================================================
                 
-                // 1. Format Details
                 $formatted_date = date('F j, Y', strtotime($appointment_date));
                 $formatted_time = date('g:i A', strtotime($appointment_time));
                     
                 if ($newStatusName === 'Confirmed' && !empty($client_email)) {
                     
-// ==================================================
-// QR CODE LOGIC (para sa Confirmed lang)
-// ==================================================
-$qr_data = $id; 
-$qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($qr_data);
-                    // ==================================================
+                    // QR CODE LOGIC
+                    $qr_data = $id; 
+                    $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($qr_data);
 
-                    // 3. PHPMailer Setup
                     $mail = new PHPMailer(true);
                     try {
                         $mail->isSMTP();
@@ -218,89 +217,71 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                         $mail->addAddress($client_email, $client_name); 
 
                         $mail->isHTML(true);
-                        $mail->Subject = 'Appointment Confirmed - Eye Master Optical Clinic (ID: #' . $id . ')'; 
+                        $mail->Subject = 'Appointment Confirmed - Eye Master Optical Clinic'; 
                         
-                        // ==================================================
-                        // Email Template (CONFIRMED)
-                        // ==================================================
-                        $mail->Body    = "
-    <!DOCTYPE html>
-    <html lang='en'>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Appointment Confirmed</title>
-        <style>
-            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
-            .container { width: 90%; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #ffffff; }
-            .header { background: #991010; /* Main clinic color */ padding: 30px 20px; text-align: center; }
-            .header h1 { margin: 0; color: #ffffff; font-size: 24px; }
-            .content { padding: 32px; }
-            .content p { font-size: 16px; line-height: 1.6; color: #334155; margin-top: 0; margin-bottom: 20px; }
-            .content p.greeting { font-size: 18px; font-weight: 600; color: #1e293b; }
-            .details { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;}
-            .details h3 { margin-top: 0; margin-bottom: 16px; font-size: 18px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-            .details-item { display: block; margin-bottom: 12px; font-size: 15px; }
-            .details-label { font-weight: 600; color: #475569; }
-            .qr-section { text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0; }
-            .qr-section p { font-size: 15px; color: #475569; margin-bottom: 16px; }
-            .qr-section img { max-width: 200px; height: auto; border: 4px solid #e2e8f0; border-radius: 8px; }
-            .footer { padding: 32px; text-align: center; background: #f8f9fa; }
-            .footer p { font-size: 13px; color: #64748b; margin: 0; }
-        </style>
-    </head>
-    <body style='background-color: #f1f5f9; padding: 20px;'>
-        <div class='container'>
-            <div class='card'>
-                <div class='header'>
-                    <h1>Eye Master Optical Clinic</h1>
-                </div>
-                <div class='content'>
-          <p class='greeting'>Hi, " . htmlspecialchars(decrypt_data($current_appt['full_name'] ?? $client_name)) . ",</p>
-                    <p>Good news! Your appointment at <b>Eye Master Optical Clinic</b> has been successfully confirmed.</p>
-                    
-                    <div class='details'>
-                        <h3>Appointment Details</h3>
-                        <span class='details-item'>
-                            <span class='details-label'>Appointment ID:</span> #" . $id . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Service:</span> " . htmlspecialchars($service_name) . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Date:</span> " . $formatted_date . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Time:</span> " . $formatted_time . "
-                        </span>
-                    </div>
-
-                    <div class='qr-section'>
-                        <p>Please present this QR code upon your arrival at the clinic. This will be used to verify your schedule.</p>
-                        <img src='" . $qr_code_url . "' alt='Your Appointment QR Code'>
-                    </div>
-                </div>
-            </div>
-            <div class='footer'>
-                <p>&copy; " . date('Y') . " Eye Master Optical Clinic. All rights reserved.</p>
-                <p style='margin-top: 4px;'><i>This is an automated message. Please do not reply.</i></p>
-            </div>
-        </div>
-    </body>
-    </html>
-                            ";
+                        $mail->Body = "
+                        <!DOCTYPE html>
+                        <html lang='en'>
+                        <head>
+                            <meta charset='UTF-8'>
+                            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+                            <title>Appointment Confirmed</title>
+                            <style>
+                                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
+                                .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+                                .header { background-color: #991010; color: #ffffff; padding: 30px 20px; text-align: center; }
+                                .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
+                                .content { padding: 30px; color: #333333; }
+                                .greeting { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+                                .message { font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
+                                .details-box { background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 30px; }
+                                .details-title { font-size: 18px; font-weight: 700; color: #991010; margin-bottom: 20px; border-bottom: 2px solid #eeeeee; padding-bottom: 10px; }
+                                .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; }
+                                .detail-label { font-weight: 600; color: #555555; }
+                                .detail-value { font-weight: 700; color: #222222; }
+                                .qr-section { text-align: center; margin-top: 30px; }
+                                .qr-text { font-size: 14px; color: #666666; margin-bottom: 20px; }
+                                .qr-code { width: 200px; height: 200px; }
+                                .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee; }
+                            </style>
+                        </head>
+                        <body>
+                            <div class='email-container'>
+                                <div class='header'>
+                                    <h1>Eye Master Optical Clinic</h1>
+                                </div>
+                                <div class='content'>
+                                    <div class='greeting'>Hi {$client_name},</div>
+                                    <div class='message'>
+                                        Good news! Your appointment at <strong>Eye Master Optical Clinic</strong> has been successfully confirmed. We look forward to seeing you.
+                                    </div>
+                                    <div class='details-box'>
+                                        <div class='details-title'>Appointment Details</div>
+                                        <div class='detail-row'><span class='detail-label'>Appointment ID:</span><span class='detail-value'>#{$id}</span></div>
+                                        <div class='detail-row'><span class='detail-label'>Service:</span><span class='detail-value'>{$service_name}</span></div>
+                                        <div class='detail-row'><span class='detail-label'>Date:</span><span class='detail-value'>{$formatted_date}</span></div>
+                                        <div class='detail-row'><span class='detail-label'>Time:</span><span class='detail-value'>{$formatted_time}</span></div>
+                                    </div>
+                                    <div class='qr-section'>
+                                        <p class='qr-text'>Please present this QR code upon your arrival at the clinic. This will be used to verify your schedule.</p>
+                                        <img class='qr-code' src='{$qr_code_url}' alt='Appointment QR Code'>
+                                    </div>
+                                </div>
+                                <div class='footer'>
+                                    <p>&copy; " . date('Y') . " Eye Master Optical Clinic. All rights reserved.</p>
+                                    <p>This is an automated message. Please do not reply.</p>
+                                </div>
+                            </div>
+                        </body>
+                        </html>";
                         
                         $mail->send();
                         error_log("Confirmation email SENT to " . $client_email);
 
                     } catch (Exception $e) {
-                        error_log("Confirmation email FAILED to send to " . $client_email . ". Error: " . $mail->ErrorInfo);
+                        error_log("Confirmation email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
                     }
                 } 
-                // ==================================================
-                // LOGIC PARA SA CANCELLED EMAIL
-                // ==================================================
                 else if ($newStatusName === 'Cancel' && !empty($client_email)) {
                     
                     $mail = new PHPMailer(true);
@@ -319,88 +300,29 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                         $mail->isHTML(true);
                         $mail->Subject = 'Appointment Cancelled - Eye Master Optical Clinic (ID: #' . $id . ')'; 
                         
-                        // Email Template para sa CANCELLED
                         $mail->Body    = "
-    <!DOCTYPE html>
-    <html lang='en'>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Appointment Cancelled</title>
-        <style>
-            body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'; }
-            .container { width: 90%; max-width: 600px; margin: 0 auto; padding: 20px; }
-            .card { border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #ffffff; }
-            .header { background: #dc2626; /* Red color for cancellation */ padding: 30px 20px; text-align: center; }
-            .header h1 { margin: 0; color: #ffffff; font-size: 24px; }
-            .content { padding: 32px; }
-            .content p { font-size: 16px; line-height: 1.6; color: #334155; margin-top: 0; margin-bottom: 20px; }
-            .content p.greeting { font-size: 18px; font-weight: 600; color: #1e293b; }
-            .details { background: #f8f9fa; border-radius: 8px; padding: 20px; margin-bottom: 24px; border: 1px solid #e2e8f0;}
-            .details h3 { margin-top: 0; margin-bottom: 16px; font-size: 18px; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; }
-            .details-item { display: block; margin-bottom: 12px; font-size: 15px; }
-            .details-label { font-weight: 600; color: #475569; }
-            .reason { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; }
-            .reason p { margin: 0; color: #78350f; font-size: 15px; line-height: 1.6; }
-            .reason-label { font-weight: 700; display: block; margin-bottom: 8px; color: #78350f; }
-            .footer { padding: 32px; text-align: center; background: #f8f9fa; }
-            .footer p { font-size: 13px; color: #64748b; margin: 0; }
-        </style>
-    </head>
-    <body style='background-color: #f1f5f9; padding: 20px;'>
-        <div class='container'>
-            <div class='card'>
-                <div class='header'>
-                    <h1>Appointment Cancelled</h1>
-                </div>
-                <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . ",</p>
-                    <p>We are writing to inform you that your appointment with <b>Eye Master Optical Clinic</b> has been cancelled.</p>
-                    
-                    <div class='details'>
-                        <h3>Cancelled Appointment Details</h3>
-                        <span class='details-item'>
-                            <span class='details-label'>Appointment ID:</span> #" . $id . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Service:</span> " . htmlspecialchars($service_name) . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Date:</span> " . $formatted_date . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Time:</span> " . $formatted_time . "
-                        </span>
-                    </div>
-
-                    <div class='reason'>
-                        <span class='reason-label'>Reason for Cancellation:</span>
-                        <p>" . htmlspecialchars(nl2br($cancelReason)) . "</p>
-                    </div>
-
-                    <p style='margin-top: 24px;'>We apologize for any inconvenience this may cause. If you wish to rebook, please visit our website or contact us directly.</p>
-
-                </div>
-            </div>
-            <div class='footer'>
-                <p>&copy; " . date('Y') . " Eye Master Optical Clinic. All rights reserved.</p>
-                <p style='margin-top: 4px;'><i>This is an automated message. Please do not reply.</i></p>
-            </div>
-        </div>
-    </body>
-    </html>
-                            ";
+                        <!DOCTYPE html>
+                        <html lang='en'>
+                        <head><title>Cancelled</title></head>
+                        <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <div style='max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #dc2626;'>
+                                <h2 style='color: #dc2626;'>Appointment Cancelled</h2>
+                                <p>Hi <b>{$client_name}</b>,</p>
+                                <p>We regret to inform you that your appointment (ID: #{$id}) has been cancelled.</p>
+                                <div style='background: #fee2e2; padding: 10px; border-radius: 4px; margin: 10px 0;'>
+                                    <strong>Reason:</strong><br>" . nl2br(htmlspecialchars($cancelReason)) . "
+                                </div>
+                            </div>
+                        </body>
+                        </html>";
                         
                         $mail->send();
                         error_log("Cancellation email SENT to " . $client_email);
 
                     } catch (Exception $e) {
-                        error_log("Cancellation email FAILED to send to " . $client_email . ". Error: " . $mail->ErrorInfo);
+                        error_log("Cancellation email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
                     }
                 }
-                // ==================================================
-                // BAGO: LOGIC PARA SA COMPLETED EMAIL
-                // ==================================================
                 else if ($newStatusName === 'Completed' && !empty($client_email)) {
                     
                     $mail = new PHPMailer(true);
@@ -419,65 +341,26 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                         $mail->isHTML(true);
                         $mail->Subject = 'Appointment Completed - Eye Master Optical Clinic (ID: #' . $id . ')'; 
                         
-                        // Email Template para sa COMPLETED
                         $mail->Body    = "
-    <!DOCTYPE html>
-    <html lang='en'>
-    <head>
-        <meta charset='UTF-8'>
-        <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-        <title>Appointment Completed</title>
-    </head>
-    <body style='background-color: #f1f5f9; padding: 20px;'>
-        <div class='container'>
-            <div class='card'>
-                <div class='header'>
-                    <h1>Appointment Completed</h1>
-                </div>
-                <div class='content'>
-                    <p class='greeting'>Hi, " . htmlspecialchars($client_name) . ",</p>
-                    <p>This email serves as confirmation that you have successfully completed your appointment at <b>Eye Master Optical Clinic</b>. We hope you had a pleasant experience.</p>
-                    
-                    <div class='details'>
-                        <h3>Completed Appointment Details</h3>
-                        <span class='details-item'>
-                            <span class='details-label'>Appointment ID:</span> #" . $id . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Service:</span> " . htmlspecialchars($service_name) . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Date:</span> " . $formatted_date . "
-                        </span>
-                        <span class='details-item'>
-                            <span class='details-label'>Time:</span> " . $formatted_time . "
-                        </span>
-                    </div>
-
-                    <div class='thank-you'>
-                        <p>Thank you for trusting us with your eye care. We look forward to seeing you again!</p>
-                    </div>
-                </div>
-            </div>
-            <div class='footer'>
-                <p>&copy; " . date('Y') . " Eye Master Optical Clinic. All rights reserved.</p>
-                <p style='margin-top: 4px;'><i>This is an automated message. Please do not reply.</i></p>
-            </div>
-        </div>
-    </body>
-    </html>
-                            ";
+                        <!DOCTYPE html>
+                        <html lang='en'>
+                        <head><title>Completed</title></head>
+                        <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
+                            <div style='max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #16a34a;'>
+                                <h2 style='color: #16a34a;'>Appointment Completed</h2>
+                                <p>Hi <b>{$client_name}</b>,</p>
+                                <p>Your appointment on <b>{$formatted_date}</b> has been successfully completed. Thank you for choosing Eye Master Optical Clinic!</p>
+                            </div>
+                        </body>
+                        </html>";
                         
                         $mail->send();
                         error_log("Completion email SENT to " . $client_email);
 
                     } catch (Exception $e) {
-                        error_log("Completion email FAILED to send to " . $client_email . ". Error: " . $mail->ErrorInfo);
+                        error_log("Completion email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
                     }
                 }
-                // ==================================================
-                // END NG EMAIL LOGIC
-                // ==================================================
 
                 echo json_encode(['success' => true, 'message' => 'Status updated successfully.', 'status' => $newStatusName]);
             } else {
@@ -485,9 +368,6 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
             }
 
         } catch (Exception $e) {
-            // =======================================================
-            // BAGO: MAS LIGTAS NA CATCH BLOCK
-            // =======================================================
             error_log("UpdateStatus fatal error (appointment.php): " . $e->getMessage());
             $rawMessage = $e->getMessage();
             $safeMessage = @iconv('UTF-8', 'UTF-8//IGNORE', $rawMessage);
@@ -509,15 +389,17 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
             exit;
         }
         try {
-            // Kinukuha ang lahat ng data (a.*) pati ang mga pangalan
             $stmt = $conn->prepare("
-                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name
-                FROM appointments a
-                LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                LEFT JOIN services ser ON a.service_id = ser.service_id
-                LEFT JOIN staff st ON a.staff_id = st.staff_id
-                WHERE a.appointment_id = ?
-            ");
+    SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name,
+           c.birth_date, c.age as client_age, u.full_name as user_full_name
+    FROM appointments a
+    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+    LEFT JOIN services ser ON a.service_id = ser.service_id
+    LEFT JOIN staff st ON a.staff_id = st.staff_id
+    LEFT JOIN clients c ON a.client_id = c.client_id
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE a.appointment_id = ?
+");
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $result = $stmt->get_result();
@@ -528,20 +410,40 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
                 exit;
             }
             
-            // =======================================================
-        // 1. DECRYPTION PARA SA MAIN MODAL DATA
-        // =======================================================
-        // Dito natin "bubuksan" ang lock para sa modal display
-        $appt['full_name']    = decrypt_data($appt['full_name']);
-        $appt['phone_number'] = decrypt_data($appt['phone_number']);
-        $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
-        $appt['concern']      = decrypt_data($appt['concern'] ?? '');
-        $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
-        $appt['notes']        = decrypt_data($appt['notes'] ?? '');
+           // =======================================================
+// 1. DECRYPTION FOR MODAL DATA
+// =======================================================
 
+// FIX: Use user's name if appointment name is empty
+if (empty($appt['full_name']) || $appt['full_name'] === '') {
+    $appt['full_name'] = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
+} else {
+    $appt['full_name'] = decrypt_data($appt['full_name']);
+}
+
+// FIX: Calculate age if it's 0 
+if (($appt['age'] == 0 || empty($appt['age'])) && !empty($appt['birth_date'])) {
+    $birth = new DateTime($appt['birth_date']);
+    $today = new DateTime();
+    $appt['age'] = $today->diff($birth)->y;
+} elseif (($appt['age'] == 0 || empty($appt['age'])) && !empty($appt['client_age'])) {
+    $appt['age'] = $appt['client_age'];
+}
+
+$appt['phone_number'] = decrypt_data($appt['phone_number']);
+$appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
+$appt['concern']      = decrypt_data($appt['concern'] ?? '');
+$appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
+$appt['notes']        = decrypt_data($appt['notes'] ?? '');
+$appt['color_issues']        = decrypt_data($appt['color_issues'] ?? '');
+
+
+// Clean up temporary fields
+unset($appt['birth_date']);
+unset($appt['client_age']);
+unset($appt['user_full_name']);
             
-            // BAGO: Ipadala ang BUONG $appt object AT $history pabalik
-    echo json_encode(['success' => true, 'data' => $appt]);
+            echo json_encode(['success' => true, 'data' => $appt]);
 
         } catch (Exception $e) {
             error_log("ViewDetails error (appointment.php): " . $e->getMessage());
@@ -552,29 +454,36 @@ $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" 
 }
 
 // =======================================================
-// 4. FILTERS, STATS, at PAGE DATA
+// 4. FILTERS, PAGINATION, STATS, and PAGE DATA
 // =======================================================
 
-// --- Kunin ang lahat ng filters ---
-$statusFilter = $_GET['status'] ?? 'Pending'; // Default status is still Pending
-
-// === CHANGE: Set default date to TODAY (YYYY-MM-DD) if no date is picked ===
-$dateFilter = $_GET['date'] ?? date('Y-m-d'); 
-
+// --- Filters ---
+$statusFilter = $_GET['status'] ?? 'Pending'; 
+$dateFilter = $_GET['date'] ?? 'All'; 
 $search = trim($_GET['search'] ?? '');
 $viewFilter = $_GET['view'] ?? 'all';
 
+// ** FIX: DETERMINE IF SEARCH IS ACTIVE **
+// If search is active, we will hide the loader via CSS/PHP
+$isSearchActive = !empty($search);
 
-// --- Base Query ---
+// --- PAGINATION SETTINGS ---
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit = 10; 
+$offset = ($page - 1) * $limit;
+
+// --- Base Query Logic ---
 $selectClauses = [
-    "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", "a.appointment_time",
-    "s.status_name", "ser.service_name"
+    "a.appointment_id", "a.client_id", "a.full_name", "a.age", "a.gender", 
+    "a.appointment_date", "a.appointment_time", "a.phone_number", "a.occupation",
+    "s.status_name", "ser.service_name",
+    "c.birth_date", "c.age as client_age", "u.full_name as user_full_name"
 ];
 $whereClauses = ["1=1"];
 $params = [];
 $paramTypes = "";
 
-// --- Dynamic Columns para sa Table ---
+// --- Dynamic Columns ---
 $extraHeaders = '';
 $extraColumnNames = [];
 
@@ -597,7 +506,7 @@ if ($viewFilter === 'eye_exam') {
     $whereClauses[] = "a.service_id = 13";
 }
 
-// --- I-apply ang iba pang Filters ---
+// --- Apply Filters ---
 if ($statusFilter !== 'All') {
     $whereClauses[] = "s.status_name = ?";
     $params[] = $statusFilter;
@@ -610,37 +519,111 @@ if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $paramTypes .= "s";
 }
 
+// =======================================================
+// TWO-PHASE SEARCH LOGIC (SUPPORTS ENCRYPTED NAMES)
+// =======================================================
 if ($search !== '') {
-    $whereClauses[] = "(a.full_name LIKE ? OR a.client_id LIKE ?)";
     $searchTerm = "%{$search}%";
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $paramTypes .= "ss";
+    
+    // Phase 1: Search on fields that ARE NOT encrypted
+    // This includes client_id, service_name, and status_name
+    $whereClauses[] = "(a.client_id LIKE ? OR ser.service_name LIKE ? OR s.status_name LIKE ?)";
+    
+    // Add parameters for non-encrypted fields
+    $params[] = $searchTerm; // client_id
+    $params[] = $searchTerm; // service_name
+    $params[] = $searchTerm; // status_name
+    $paramTypes .= "sss";
+    
+    // Store the search term for PHP-side filtering of encrypted names
+    // We'll handle name searching after decrypting in PHP
+    $searchForName = trim($search);
 }
+// =======================================================
 
-// --- Buuin ang Final Query para sa Table ---
+// ---------------------------------------------------------
+// QUERY 1: Count Total Rows
+// ---------------------------------------------------------
+// Count Total for Pagination - Get ALL records that match SQL criteria
+$whereSQL = implode(" AND ", $whereClauses);
+$countQuery = "SELECT COUNT(*) as total 
+               FROM appointments a
+               LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+               LEFT JOIN services ser ON a.service_id = ser.service_id
+               WHERE $whereSQL";
+
+// We'll store the raw count, but actual displayed count will be after PHP filtering
+try {
+    $stmtCount = $conn->prepare($countQuery);
+    if (!empty($params)) {
+        $stmtCount->bind_param($paramTypes, ...$params);
+    }
+    $stmtCount->execute();
+    $totalResult = $stmtCount->get_result()->fetch_assoc();
+    $totalRows = $totalResult['total'];
+    
+    // Note: $totalRows is the SQL-matched count
+    // We'll adjust pagination based on actual filtered count
+    $totalPages = ceil($totalRows / $limit);
+} catch (Exception $e) {
+    $totalRows = 0; 
+    $totalPages = 1;
+}
+// ---------------------------------------------------------
+// QUERY 2: Main Data Fetch
+// ---------------------------------------------------------
 $query = "SELECT " . implode(", ", $selectClauses) . "
           FROM appointments a
           LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
           LEFT JOIN services ser ON a.service_id = ser.service_id
+          LEFT JOIN clients c ON a.client_id = c.client_id
+          LEFT JOIN users u ON c.user_id = u.id
           WHERE " . implode(" AND ", $whereClauses) . "
-          ORDER BY a.appointment_date DESC";
+          ORDER BY a.appointment_date DESC
+          LIMIT ? OFFSET ?";
+
+// Add limit/offset to params
+$paramsForMain = $params;
+$paramsForMain[] = $limit;
+$paramsForMain[] = $offset;
+$paramTypesForMain = $paramTypes . "ii";
 
 try {
     $stmt = $conn->prepare($query);
-    if (!empty($params)) {
-        $stmt->bind_param($paramTypes, ...$params);
+    if (!empty($paramsForMain)) {
+        $stmt->bind_param($paramTypesForMain, ...$paramsForMain);
     }
     $stmt->execute();
     $appointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
-     error_log("Fetch Appointments error (appointment.php): " . $e->getMessage());
+     error_log("Fetch Appointments error: " . $e->getMessage());
      $appointments = [];
-     $pageError = "Error loading appointments: " . $e->getMessage();
+     $pageError = "Error loading appointments.";
+}
+// After filtering appointments, calculate stats from filtered data
+$pendingCount = $acceptedCount = $cancelledCount = $completedCount = 0;
+
+foreach ($appointments as $appt) {
+    $status = strtolower($appt['status_name'] ?? '');
+    switch ($status) {
+        case 'pending':
+            $pendingCount++;
+            break;
+        case 'confirmed':
+            $acceptedCount++;
+            break;
+        case 'cancel':
+            $cancelledCount++;
+            break;
+        case 'completed':
+            $completedCount++;
+            break;
+    }
 }
 
-
-// --- Buuin ang Stats Query ---
+// ---------------------------------------------------------
+// QUERY 3: Stats Count
+// ---------------------------------------------------------
 $countSql = "SELECT
     COALESCE(SUM(CASE WHEN s.status_name = 'Pending' THEN 1 ELSE 0 END), 0)   AS pending,
     COALESCE(SUM(CASE WHEN s.status_name = 'Confirmed' THEN 1 ELSE 0 END), 0) AS accepted,
@@ -648,37 +631,18 @@ $countSql = "SELECT
     COALESCE(SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END), 0) AS completed
     FROM appointments a
     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-    WHERE 1=1";
-$countParams = [];
-$countParamTypes = "";
-
-// I-apply din ang filters sa stats
-if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 6"; }
-if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 8"; }
-if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 7"; }
-
-if ($dateFilter !== 'All' && !empty($dateFilter)) {
-    $countSql .= " AND DATE(a.appointment_date) = ?";
-    $countParams[] = $dateFilter;
-    $countParamTypes .= "s";
-}
-if ($search !== '') {
-    $countSql .= " AND (a.full_name LIKE ? OR a.client_id LIKE ?)";
-    $q = "%{$search}%";
-    $countParams[] = $q;
-    $countParams[] = $q;
-    $countParamTypes .= "ss";
-}
+    LEFT JOIN services ser ON a.service_id = ser.service_id
+    WHERE " . implode(" AND ", $whereClauses);
 
 try {
     $stmt_stats = $conn->prepare($countSql);
-    if (!empty($countParams)) {
-        $stmt_stats->bind_param($countParamTypes, ...$countParams);
+    if (!empty($params)) {
+        $stmt_stats->bind_param($paramTypes, ...$params); 
     }
     $stmt_stats->execute();
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
-    error_log("Fetch Stats error (appointment.php): " . $e->getMessage());
+    error_log("Fetch Stats error: " . $e->getMessage());
     $stats = ['pending'=>0, 'accepted'=>0, 'cancelled'=>0, 'completed'=>0];
 }
 
@@ -686,9 +650,48 @@ $pendingCount   = (int)($stats['pending']   ?? 0);
 $acceptedCount  = (int)($stats['accepted']  ?? 0);
 $cancelledCount = (int)($stats['cancelled'] ?? 0);
 $completedCount = (int)($stats['completed'] ?? 0);
+            
 
-
-// BAGO: Kunin ang lahat ng araw na may appointments para i-highlight
+try {
+    $stmt = $conn->prepare($query);
+    if (!empty($paramsForMain)) {
+        $stmt->bind_param($paramTypesForMain, ...$paramsForMain);
+    }
+    $stmt->execute();
+    $rawAppointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    
+    // Now filter by name if search term exists
+    $appointments = [];
+    if (!empty($search) && !empty($rawAppointments)) {
+        $searchLower = strtolower(trim($search));
+        foreach ($rawAppointments as $appt) {
+            // Decrypt the name for searching
+            $decryptedName = decrypt_data($appt['full_name']);
+            $decryptedNameLower = strtolower($decryptedName);
+            
+            // Check client ID, service name, and status name too
+            $clientId = strtolower($appt['client_id'] ?? '');
+            $serviceName = strtolower($appt['service_name'] ?? '');
+            $statusName = strtolower($appt['status_name'] ?? '');
+            
+            // Check ALL searchable fields
+            if (strpos($decryptedNameLower, $searchLower)   !== false ||
+                strpos($clientId, $searchLower) !== false ||
+                strpos($serviceName, $searchLower) !== false ||
+                strpos($statusName, $searchLower) !== false) {
+                $appointments[] = $appt;
+            }
+        }
+    } else {
+        $appointments = $rawAppointments;
+    }
+    
+} catch (Exception $e) {
+     error_log("Fetch Appointments error: " . $e->getMessage());
+     $appointments = [];
+     $pageError = "Error loading appointments.";
+}
+// Highlight dates logic
 $highlight_dates = [];
 try {
     $hl_result = $conn->query("SELECT DISTINCT appointment_date FROM appointments");
@@ -715,33 +718,48 @@ $js_highlight_dates = json_encode($highlight_dates);
 <style>
 /* --- Keep all your existing styles --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background:#f8f9fa; color:#223; }
+body { background:#f8f9fa; color:#223; padding-bottom: 40px; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 
-/* UPDATED: Symmetric padding (75px left/right) for Header */
+/* Header */
 header { 
     display:flex; align-items:center; background:#fff; 
-    padding:12px 75px 12px 75px; 
-    box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; 
+    padding:12px 20px; 
+    box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; justify-content: space-between;
+}
+@media(min-width: 1000px) {
+    header { padding: 12px 75px; }
 }
 
-.logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
+.logo-section { display:flex; align-items:center; gap:10px; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
 
-/* UPDATED: Symmetric padding (75px left/right) for Container */
+/* Container */
 .container { 
-    padding:20px 75px 40px 75px; 
+    padding:20px; 
     max-width:100%; 
     margin:0 auto; 
+}
+@media(min-width: 1000px) {
+    .container { padding:20px 75px 40px 75px; }
 }
 
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
-.filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
+
+.filters { 
+    display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; 
+    background: transparent; 
+    padding: 0; 
+    border: none; 
+    box-shadow: none; 
+    border-radius: 0;
+}
+
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; }
 
 input.flatpickr-input {
@@ -761,26 +779,40 @@ input.flatpickr-input {
 }
 .flatpickr-day.has-appointments:hover { background: #f5c6cb; }
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
+
 .btn-filter {
-    padding: 9px 15px; border-radius: 8px; border: 2px solid #dde3ea;
-    background: #fff; color: #5a6c7d; font-weight: 700; cursor: pointer;
-    font-size: 13px; transition: all 0.2s;
+    padding: 9px 15px; 
+    border-radius: 8px; 
+    border: none; 
+    background: #f1f5f9; 
+    color: #5a6c7d; 
+    font-weight: 700; 
+    cursor: pointer;
+    font-size: 13px; 
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 }
-.btn-filter:hover { border-color: #b0b9c4; }
-.btn-filter.active { background: #991010; color: #fff; border-color: #991010; }
+.btn-filter:hover { border-color: #b0b9c4; background: #e2e8f0; }
+.btn-filter.active { background: #991010; color: #fff; border-color: #991010; box-shadow: 0 4px 10px rgba(153, 16, 16, 0.3); }
+
+/* Stats Responsive Grid */
 .stats { 
-    display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
     gap:12px; margin-bottom:18px; 
 }
 .stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
 .stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
 .stat-card p { color:#6b7f86; font-size:13px; }
-.action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
+
+/* Action Buttons */
+.action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; margin-right: 4px; margin-bottom: 4px; }
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
 .accept { background:#16a34a; }
 .cancel { background:#dc2626; }
 .view { background:#1d4ed8; }
 .edit { background:#f59e0b; }
+
+/* Modals */
 .detail-overlay, .confirm-modal { 
     display: none; position: fixed; inset: 0; background: rgba(2, 12, 20, 0.6); 
     z-index: 3000; align-items: center; justify-content: center; padding: 20px; 
@@ -792,7 +824,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     max-width: 96%; background: #fff; border-radius: 16px; padding: 0; 
     box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; 
 }
-.detail-card { width: 700px; }
+.detail-card { width: 700px; max-height: 90vh; overflow-y: auto; }
 .confirm-card { width: 440px; padding: 24px; }
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 .detail-header { 
@@ -801,23 +833,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 }
 .detail-title { font-weight: 800; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 10px; }
 .detail-id { background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; }
-.detail-title:before { content: '📋'; font-size: 24px; }
+
 .badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge.pending { background: #fff4e6; color: #a66300; border: 2px solid #ffd280; }
 .badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
-/* REMOVED MISSED BADGE CSS */
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
 .badge.cancel { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
+
 .detail-actions, .confirm-actions { 
     padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; 
     display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; 
 }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
-.btn-small:hover { transform: translateY(-1px); }
 .btn-close { background: #fff; color: #4a5568; border: 2px solid #e2e8f0; }
-.btn-accept { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3); }
-.btn-cancel { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
-.btn-edit { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3); }
+.btn-accept { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+.btn-cancel { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; }
+.btn-edit { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; }
+
 .confirm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
 .confirm-icon { 
     width: 56px; height: 56px; border-radius: 12px; color: #fff; 
@@ -831,222 +863,96 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .confirm-msg { color: #4a5568; font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
 #reasonInputWrapper { margin-bottom: 20px; }
 #cancelReasonInput {
-    width: 100%;
-    padding: 10px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    font-size: 14px;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    resize: vertical;
-    min-height: 80px;
+    width: 100%; padding: 10px; font-family: 'Segoe UI', sans-serif; font-size: 14px;
+    border: 2px solid #e2e8f0; border-radius: 8px; resize: vertical; min-height: 80px;
 }
-#cancelReasonInput:focus {
-    border-color: #991010;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(153, 16, 16, 0.2);
-}
+#cancelReasonInput:focus { border-color: #991010; outline: none; }
 
-#editModal .detail-title:before { content: '✏️'; }
 #editModal .detail-card { width: 500px; }
-#editModal .detail-content { padding: 28px; display: block; }
-#editModal .detail-row { margin-bottom: 20px; }
 #editModal select { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px; font-weight: 600; margin-top: 10px; }
 
-.detail-content { padding: 0; }
-#detailModalBody, #historyDetailModalBody {
-    padding: 24px 28px; max-height: 70vh;
-    overflow-y: auto; font-size: 15px;
-}
-.detail-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
-}
-.detail-row {
-    background: #f8f9fb; padding: 12px 14px;
-    border-radius: 8px; border: 1px solid #e8ecf0;
-}
+#detailModalBody { padding: 24px 28px; font-size: 15px; }
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.detail-row { background: #f8f9fb; padding: 12px 14px; border-radius: 8px; border: 1px solid #e8ecf0; }
 .detail-row.full-width { grid-column: 1 / -1; }
-.detail-label {
-    font-size: 11px; font-weight: 700; color: #4a5568;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    display: block; margin-bottom: 6px;
-}
-.detail-value {
-    color: #1a202c; font-weight: 500; font-size: 15px;
-    line-height: 1.4; word-wrap: break-word;
-}
-.detail-value b { font-weight: 600; }
-.detail-notes { display: none; }
+.detail-label { font-size: 11px; font-weight: 700; color: #4a5568; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.detail-value { color: #1a202c; font-weight: 500; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
 
-/* =================================== */
-/* BAGO: CSS PARA SA HISTORY SECTION */
-/* =================================== */
-.history-section {
-    margin-top: 20px;
-    padding-top: 20px;
-    border-top: 2px solid #e8ecf0;
-}
-.history-section h3 {
-    font-size: 16px;
-    color: #1a202c;
-    margin-bottom: 12px;
-}
-.history-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 150px;
-    overflow-y: auto;
-    border: 1px solid #e8ecf0;
-    border-radius: 8px;
-    background: #fdfdfd;
-}
-.history-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border-bottom: 1px solid #f3f6f9;
-    font-size: 14px;
-}
-.history-item:last-child {
-    border-bottom: none;
-}
-.history-item-info {
-    font-weight: 600;
-    color: #334155;
-}
-.history-item-info span {
-    display: block;
-    font-weight: 500;
-    font-size: 13px;
-    color: #64748b;
-    margin-top: 2px;
-}
-.btn-view-history {
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    background: #1d4ed8;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s;
-    flex-shrink: 0;
-}
-.btn-view-history:hover {
-    background: #1e40af;
-    transform: translateY(-1px);
-}
-/* =================================== */
-
-
-.toast-overlay {
-    position: fixed; inset: 0; background: rgba(34, 49, 62, 0.6);
-    z-index: 9998; display: flex; align-items: center; justify-content: center;
-    opacity: 1; transition: opacity 0.3s ease-out; backdrop-filter: blur(4px);
-}
-.toast {
-    background: #fff; color: #1a202c; padding: 24px; border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999;
-    display: flex; align-items: center; gap: 16px;
-    font-weight: 600; min-width: 300px; max-width: 450px;
-    text-align: left; animation: slideUp .3s ease;
-}
-.toast-icon {
-    font-size: 24px; font-weight: 800; width: 44px; height: 44px;
-    border-radius: 50%; display: flex; align-items: center;
-    justify-content: center; flex-shrink: 0; color: #fff;
-}
-.toast-message { font-size: 15px; line-height: 1.5; }
+/* Toast */
+.toast-overlay { position: fixed; inset: 0; background: transparent; z-index: 9998; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.toast { background: #fff; color: #1a202c; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); pointer-events: auto; display: flex; align-items: center; gap: 16px; font-weight: 600; min-width: 300px; animation: slideUp .3s ease; }
+.toast-icon { width: 44px; height: 44px; border-radius: 50%; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 24px; flex-shrink: 0; }
 .toast.success { border-top: 4px solid #16a34a; }
 .toast.success .toast-icon { background: #16a34a; }
 .toast.error { border-top: 4px solid #dc2626; }
 .toast.error .toast-icon { background: #dc2626; }
 
-#loader-overlay {
-    position: fixed; inset: 0; background: #ffffff; z-index: 99999;
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; transition: opacity 0.5s ease;
-}
-.loader-spinner {
-    width: 50px; height: 50px; border-radius: 50%;
-    border: 5px solid #f3f3f3; border-top: 5px solid #991010;
-    animation: spin 1s linear infinite;
-}
-.loader-text {
-    margin-top: 15px; font-size: 16px;
-    font-weight: 600; color: #5a6c7d;
-}
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-@keyframes fadeInContent {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Loader */
+#loader-overlay { position: fixed; inset: 0; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
+.loader-spinner { width: 50px; height: 50px; border-radius: 50%; border: 5px solid #f3f3f3; border-top: 5px solid #991010; animation: spin 1s linear infinite; }
+.loader-text { margin-top: 15px; font-size: 16px; font-weight: 600; color: #5a6c7d; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+/* PAGINATION STYLES */
+.pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.pagination a { padding: 8px 16px; border: 1px solid #dde3ea; background: #fff; color: #5a6c7d; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+.pagination a:hover { border-color: #991010; color: #991010; }
+.pagination a.active { background: #991010; color: #fff; border-color: #991010; }
+.pagination span.disabled { padding: 8px 16px; border: 1px solid #eee; background: #f9f9f9; color: #ccc; border-radius: 8px; }
+
+/* TABLE RESPONSIVE */
+.table-container { background: #fff; border-radius: 10px; border: 1px solid #e6e9ee; padding: 0; overflow-x: auto; margin-bottom: 20px; }
+.custom-table { width: 100%; border-collapse: collapse; table-layout: auto; min-width: 900px; /* Forces scroll on mobile */ }
+.custom-table th { background: #f1f5f9; color: #4a5568; font-weight: 700; font-size: 13px; text-transform: uppercase; padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.custom-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; vertical-align: middle; }
+.custom-table tbody tr:hover { background: #f8f9fb; }
+
+/* SEARCH BAR CSS */
+#searchInput { 
+    margin-left: auto; 
+    width: 350px;       
+    min-width: 200px;   
 }
 
-#menu-toggle {
-display: none; background: #f1f5f9; border: 2px solid #e2e8f0;
-color: #334155; font-size: 24px; padding: 5px 12px;
-border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100; 
-}
+/* Mobile View Adjustments */
+#menu-toggle { display: none; background: #fff; border: 1px solid #ddd; padding: 5px 10px; font-size: 24px; cursor: pointer; border-radius: 5px; }
 
 @media (max-width: 1000px) {
-.vertical-bar { display: none; }
-/* Mobile Reset: Padded to 20px when sidebar is hidden */
-header { padding: 12px 20px; justify-content: space-between; }
-.logo-section { margin-right: 0; }
-.container { padding: 20px; }
-#menu-toggle { display: block; }
-nav#main-nav {
-    display: flex; flex-direction: column; position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(20, 0, 0, 0.9); backdrop-filter: blur(5px);
-    z-index: 2000; padding: 80px 20px 20px 20px;
-    opacity: 0; visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-nav#main-nav.show { opacity: 1; visibility: visible; }
-nav#main-nav a {
-    color: #fff; font-size: 24px; font-weight: 700;
-    padding: 15px; text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.2);
-}
-nav#main-nav a:hover { background: rgba(255,255,255,0.1); }
-nav#main-nav a.active { background: none; color: #ff6b6b; }
-}
-@media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
-/* --- Desktop View --- */
-#searchInput {
-    margin-left: auto;
-    width: 333px; /* Binago para maging kasing haba ng card */
+    .vertical-bar { display: none; }
+    header { padding: 12px 20px; justify-content: space-between; }
+    .logo-section { margin-right: 0; }
+    #menu-toggle { display: block; }
+    nav#main-nav { 
+        display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(20, 0, 0, 0.95); z-index: 2000; padding: 80px 20px 20px 20px; 
+        opacity: 0; visibility: hidden; transition: 0.3s ease; 
+    }
+    nav#main-nav.show { opacity: 1; visibility: visible; }
+    nav#main-nav a { color: #fff; font-size: 24px; font-weight: 700; padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
 }
 
-/* ... ibang styles ... */
-
-/* --- Mobile View --- */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .filters { flex-direction: column; align-items: stretch; }
+    .filters > div, .filters select, .filters input { width: 100%; margin-bottom: 5px; }
+    #searchInput { width: 100%; margin-left: 0; }
+    .detail-grid { grid-template-columns: 1fr; }
     
-    #searchInput {
-        margin-left: 0;
-        width: 100%;
+    .flatpickr-calendar {
+        max-width: 90%; 
+        left: 50% !important;
+        transform: translateX(-50%) !important; 
     }
 }
-
 </style>
 </head>
 <body>
 
-<div id="loader-overlay">
+<div id="loader-overlay" style="<?= $isSearchActive ? 'display:none !important;' : '' ?>">
     <div class="loader-spinner"></div>
     <p class="loader-text">Loading Management...</p>
 </div>
-<div id="main-content" style="display: none;">
 
-
+<div id="main-content" style="<?= $isSearchActive ? 'display:block;' : 'display: none;' ?>">
 
     <header>
     <div class="logo-section">
@@ -1060,13 +966,14 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         <a href="product.php">💊 Product & Services</a>
         <a href="account.php">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
+        <button id="close-menu-btn" style="background:none; border:1px solid #fff; color:#fff; padding:10px; margin-top:20px; border-radius:5px; display:none;">Close Menu</button>
     </nav>
     </header>
     
     <div class="container">
     <div class="header-row">
         <h2>Appointment Management</h2>
-        </div>
+    </div>
     
     <?php if (isset($pageError)): ?>
         <div style="background:#f8d7da; color:#721c24; border:1px solid #f5c6cb; padding:15px; border-radius:8px; margin-bottom:15px;">
@@ -1075,12 +982,14 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
     <?php endif; ?>
     
     <form id="filtersForm" method="get" class="filters">
-        <div>
+        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+            <button type="button" class="btn-filter <?= $viewFilter === 'all' ? 'active' : '' ?>" data-view="all">All</button>
             <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical</button>
             <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
         </div>
+
         <select name="status" id="statusFilter" title="Filter by status">
             <option value="All" <?= $statusFilter==='All'?'selected':'' ?>>All Status</option>
             <option value="Pending" <?= $statusFilter==='Pending'?'selected':'' ?>>Pending</option>
@@ -1088,10 +997,9 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
             <option value="Cancel" <?= $statusFilter==='Cancel'?'selected':'' ?>>Cancel</option>
             <option value="Completed" <?= $statusFilter==='Completed'?'selected':'' ?>>Completed</option>
         </select>
+
         <div style="display:flex;gap:8px;align-items:center;">
-        
         <?php 
-            // If dateFilter is 'All', select 'all', otherwise 'pick'
             $isAllDates = ($dateFilter === 'All');
         ?>
         <select id="dateMode" title="Filter by date">
@@ -1100,90 +1008,104 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         </select>
         
         <input type="date" id="dateVisible" title="Select date"
-               value="<?= !$isAllDates ? htmlspecialchars($dateFilter) : '' ?>">
+               value="<?= !$isAllDates ? htmlspecialchars($dateFilter) : '' ?>" style="<?= $isAllDates ? 'display:none;' : '' ?>">
                
         <input type="hidden" name="date" id="dateHidden" value="<?= htmlspecialchars($dateFilter) ?>">
         </div>
-        <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
+        
+        <input type="text" name="search" id="searchInput" placeholder="Search Patient, Service, or Status..." value="<?= htmlspecialchars($search) ?>" title="Search by Patient, ID, Service, or Status">
     </form>
     
     <div class="stats">
-        <div class="stat-card"><h3><?= $pendingCount ?></h3><p>Pending</p></div>
-        <div class="stat-card"><h3><?= $acceptedCount ?></h3><p>Confirmed</p></div>
-        <div class="stat-card"><h3><?= $cancelledCount ?></h3><p>Cancel</p></div>
-        <div class="stat-card"><h3><?= $completedCount ?></h3><p>Completed</p></div>
+        <div class="stat-card"><h3><?= $pendingCount ?></h3><p style="color:#a66300;">Pending</p></div>
+        <div class="stat-card"><h3><?= $acceptedCount ?></h3><p style="color:#16a34a;">Confirmed</p></div>
+        <div class="stat-card"><h3><?= $cancelledCount ?></h3><p style="color:#dc2626;">Cancel</p></div>
+        <div class="stat-card"><h3><?= $completedCount ?></h3><p style="color:#4f46e5;">Completed</p></div>
     </div>
     
-    <div style="background:#fff;border:1px solid #e6e9ee;border-radius:10px;padding:12px; overflow-x: auto;">
-        <table id="appointmentsTable" style="width:100%;border-collapse:collapse;font-size:14px; min-width: 900px;">
+    <div class="table-container">
+        <table id="appointmentsTable" class="custom-table">
         <thead>
-            <tr style="text-align:left;color:#34495e;">
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:50px;">#</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;">Patient</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:100px;">Patient I.D.</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:140px;">Service</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Date</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:90px;">Time</th>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:120px;">Status</th>
+            <tr>
+            <th>#</th>
+            <th>Patient</th>
+            <th>Patient I.D.</th>
+            <th>Service</th>
+            <th>Date</th>
+            <th>Time</th>
+            <th>Status</th>
             <?= $extraHeaders ?>
-            <th style="padding:10px 8px;border-bottom:2px solid #e8ecf0;width:260px;text-align:center;">Actions</th>
+            <th>Actions</th>
             </tr>
         </thead>
         <tbody>
-            <?php if (!empty($appointments)): $i=0; foreach ($appointments as $appt): $i++;
-            $nameParts = explode(' ', trim($appt['full_name']));
-            $initials = count($nameParts) > 1
-                ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
-                : strtoupper(substr($appt['full_name'], 0, 1));
-            if (strlen($initials) == 1 && strlen($appt['full_name']) > 1) { $initials .= strtoupper(substr($appt['full_name'], 1, 1)); }
-            elseif (empty($initials)) { $initials = '??'; }
-            ?>
-            <tr style="border-bottom:1px solid #f3f6f9;" data-id="<?= $appt['appointment_id'] ?>" data-status="<?= strtolower($appt['status_name']) ?>">
-                <td style="padding:12px 8px;vertical-align:middle;"><?= $i ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:40px;height:40px;border-radius:50%;background:#991010;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0;">
-                    <?= htmlspecialchars($initials) ?>
-                    </div>
-                    <div>
-                   <div style="font-weight:700;color:#223;">
-    <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>
-</div>
-                    </div>
-                </div>
-                </td>
-                <td style="padding:12px 8px;vertical-align:middle;"><span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;"><?= htmlspecialchars($appt['client_id'] ?? 'N/A') ?></span></td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($appt['service_name'] ?? 'N/A') ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= date('M d, Y', strtotime($appt['appointment_date'])) ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;"><?= date('h:i A', strtotime($appt['appointment_time'])) ?></td>
-                <td style="padding:12px 8px;vertical-align:middle;">
+            <?php if (!empty($appointments)): $i=$offset; foreach ($appointments as $appt): $i++;
+    // FIX: Get display name with fallback
+    if (empty($appt['full_name']) || $appt['full_name'] === '') {
+        $displayName = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
+    } else {
+        $displayName = decrypt_data($appt['full_name']);
+    }
+    
+    $nameParts = explode(' ', trim($displayName));
+    $initials = count($nameParts) > 1 
+        ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1)) 
+        : strtoupper(substr($displayName, 0, 1));
+?>
+<tr data-id="<?= $appt['appointment_id'] ?>" data-status="<?= strtolower($appt['status_name']) ?>">
+    <td><?= $i ?></td>
+    
+    <td>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#991010;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0; font-size:12px;">
+        <?= htmlspecialchars($initials) ?>
+        </div>
+        <div>
+        <div style="font-weight:700;color:#223;font-size:13px;">
+            <?= htmlspecialchars($displayName) ?>
+        </div>
+        </div>
+    </div>
+    </td>
+
+                <td><span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;font-size:12px;"><?= htmlspecialchars($appt['client_id'] ?? 'N/A') ?></span></td>
+                
+                <td><?= htmlspecialchars($appt['service_name'] ?? 'N/A') ?></td>
+                <td><?= date('M d, Y', strtotime($appt['appointment_date'])) ?></td>
+                <td><?= date('h:i A', strtotime($appt['appointment_time'])) ?></td>
+                <td>
                 <span class="badge <?= strtolower($appt['status_name'] ?? 'unknown') ?>">
                     <?= htmlspecialchars($appt['status_name'] ?? 'N/A') ?>
                 </span>
                 </td>
                 
                 <?php foreach ($extraColumnNames as $colName): ?>
-                    <td style="padding:12px 8px;vertical-align:middle;"><?= htmlspecialchars($appt[$colName] ?? 'N/A') ?></td>
+                    <td><?= htmlspecialchars($appt[$colName] ?? 'N/A') ?></td>
                 <?php endforeach; ?>
     
-                <td style="padding:12px 8px;vertical-align:middle;">
-                <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+                <td>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <?php 
+                    $stat = strtolower($appt['status_name']); 
+                    // Check date (IF PAST, CANNOT EDIT)
+                    $isPast = strtotime($appt['appointment_date']) < strtotime(date('Y-m-d'));
+                    ?>
+
+                    <?php if ($isPast): ?>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                     
-                    <?php $stat = strtolower($appt['status_name']); ?>
-                    
-                    <?php if ($stat === 'pending'): ?>
-                    <button class="action-btn accept" onclick="updateStatus(<?= $appt['appointment_id'] ?>,'Confirmed')">Confirm</button>
-                    <button class="action-btn cancel" onclick="promptForCancelReason(<?= $appt['appointment_id'] ?>)">Cancel</button>
-                    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                    <?php elseif ($stat === 'pending'): ?>
+                        <button class="action-btn accept" onclick="updateStatus(<?= $appt['appointment_id'] ?>,'Confirmed')">Confirm</button>
+                        <button class="action-btn cancel" onclick="promptForCancelReason(<?= $appt['appointment_id'] ?>)">Cancel</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                     
                     <?php elseif ($stat === 'confirmed' || $stat === 'completed' || $stat === 'cancel'): ?>
-                    <button class="action-btn edit" onclick="openEditModal(<?= $appt['appointment_id'] ?>)">Edit</button>
-                    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                        <button class="action-btn edit" onclick="openEditModal(<?= $appt['appointment_id'] ?>)">Edit</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                     
                     <?php else: ?>
-                    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                     <?php endif; ?>
-
                 </div>
                 </td>
             </tr>
@@ -1193,6 +1115,30 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         </tbody>
         </table>
     </div>
+
+    <?php if ($totalPages > 1): ?>
+    <div class="pagination">
+        <?php if ($page > 1): ?>
+            <a href="?page=<?= $page - 1 ?>&status=<?= $statusFilter ?>&date=<?= $dateFilter ?>&search=<?= $search ?>&view=<?= $viewFilter ?>">&laquo; Previous</a>
+        <?php else: ?>
+            <span class="disabled">&laquo; Previous</span>
+        <?php endif; ?>
+
+        <?php for($p=1; $p<=$totalPages; $p++): ?>
+            <a href="?page=<?= $p ?>&status=<?= $statusFilter ?>&date=<?= $dateFilter ?>&search=<?= $search ?>&view=<?= $viewFilter ?>" class="<?= $p===$page ? 'active' : '' ?>"><?= $p ?></a>
+        <?php endfor; ?>
+
+        <?php if ($page < $totalPages): ?>
+            <a href="?page=<?= $page + 1 ?>&status=<?= $statusFilter ?>&date=<?= $dateFilter ?>&search=<?= $search ?>&view=<?= $viewFilter ?>">Next &raquo;</a>
+        <?php else: ?>
+            <span class="disabled">Next &raquo;</span>
+        <?php endif; ?>
+    </div>
+    <div style="text-align:center; font-size:12px; color:#666; margin-top:10px;">
+        Showing page <?= $page ?> of <?= $totalPages ?>
+    </div>
+    <?php endif; ?>
+
     </div>
     
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
@@ -1207,7 +1153,6 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         </div>
     </div>
     </div>
-    
     
     <div id="editModal" class="detail-overlay" aria-hidden="true" data-old-status="">
     <div class="detail-card" role="dialog" style="width:500px;"> 
@@ -1226,7 +1171,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
         </div>
         <div style="margin-top:20px;">
             <label for="editStatusSelect" class="detail-label" style="display:block;margin-bottom:10px;">Change Status To:</label>
-            <select id="editStatusSelect" style="width:100%;padding:12px;border:2px solid #e2e8f0;border-radius:8px;font-size:15px;font-weight:600;">
+            <select id="editStatusSelect">
             <option value="Pending">Pending</option>
             <option value="Confirmed">Confirmed</option>
             <option value="Cancel">Cancel</option>
@@ -1286,7 +1231,7 @@ nav#main-nav a.active { background: none; color: #ff6b6b; }
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <script>
-// BAGO: Ilagay ang PHP dates sa JavaScript
+// PHP dates to JS
 const datesWithAppointments = <?= $js_highlight_dates ?? '[]' ?>;
 
 let currentEditId = null;
@@ -1460,30 +1405,8 @@ showConfirm(message, options)
         hideActionLoader();
         if (data && data.success) {
         showToast(`Status updated successfully.`, 'success');
-        const row = document.querySelector(`tr[data-id="${id}"]`);
-        if (row) {
-            const statusCell = row.querySelector('.badge');
-            const actionsCell = row.querySelector('td:last-child > div');
-            if (statusCell) {
-            statusCell.className = 'badge ' + data.status.toLowerCase();
-            statusCell.textContent = data.status;
-            }
-            row.setAttribute('data-status', data.status.toLowerCase());
-
-            let buttonsHTML = '';
-            const newStatus = data.status.toLowerCase();
-            
-            if (newStatus === 'pending') {
-            buttonsHTML = `<button class="action-btn accept" onclick="updateStatus(${id},'Confirmed')">Confirm</button> <button class="action-btn cancel" onclick="promptForCancelReason(${id})">Cancel</button> <button class="action-btn view" onclick="viewDetails(${id})">View</button>`;
-            } else if (newStatus === 'confirmed' || newStatus === 'completed' || newStatus === 'cancel') {
-            buttonsHTML = `<button class="action-btn edit" onclick="openEditModal(${id})">Edit</button> <button class="action-btn view" onclick="viewDetails(${id})">View</button>`;
-            } else {
-            buttonsHTML = `<button class="action-btn view" onclick="viewDetails(${id})">View</button>`;
-            }
-            
-            if (actionsCell) actionsCell.innerHTML = buttonsHTML;
-        }
-        setTimeout(() => updateStats(), 300);
+        // Reload page to reflect changes in stats and list
+        setTimeout(() => location.reload(), 1000);
         } else {
         showToast(data.message || 'Failed to update status', 'error');
         }
@@ -1496,38 +1419,6 @@ showConfirm(message, options)
     });
 }
 
-function updateStats() {
-    const rows = document.querySelectorAll('#appointmentsTable tbody tr[data-status]');
-    // REMOVED MISSED VARIABLE AND COUNTING
-    let pending = 0, accepted = 0, cancelled = 0, completed = 0;
-    const statCards = document.querySelectorAll('.stat-card h3');
-    const isStatusFiltered = document.getElementById('statusFilter').value !== 'All';
-    const isDateFiltered = document.getElementById('dateHidden').value !== 'All';
-    const isSearchFiltered = document.getElementById('searchInput').value !== '';
-    const isViewFiltered = document.getElementById('viewFilterInput').value !== 'all';
-    const isFiltered = isStatusFiltered || isDateFiltered || isSearchFiltered || isViewFiltered;
-    rows.forEach(row => {
-        const status = row.getAttribute('data-status');
-        if (status === 'pending') pending++;
-        else if (status === 'confirmed') accepted++;
-        // REMOVED MISSED CHECK
-        else if (status === 'cancel') cancelled++;
-        else if (status === 'completed') completed++;
-    });
-    if (!isFiltered) {
-        if (statCards[0]) statCards[0].textContent = pending;
-        if (statCards[1]) statCards[1].textContent = accepted;
-        // Adjusted indexes since one card was removed
-        if (statCards[2]) statCards[2].textContent = cancelled;
-        if (statCards[3]) statCards[3].textContent = completed;
-    }
-}
-
-
-
-// =======================================================
-// UPDATED: viewDetails function (main modal with history)
-// =======================================================
 function viewDetails(id) {
 showActionLoader('Fetching details...');
 fetch('appointment.php', {
@@ -1676,12 +1567,9 @@ if (newStatus === 'Cancel') {
 }
 }
 
-// =======================================================
-// UPDATED: Event Listeners (para sa lahat ng modals)
-// =======================================================
+// Event Listeners for Modals
 document.addEventListener('click', function(e){
 const detailOverlay = document.getElementById('detailOverlay');
-const historyOverlay = document.getElementById('historyDetailOverlay');
 const editOverlay = document.getElementById('editModal');
 const confirmOverlay = document.getElementById('confirmModal');
 const reasonOverlay = document.getElementById('reasonModal');
@@ -1696,7 +1584,6 @@ if (reasonOverlay?.classList.contains('show') && e.target === reasonOverlay) {
 document.addEventListener('keydown', function(e){
 if (e.key === 'Escape') {
     const confirmModal = document.getElementById('confirmModal');
-    const historyModal = document.getElementById('historyDetailOverlay');
     const editModal = document.getElementById('editModal');
     const detailModal = document.getElementById('detailOverlay');
     const reasonModal = document.getElementById('reasonModal');
@@ -1705,8 +1592,6 @@ if (e.key === 'Escape') {
         document.getElementById('confirmCancel')?.click();
     } else if (reasonModal?.classList.contains('show')) {
         document.getElementById('reasonBack')?.click();
-    } else if (historyModal?.classList.contains('show')) {
-        closeHistoryDetailModal();
     } else if (editModal?.classList.contains('show')){
         closeEditModal();
     } else if (detailModal?.classList.contains('show')){
@@ -1727,6 +1612,7 @@ const viewInput = document.getElementById('viewFilterInput');
 const viewButtons = document.querySelectorAll('.btn-filter');
 
 const fpInstance = flatpickr(dateVisible, {
+    disableMobile: true, 
     dateFormat: "Y-m-d", 
     onDayCreate: function(dObj, dStr, fp, dayElem){
         const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
@@ -1743,12 +1629,6 @@ const fpInstance = flatpickr(dateVisible, {
 });
 
 const flatpickrInput = fpInstance.input;
-
-if (dateMode.value === 'all') {
-    flatpickrInput.style.display = 'none';
-} else {
-    flatpickrInput.style.display = 'inline-block';
-}
 
 dateMode?.addEventListener('change', function(){
     if (this.value === 'all') {
@@ -1782,47 +1662,69 @@ viewButtons.forEach(button => {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Menu Toggle Logic
+    const menuToggle = document.getElementById('menu-toggle');
+    const mainNav = document.getElementById('main-nav');
+    const closeMenuBtn = document.getElementById('close-menu-btn');
+
+    if (menuToggle && mainNav) {
+        menuToggle.addEventListener('click', function() {
+            mainNav.classList.toggle('show');
+            if (mainNav.classList.contains('show')) {
+                this.innerHTML = '✕'; 
+                this.setAttribute('aria-label', 'Close navigation');
+                if(closeMenuBtn) closeMenuBtn.style.display = 'block';
+            } else {
+                this.innerHTML = '☰';
+                this.setAttribute('aria-label', 'Open navigation');
+                if(closeMenuBtn) closeMenuBtn.style.display = 'none';
+            }
+        });
+        
+        mainNav.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                mainNav.classList.remove('show');
+                menuToggle.innerHTML = '☰';
+                if(closeMenuBtn) closeMenuBtn.style.display = 'none';
+            });
+        });
+        
+        if(closeMenuBtn) {
+            closeMenuBtn.addEventListener('click', function() {
+                mainNav.classList.remove('show');
+                menuToggle.innerHTML = '☰';
+                this.style.display = 'none';
+            });
+        }
+    }
+
+    // Page Loader Logic
     setTimeout(function() {
         const loader = document.getElementById('loader-overlay');
         const content = document.getElementById('main-content');
         if (loader) {
-            loader.style.opacity = '0';
-            loader.addEventListener('transitionend', () => {
-                loader.style.display = 'none';
-            }, { once: true });
+            // Only fade out if it's currently visible
+            if (getComputedStyle(loader).display !== 'none') {
+                loader.style.opacity = '0';
+                loader.addEventListener('transitionend', () => {
+                    loader.style.display = 'none';
+                }, { once: true });
+            }
         }
         if (content) {
             content.style.display = 'block';
             content.style.animation = 'fadeInContent 0.5s ease';
         }
     }, 1000);
-});
-</script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-const menuToggle = document.getElementById('menu-toggle');
-const mainNav = document.getElementById('main-nav');
-
-if (menuToggle && mainNav) {
-    menuToggle.addEventListener('click', function() {
-    mainNav.classList.toggle('show');
-    if (mainNav.classList.contains('show')) {
-        this.innerHTML = '✕'; 
-        this.setAttribute('aria-label', 'Close navigation');
-    } else {
-        this.innerHTML = '☰';
-        this.setAttribute('aria-label', 'Open navigation');
+    // FIX: Auto-focus search input if user was searching
+    const searchInput = document.getElementById('searchInput');
+    if(searchInput && searchInput.value.trim() !== '') {
+        searchInput.focus();
+        // Move cursor to end of text
+        const len = searchInput.value.length;
+        searchInput.setSelectionRange(len, len);
     }
-    });
-    mainNav.querySelectorAll('a').forEach(link => {
-    link.addEventListener('click', function() {
-        mainNav.classList.remove('show');
-        menuToggle.innerHTML = '☰';
-        menuToggle.setAttribute('aria-label', 'Open navigation');
-    });
-    });
-}
 });
 </script>
 <script>
@@ -1832,7 +1734,6 @@ if (menuToggle && mainNav) {
         history.go(1);
     };
 </script>
-
 
 </body>
 </html>

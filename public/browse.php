@@ -400,11 +400,11 @@ $result = $conn->query($sql);
 <!-- Modal -->
 <div class="modal" id="productModal">
   <div class="modal-content">
-    <button class="modal-close" onclick="closeModal()">×</button>
+      <button class="modal-close" onclick="closeModal()">×</button>
     <div class="modal-left">
       <div class="modal-main-display-container">
         <img id="modalMainDisplayImg" src="" alt="Product Image" onerror="this.style.display='none'">
-      </div>
+    </div>
       <div class="modal-thumbnails-row" id="modalThumbnailsContainer" style="display: none;"></div>
     </div>
     <div class="modal-right">
@@ -421,12 +421,12 @@ $result = $conn->query($sql);
               <span class="spec-label">Gender</span>
               <span class="spec-value" id="specGender">-</span>
             </div>
-          </div>
-          
+        </div>
+        
           <div class="spec-item">
             <span class="spec-icon">🏷️</span>
             <div class="spec-content">
-              <span class="spec-label">Brand</span>
+                <span class="spec-label">Brand</span>
               <span class="spec-value" id="specBrand">-</span>
             </div>
           </div>
@@ -434,7 +434,7 @@ $result = $conn->query($sql);
           <div class="spec-item">
             <span class="spec-icon">👓</span>
             <div class="spec-content">
-              <span class="spec-label">Lens Type</span>
+                <span class="spec-label">Lens Type</span>
               <span class="spec-value" id="specLensType">-</span>
             </div>
           </div>
@@ -442,18 +442,18 @@ $result = $conn->query($sql);
           <div class="spec-item">
             <span class="spec-icon">🖼️</span>
             <div class="spec-content">
-              <span class="spec-label">Frame Type</span>
-              <span class="spec-value" id="specFrameType">-</span>
+                <span class="spec-label">Frame Type</span>
+                <span class="spec-value" id="specFrameType">-</span>
             </div>
           </div>
         </div>
       </div>
-      
       <a href="../public/appointment.php" class="prescription-link">📅 Book An Appointment Now</a>
       
       <div class="description-section">
-        <h3 class="description-title">Description</h3>
-        <p id="modalDescription" class="modal-description">Loading description...</p>
+          <h3 class="description-title">Description</h3>
+          <p id="modalDescription" class="modal-description">Loading description...</p>
+        
       </div>
     </div>
   </div>
@@ -700,6 +700,7 @@ function openModal(productId) {
                 const firstImage = cleanPath(data.gallery_images[0]);
                 mainDisplay.src = firstImage;
                 mainDisplay.style.display = 'block';
+                /* aslndasdka shdo idhkja la jja sdlkjadl jlasdl jkkjldkj lddjkdsl aslkd jaslkdasd dasdsf asdas dasd adsdsad as dasdas dsa da s as asd*/
 
                 if (data.gallery_images.length > 1) {
                     thumbsContainer.style.display = 'flex';

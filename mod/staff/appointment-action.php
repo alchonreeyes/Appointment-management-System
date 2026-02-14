@@ -2,7 +2,7 @@
 // Start session at the very beginning
 session_start();
 
-// Ensure database.php is outside the 'admin' folder
+// Ensure database.php is outside the 'staff' folder
 require_once __DIR__ . '/../database.php';
 
 // Load PHPMailer using Composer autoload
@@ -23,7 +23,7 @@ use PHPMailer\PHPMailer\Exception;
 // =======================================================
 // 1. SECURITY CHECK
 // =======================================================
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     if (isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
@@ -507,11 +507,10 @@ select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px so
     <header>
     <div class="logo-section"><img src="../photo/LOGO.jpg" alt="Logo"> <strong> EYE MASTER CLINIC</strong></div>
     <nav id="main-nav">
-        <a href="admin_dashboard.php">🏠 Dashboard</a>
+        <a href="staff_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php" class="active">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
-        <a href="account.php">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
     </nav>
     </header>

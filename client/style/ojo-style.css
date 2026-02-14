@@ -514,3 +514,57 @@ body {
         .char-counter.error {
             color: #ef4444;
         }
+        /* Warning Notice Styles */
+.warning-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 8px;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #856404;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.warning-notice i {
+    color: #ffc107;
+}
+
+/* Cooldown Indicator */
+.cooldown-indicator {
+    background: #e9ecef;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 15px 0;
+    font-size: 13px;
+}
+
+.cooldown-indicator h4 {
+    margin: 0 0 8px 0;
+    color: #495057;
+    font-size: 14px;
+}
+
+.cooldown-progress {
+    height: 6px;
+    background: #e9ecef;
+    border-radius: 3px;
+    margin: 8px 0;
+    overflow: hidden;
+}
+
+.cooldown-progress-bar {
+    height: 100%;
+    background: #007bff;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.cooldown-timer {
+    font-size: 12px;
+    color: #6c757d;
+    text-align: right;
+}

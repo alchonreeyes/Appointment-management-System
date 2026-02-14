@@ -304,6 +304,29 @@ nav a.active {
     position: relative;
     height: 140px;
 }
+
+/* ========================================================================= */
+/* <-- FINAL FIX: "UNIFICATION" FILTER TO FORCE ALL BARS GREEN */
+/* ========================================================================= */
+/* This works by converting EVERYTHING in the chart to black & white first,
+   then applying a Green color wash. This ensures Red and Green bars BOTH 
+   become the same Green color.
+*/
+.weekly-wrapper canvas,
+.weekly-wrapper img,
+.weekly-wrapper .chart-canvas {
+    filter: grayscale(100%) sepia(100%) hue-rotate(90deg) saturate(300%) contrast(1.1) !important;
+}
+
+/* Fallback: Direct SVG fill if it's an SVG chart */
+.weekly-wrapper svg path[fill]:not([fill="none"]), 
+.weekly-wrapper svg rect:not([fill="none"]) {
+    fill: #16a34a !important;
+    stroke: #16a34a !important;
+}
+/* ========================================================================= */
+
+
 .right-section {
     display: grid;
     grid-template-columns: 1.5fr 1fr;
@@ -687,7 +710,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
   .dashboard, .container, footer { 
     padding: 20px; /* Reset padding to uniform 20px for mobile */
   }
-  
+   
   #menu-toggle {
     display: block; 
   }
@@ -723,11 +746,11 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     text-align: center;
     border-bottom: 1px solid rgba(255,255,255,0.2);
   }
-  
+   
   nav#main-nav a:hover {
       background: rgba(255,255,255,0.1);
   }
-  
+   
   nav#main-nav a.active {
     background: none; 
     color: #ff6b6b; 

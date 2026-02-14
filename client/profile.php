@@ -51,6 +51,149 @@ function log_rate_limit($pdo, $user_id, $action_type = 'profile_update') {
     $stmt->execute([$user_id, $action_type]);
 }
 
+// ========================================================
+// AGE CHANGE VALIDATION & COOLDOWN SYSTEM
+// ========================================================
+class AgeChangeValidator {
+    private $pdo;
+    private $user_id;
+    
+    public function __construct($pdo, $user_id) {
+        $this->pdo = $pdo;
+        $this->user_id = $user_id;
+    }
+    
+    // Check if user can change their birth date/age
+    public function canChangeAge($new_birth_date, $current_birth_date = null) {
+        $result = [
+            'allowed' => true,
+            'message' => '',
+            'cooldown_remaining' => 0
+        ];
+        
+        // Check recent changes (last 30 days)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as change_count, 
+                   MAX(created_at) as last_change,
+                   TIMESTAMPDIFF(DAY, MAX(created_at), NOW()) as days_since_last_change
+            FROM age_change_history 
+            WHERE user_id = ? 
+            AND created_at > DATE_SUB(NOW(), INTERVAL 30 DAY)
+        ");
+        $stmt->execute([$this->user_id]);
+        $history = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Rule 1: Maximum 2 age changes per 30 days
+        if ($history['change_count'] >= 2) {
+            $result['allowed'] = false;
+            $result['message'] = "You've reached the maximum limit of 2 age changes per 30 days.";
+            $result['cooldown_remaining'] = 30 - $history['days_since_last_change'];
+            return $result;
+        }
+        
+        // Rule 2: 14-day cooldown after last change
+        if ($history['last_change'] && $history['days_since_last_change'] < 14) {
+            $cooldown_left = 14 - $history['days_since_last_change'];
+            $result['allowed'] = false;
+            $result['message'] = "Age changes can only be made every 14 days. Please wait {$cooldown_left} more day(s).";
+            $result['cooldown_remaining'] = $cooldown_left;
+            return $result;
+        }
+        
+        // Rule 3: Prevent drastic age changes (more than 5 years at once)
+        if ($current_birth_date) {
+            $old_date = new DateTime($current_birth_date);
+            $new_date = new DateTime($new_birth_date);
+            
+            $old_age = (new DateTime())->diff($old_date)->y;
+            $new_age = (new DateTime())->diff($new_date)->y;
+            $age_difference = abs($old_age - $new_age);
+            
+            if ($age_difference > 5) {
+                $result['allowed'] = false;
+                $result['message'] = "Age changes are limited to 5 years at a time. Requested change: {$age_difference} years.";
+                return $result;
+            }
+            
+            // Rule 4: Prevent age bouncing (frequent small changes)
+            $stmt = $this->pdo->prepare("
+                SELECT new_age, previous_age, 
+                       ABS(new_age - previous_age) as change_amount
+                FROM age_change_history 
+                WHERE user_id = ? 
+                AND created_at > DATE_SUB(NOW(), INTERVAL 60 DAY)
+                ORDER BY created_at DESC
+                LIMIT 3
+            ");
+            $stmt->execute([$this->user_id]);
+            $recent_changes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (count($recent_changes) >= 2) {
+                $total_change = 0;
+                $direction_changes = 0;
+                $last_change = null;
+                
+                foreach ($recent_changes as $change) {
+                    if ($last_change !== null) {
+                        // Check if direction changed (up then down)
+                        $current_dir = ($change['new_age'] > $change['previous_age']) ? 'up' : 'down';
+                        $last_dir = ($last_change['new_age'] > $last_change['previous_age']) ? 'up' : 'down';
+                        
+                        if ($current_dir !== $last_dir) {
+                            $direction_changes++;
+                        }
+                    }
+                    $last_change = $change;
+                }
+                
+                if ($direction_changes >= 2) {
+                    $result['allowed'] = false;
+                    $result['message'] = "Too many age adjustments detected. Please contact support if this is an error.";
+                    return $result;
+                }
+            }
+        }
+        
+        return $result;
+    }
+    
+    // Log age change for history tracking
+    public function logAgeChange($previous_birth_date, $new_birth_date, $change_reason = 'user_update') {
+        $previous_age = $previous_birth_date ? (new DateTime())->diff(new DateTime($previous_birth_date))->y : null;
+        $new_age = (new DateTime())->diff(new DateTime($new_birth_date))->y;
+        
+        $stmt = $this->pdo->prepare("
+            INSERT INTO age_change_history 
+            (user_id, previous_age, new_age, previous_birth_date, new_birth_date, change_reason, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        
+        $stmt->execute([
+            $this->user_id,
+            $previous_age,
+            $new_age,
+            $previous_birth_date,
+            $new_birth_date,
+            $change_reason,
+            $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+            $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
+        ]);
+        
+        return $this->pdo->lastInsertId();
+    }
+    
+    // Get age change history for user
+    public function getChangeHistory($limit = 10) {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM age_change_history 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        ");
+        $stmt->execute([$this->user_id, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+}
 // =======================================================
 // IMPROVED: CENTRALIZED VALIDATION RULES (Easy to Scale!)
 // =======================================================
@@ -67,7 +210,7 @@ class ValidationRules {
         'email' => [
             'required' => true,
             'type' => 'email',
-            'readonly' => true // Cannot be changed in profile
+            'readonly' => true
         ],
         'phone_number' => [
             'required' => true,
@@ -76,13 +219,13 @@ class ValidationRules {
             'sanitize' => 'phone'
         ],
         'age' => [
-    'required' => true,
-    'type' => 'integer',
-    'min' => 1,
-    'max' => 120,
-    'message' => 'Age must be between 1 and 120',
-    'auto_calculated' => true  // Flag that this is auto-calculated
-],
+            'required' => true,
+            'type' => 'integer',
+            'min' => 16,        // Changed from 1 to 16
+            'max' => 90,        // Changed from 120 to 90
+            'message' => 'Age must be between 16 and 90 years old',
+            'auto_calculated' => true
+        ],
         'gender' => [
             'required' => true,
             'readonly' => true
@@ -96,18 +239,19 @@ class ValidationRules {
             'sanitize' => true
         ],
         'address' => [
-            'required' => false, // Optional field
+            'required' => false,
             'min_length' => 5,
             'max_length' => 255,
             'sanitize' => true
         ],
         'birth_date' => [
-    'required' => true,  // Changed from false to true
-    'type' => 'date',
-    'max_date' => 'today',
-    'min_date' => '1900-01-01',  // Added minimum date
-    'message' => 'Birth date cannot be in the future'
-],
+            'required' => true,
+            'type' => 'date',
+            'max_date' => 'today',
+            'min_age' => 16,      // NEW: Minimum age requirement
+            'max_age' => 90,      // NEW: Maximum age requirement
+            'message' => 'You must be between 16 and 90 years old to use this service'
+        ],
         'suffix' => [
             'required' => false,
             'max_length' => 10,
@@ -116,19 +260,9 @@ class ValidationRules {
         ]
     ];
     
-    // ADD NEW FIELDS HERE! Just add to the array above with validation rules
-    // Example for future fields:
-    // 'middle_name' => [
-    //     'required' => false,
-    //     'min_length' => 1,
-    //     'max_length' => 50,
-    //     'pattern' => '/^[a-zA-Z\s\.]+$/',
-    //     'sanitize' => true
-    // ],
-    
     public static function validate($field_name, $value) {
         if (!isset(self::$rules[$field_name])) {
-            return ['valid' => true, 'value' => $value]; // No rules defined = valid
+            return ['valid' => true, 'value' => $value];
         }
         
         $rules = self::$rules[$field_name];
@@ -174,6 +308,16 @@ class ValidationRules {
                         return ['valid' => false, 'message' => 'Must be a valid number', 'value' => $value];
                     }
                     $value = intval($value);
+                    
+                    // Check age-specific rules
+                    if ($field_name === 'age') {
+                        if (isset($rules['min']) && $value < $rules['min']) {
+                            return ['valid' => false, 'message' => $rules['message'] ?? "Minimum age is {$rules['min']}", 'value' => $value];
+                        }
+                        if (isset($rules['max']) && $value > $rules['max']) {
+                            return ['valid' => false, 'message' => $rules['message'] ?? "Maximum age is {$rules['max']}", 'value' => $value];
+                        }
+                    }
                     break;
                     
                 case 'date':
@@ -181,21 +325,37 @@ class ValidationRules {
                     if (!$date || $date->format('Y-m-d') !== $value) {
                         return ['valid' => false, 'message' => 'Invalid date format', 'value' => $value];
                     }
+                    
+                    // Check if date is in the future
                     if (isset($rules['max_date']) && $rules['max_date'] === 'today') {
                         if ($date > new DateTime()) {
                             return ['valid' => false, 'message' => $rules['message'] ?? 'Date cannot be in the future', 'value' => $value];
+                        }
+                    }
+                    
+                    // NEW: Check age requirements for birth date
+                    if (isset($rules['min_age']) || isset($rules['max_age'])) {
+                        $today = new DateTime();
+                        $calculated_age = $today->diff($date)->y;
+                        
+                        if (isset($rules['min_age']) && $calculated_age < $rules['min_age']) {
+                            return ['valid' => false, 'message' => "You must be at least {$rules['min_age']} years old", 'value' => $value];
+                        }
+                        
+                        if (isset($rules['max_age']) && $calculated_age > $rules['max_age']) {
+                            return ['valid' => false, 'message' => "Maximum age allowed is {$rules['max_age']} years", 'value' => $value];
                         }
                     }
                     break;
             }
         }
         
-        // Min/Max validations
-        if (isset($rules['min']) && is_numeric($value) && $value < $rules['min']) {
+        // Min/Max validations for non-age fields
+        if (isset($rules['min']) && is_numeric($value) && $field_name !== 'age' && $value < $rules['min']) {
             return ['valid' => false, 'message' => $rules['message'] ?? "Minimum value is {$rules['min']}", 'value' => $value];
         }
         
-        if (isset($rules['max']) && is_numeric($value) && $value > $rules['max']) {
+        if (isset($rules['max']) && is_numeric($value) && $field_name !== 'age' && $value > $rules['max']) {
             return ['valid' => false, 'message' => $rules['message'] ?? "Maximum value is {$rules['max']}", 'value' => $value];
         }
         
@@ -220,6 +380,9 @@ class ValidationRules {
         
         return ['valid' => true, 'value' => $value];
     }
+    
+    // ... rest of the class remains the same ...
+
     
     private static function sanitize($value, $type) {
         if ($type === 'phone') {
@@ -274,6 +437,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
         header("Location: profile.php");
         exit();
     }
+    // NEW: AGE CHANGE VALIDATION
+$age_validator = new AgeChangeValidator($pdo, $user_id);
+$current_birth_date = decrypt_data($current_data['birth_date']);
+// Check if birth date is actually changing
+if ($validated_data['birth_date'] != $current_birth_date) {
+    $age_check = $age_validator->canChangeAge($validated_data['birth_date'], $current_birth_date);
+    
+    if (!$age_check['allowed']) {
+        $_SESSION['error_message'] = "Age change rejected: " . $age_check['message'];
+        if ($age_check['cooldown_remaining'] > 0) {
+            $_SESSION['error_message'] .= " Cooldown: " . $age_check['cooldown_remaining'] . " day(s) remaining.";
+        }
+        header("Location: profile.php");
+        exit();
+    }
+}
     
     // STEP 4: Check if data actually changed (prevent unnecessary updates)
     try {
@@ -322,48 +501,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $encrypted_occupation = encrypt_data($validated_data['occupation']);
 
     // STEP 6: Update database with transaction
-    try {
-        $pdo->beginTransaction();
+    // STEP 6: Update database with transaction
+try {
+    $pdo->beginTransaction();
 
-        $update_user_stmt = $pdo->prepare("
-            UPDATE users SET full_name = ?, email = ?, phone_number = ?, address = ? WHERE id = ?
-        ");
-        $update_user_stmt->execute([
-            $encrypted_full_name,
-            $validated_data['email'], 
-            $encrypted_phone_number,
-            $encrypted_address,
-            $user_id
-        ]);
+    $update_user_stmt = $pdo->prepare("
+        UPDATE users SET full_name = ?, email = ?, phone_number = ?, address = ? WHERE id = ?
+    ");
+    $update_user_stmt->execute([
+        $encrypted_full_name,
+        $validated_data['email'], 
+        $encrypted_phone_number,
+        $encrypted_address,
+        $user_id
+    ]);
 
-        $update_client_stmt = $pdo->prepare("
-            UPDATE clients 
-            SET birth_date = ?, gender = ?, age = ?, suffix = ?, occupation = ? 
-            WHERE user_id = ?
-        ");
-        $update_client_stmt->execute([
-            $validated_data['birth_date'], 
-            $validated_data['gender'], 
-            $validated_data['age'], 
-            $validated_data['suffix'], 
-            $encrypted_occupation, 
-            $user_id
-        ]);
+    $update_client_stmt = $pdo->prepare("
+        UPDATE clients 
+        SET birth_date = ?, gender = ?, age = ?, suffix = ?, occupation = ? 
+        WHERE user_id = ?
+    ");
+    $update_client_stmt->execute([
+        $validated_data['birth_date'], 
+        $validated_data['gender'], 
+        $validated_data['age'], 
+        $validated_data['suffix'], 
+        $encrypted_occupation, 
+        $user_id
+    ]);
+    
+    // NEW: Log age change if birth date was updated
+    if ($validated_data['birth_date'] != $current_birth_date) {
+        $age_validator->logAgeChange($current_birth_date, $validated_data['birth_date'], 'profile_update');
         
-        // STEP 7: Log this update for rate limiting
-        log_rate_limit($pdo, $user_id, 'profile_update');
-        
-        $pdo->commit();
-        $_SESSION['success_message'] = "Profile updated successfully!";
-        header("Location: profile.php");
-        exit();
-
-    } catch (Exception $e) {
-        if ($pdo->inTransaction()) $pdo->rollBack();
-        $_SESSION['error_message'] = "Update failed: " . $e->getMessage();
-        header("Location: profile.php");
-        exit();
+        // Also update session with new age for immediate feedback
+        $_SESSION['user_age'] = $validated_data['age'];
     }
+    
+    // STEP 7: Log this update for rate limiting
+    log_rate_limit($pdo, $user_id, 'profile_update');
+    
+    $pdo->commit();
+    $_SESSION['success_message'] = "Profile updated successfully!";
+    
+    // Add note about age change if applicable
+    if ($validated_data['birth_date'] != $current_birth_date) {
+        $age_difference = abs((new DateTime())->diff(new DateTime($validated_data['birth_date']))->y - 
+                              (new DateTime())->diff(new DateTime($current_birth_date))->y);
+        $_SESSION['success_message'] .= " Age updated by {$age_difference} year(s).";
+    }
+    
+    header("Location: profile.php");
+    exit();
+
+} catch (Exception $e) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    $_SESSION['error_message'] = "Update failed: " . $e->getMessage();
+    header("Location: profile.php");
+    exit();
+}
 }
 
 // =======================================================
@@ -792,7 +988,153 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 300);
             }, 5000);
         }
+        // Enhanced birth date validation with age restrictions
+function validateBirthDate(value) {
+    if (!value) return { valid: false, message: 'Birth date is required' };
+    
+    const birthDate = new Date(value);
+    const today = new Date();
+    
+    if (birthDate > today) {
+        return { valid: false, message: 'Birth date cannot be in the future' };
+    }
+    
+    // Calculate age
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    
+    // Check age restrictions
+    if (age < 16) {
+        return { valid: false, message: 'You must be at least 16 years old' };
+    }
+    
+    if (age > 90) {
+        return { valid: false, message: 'Maximum age allowed is 90 years' };
+    }
+    
+    return { valid: true, age: age };
+}
 
+// Update the form validation to include birth date
+document.getElementById('profileForm').addEventListener('submit', function(e) {
+    let isValid = true;
+    const fieldsToValidate = ['full_name', 'phone_number', 'age', 'occupation', 'address', 'birth_date'];
+    
+    fieldsToValidate.forEach(fieldName => {
+        const input = document.getElementById(fieldName);
+        if (!input) return;
+        
+        let result;
+        
+        if (fieldName === 'birth_date') {
+            result = validateBirthDate(input.value);
+            if (!result.valid) {
+                e.preventDefault();
+                showFieldError(fieldName, result.message);
+                isValid = false;
+            } else {
+                // Update age field with calculated age
+                const ageInput = document.getElementById('age');
+                ageInput.value = result.age;
+                clearFieldError(fieldName);
+            }
+        } else {
+            result = validateField(fieldName, input.value);
+            if (!result.valid) {
+                e.preventDefault();
+                showFieldError(fieldName, result.message);
+                isValid = false;
+            } else {
+                clearFieldError(fieldName);
+            }
+        }
+    });
+
+    if (!isValid) {
+        showNotification('Please correct the errors before submitting.', 'error');
+    } else {
+        // Additional validation: Show warning for age changes
+        const birthDateInput = document.getElementById('birth_date');
+        const originalBirthDate = "<?= htmlspecialchars($user['birth_date'] ?? '') ?>";
+        
+        if (birthDateInput.value && birthDateInput.value !== originalBirthDate) {
+            const oldDate = new Date(originalBirthDate);
+            const newDate = new Date(birthDateInput.value);
+            
+            const oldAge = calculateAge(oldDate);
+            const newAge = calculateAge(newDate);
+            const ageDifference = Math.abs(newAge - oldAge);
+            
+            if (ageDifference > 5) {
+                if (!confirm(`You're changing your age by ${ageDifference} years. Age changes are limited to 5 years at a time and can only be done every 14 days. Continue?`)) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        }
+    }
+});
+
+// Helper function to calculate age
+function calculateAge(birthDate) {
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+    }
+    return age;
+}
+
+// Add real-time age validation to birth date field
+document.getElementById('birth_date').addEventListener('change', function() {
+    const result = validateBirthDate(this.value);
+    if (!result.valid) {
+        showFieldError('birth_date', result.message);
+    } else {
+        clearFieldError('birth_date');
+        // Update age field
+        document.getElementById('age').value = result.age;
+        
+        // Show age change warning if applicable
+        const originalBirthDate = "<?= htmlspecialchars($user['birth_date'] ?? '') ?>";
+        if (originalBirthDate && this.value !== originalBirthDate) {
+            const oldDate = new Date(originalBirthDate);
+            const newDate = new Date(this.value);
+            const oldAge = calculateAge(oldDate);
+            const newAge = calculateAge(newDate);
+            const ageDifference = Math.abs(newAge - oldAge);
+            
+            if (ageDifference > 0) {
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'warning-notice';
+                warningDiv.style.cssText = `
+                    background: #fff3cd;
+                    border: 1px solid #ffc107;
+                    border-radius: 4px;
+                    padding: 8px;
+                    margin-top: 8px;
+                    font-size: 12px;
+                    color: #856404;
+                `;
+                warningDiv.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Age will change by ${ageDifference} year(s). 
+                    ${ageDifference > 5 ? '<strong>Note: Changes over 5 years require approval.</strong>' : ''}
+                `;
+                
+                // Remove existing warning
+                const existingWarning = this.parentNode.querySelector('.warning-notice');
+                if (existingWarning) existingWarning.remove();
+                
+                this.parentNode.appendChild(warningDiv);
+            }
+        }
+    }
+});
         // Validation helper functions
         function validateField(fieldName, value) {
             const rules = validationRules[fieldName];

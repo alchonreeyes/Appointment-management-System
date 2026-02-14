@@ -9,6 +9,10 @@ body {
     color: #333;
     line-height: 1.6;
 }
+   
+    .nav-links ul li a{
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    }
 
 /* 1. HERO SECTION */
 .about-hero {

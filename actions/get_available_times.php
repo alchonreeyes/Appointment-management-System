@@ -20,7 +20,9 @@ try {
     $allTimes = ['10:00', '11:00', '13:30', '14:30', '15:30', '16:30'];
     $unavailableTimes = [];
 
-    // 1. Check if entire day is closed
+    // ========================================
+    // 1. CHECK IF ENTIRE DAY OR PARTIAL TIME IS CLOSED
+    // ========================================
     $checkClosed = $pdo->prepare("
         SELECT time_from, time_to 
         FROM schedule_settings 
@@ -50,20 +52,34 @@ try {
         }
     }
 
-    // 2. Get fully booked times for this date
+    // ========================================
+    // 2. CHECK FULLY BOOKED TIMES GLOBALLY (ACROSS ALL SERVICES)
+    // ========================================
+    // ✅ KEY FIX: Removed service_id filter to check ALL services together
     $stmt = $pdo->prepare("
-        SELECT appointment_time 
+        SELECT 
+            appointment_time,
+            SUM(used_slots) as total_used,
+            MAX(max_slots) as slot_limit
         FROM appointment_slots 
-        WHERE service_id = ? AND appointment_date = ? AND used_slots >= max_slots
+        WHERE appointment_date = ?
+        GROUP BY appointment_time
     ");
-    $stmt->execute([$service_id, $date]);
-    $bookedTimes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $stmt->execute([$date]);
+    $bookedSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Add booked times to unavailable list
-    foreach ($bookedTimes as $time) {
-        $formattedTime = date('H:i', strtotime($time));
-        if (!in_array($formattedTime, $unavailableTimes)) {
-            $unavailableTimes[] = $formattedTime;
+    // Check each time slot for availability
+    foreach ($bookedSlots as $slot) {
+        $time = $slot['appointment_time'];
+        $totalUsed = intval($slot['total_used']);
+        $slotLimit = intval($slot['slot_limit']);
+        
+        // If fully booked (used >= max), add to unavailable list
+        if ($totalUsed >= $slotLimit) {
+            $formattedTime = date('H:i', strtotime($time));
+            if (!in_array($formattedTime, $unavailableTimes)) {
+                $unavailableTimes[] = $formattedTime;
+            }
         }
     }
 
@@ -74,11 +90,16 @@ try {
         'success' => true,
         'unavailable_times' => $unavailableTimes,
         'all_booked' => $allBooked,
-        'closure_info' => $closure // For debugging
+        'closure_info' => $closure, // For debugging
+        'debug' => [
+            'date' => $date,
+            'booked_slots' => $bookedSlots,
+            'total_unavailable' => count($unavailableTimes)
+        ]
     ]);
 
 } catch (Exception $e) {
     error_log("get_available_times.php error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'message' => 'Server error']);
+    echo json_encode(['success' => false, 'message' => 'Server error: ' . $e->getMessage()]);
 }
 ?>

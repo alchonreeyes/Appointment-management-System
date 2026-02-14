@@ -6,7 +6,7 @@ require_once __DIR__ . '/../../config/encryption_util.php'; // IDAGDAG ITO!
 header('Content-Type: application/json');
 
 // ===== SECURITY CHECK =====
-if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['admin', 'staff'])) {
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'] ?? '', ['staff', 'staff'])) {
     echo json_encode(['success' => false, 'message' => 'Authentication required (Admin or Staff).']);
     exit;
 }

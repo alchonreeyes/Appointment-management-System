@@ -128,37 +128,37 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
                 
                 <div class="form-row name-row" id="formFields">
                     <input type="text" placeholder="Enter Your Name..." name="full_name" required
-                        value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>" disabled>
-                    
-                    <select name="suffix" id="suffix" disabled>
-                        <option value="">Suffix (Optional)</option>
-                        <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
-                        <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
-                        <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
-                    </select>
-                    <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..." disabled> 
-                </div>
+                                value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>">
+                              
+                              <select name="suffix" id="suffix">
+                                <option value="">Suffix (Optional)</option>
+                                <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
+                                <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
+                                <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
+                              </select>
+                              <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..."> 
+                            </div>
 
-                <div class="form-row three-cols">
-                    <select name="gender" required disabled>
-                        <option value="">Select Gender...</option>
-                        <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
-                        <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
-                    </select>
-                    
-                    <input type="number" name="age" placeholder="Enter your Age..." required min="1" max="120"
-                        value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>" disabled>
-                    <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
+                            <div class="form-row three-cols">
+                              <select name="gender" required>
+                                <option value="">Select Gender...</option>
+                                <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
+                                <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
+                              </select>
+                              
+                              <input type="number" name="age" placeholder="Enter your Age..." required min="1" max="120"
+                                value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>">
+                              <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
 
-                    <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="11" required
-                        value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>" disabled>
-                    <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
-                </div>
+                              <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="11" required
+                                value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>">
+                              <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+                            </div>
 
-                <div class="form-row single">
-                    <input type="text" name="occupation" placeholder="Enter your Occupation..." required
-                        value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>" disabled>
-                    </div>
+                            <div class="form-row single">
+                              <input type="text" name="occupation" placeholder="Enter your Occupation..." required
+                                value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>">
+                              </div>
                 
                 <button type="button" class="next-btn">Next</button>
             </div>
@@ -212,11 +212,13 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
         <select class="time-select" data-index="0">
           <option value="">Select Time</option>
-          <option value="10:00">10:00 AM</option>
-          <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
+      <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="17:00">5:00 PM</option>
           
         </select>
       </div>
@@ -244,12 +246,13 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
         <select class="time-select" data-index="1">
           <option value="">Select Time</option>
-          <option value="10:00">10:00 AM</option>
-          <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+        <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="17:00">5:00 PM</option>
         </select>
       </div>
     </div>
@@ -276,12 +279,13 @@ $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
         <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
         <select class="time-select" data-index="2">
           <option value="">Select Time</option>
-          <option value="10:00">10:00 AM</option>
-          <option value="11:00">11:00 AM</option>
-          <option value="13:30">1:30 PM</option>
-          <option value="14:30">2:30 PM</option>
-          <option value="15:30">3:30 PM</option>
-          <option value="16:30">4:30 PM</option>
+   <option value="10:00">10:00 AM</option>
+            <option value="11:00">11:00 AM</option>
+            <option value="13:00">1:00 PM</option>
+            <option value="14:00">2:00 PM</option>
+            <option value="15:00">3:00 PM</option>
+            <option value="16:00">4:00 PM</option>
+            <option value="17:00">5:00 PM</option>
         </select>
       </div>
     </div>

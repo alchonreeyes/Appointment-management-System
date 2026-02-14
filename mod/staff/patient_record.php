@@ -31,6 +31,7 @@ if (isset($_POST['action'])) {
             exit;
         }
         try {
+            // 1. Fetch the requested appointment basic details
             $stmt = $conn->prepare("
                 SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name
                 FROM appointments a
@@ -48,11 +49,38 @@ if (isset($_POST['action'])) {
                 echo json_encode(['success' => false, 'message' => 'Appointment not found']);
                 exit;
             }
-            
-            // DECRYPTION
+
+            // ---------------------------------------------------------
+            // FIX: ONLY OVERWRITE IF LATEST DATA IS NOT EMPTY
+            // ---------------------------------------------------------
+            if (!empty($appt['client_id'])) {
+                $client_id = $appt['client_id'];
+                
+                $stmt_latest = $conn->prepare("
+                    SELECT * FROM appointments 
+                    WHERE client_id = ? 
+                    ORDER BY appointment_date DESC, appointment_id DESC 
+                    LIMIT 1
+                ");
+                $stmt_latest->bind_param("i", $client_id);
+                $stmt_latest->execute();
+                $res_latest = $stmt_latest->get_result();
+                $latest_data = $res_latest->fetch_assoc();
+
+                if ($latest_data) {
+                    // Check !empty to ensure we don't erase valid data with blank data
+                    if (!empty($latest_data['full_name']))    $appt['full_name']    = $latest_data['full_name'];
+                    if (!empty($latest_data['age']))          $appt['age']          = $latest_data['age'];
+                    if (!empty($latest_data['phone_number'])) $appt['phone_number'] = $latest_data['phone_number'];
+                    if (!empty($latest_data['occupation']))   $appt['occupation']   = $latest_data['occupation'];
+                }
+            }
+
+            // Decrypt Data
             $appt['full_name']    = decrypt_data($appt['full_name']);
             $appt['phone_number'] = decrypt_data($appt['phone_number']);
             $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
+            
             $appt['concern']      = decrypt_data($appt['concern'] ?? '');
             $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
             $appt['notes']        = decrypt_data($appt['notes'] ?? '');
@@ -62,20 +90,20 @@ if (isset($_POST['action'])) {
             $history = [];
             if (!empty($appt['client_id'])) {
                 $client_id = $appt['client_id'];
-                $current_appt_id = $appt['appointment_id'];
-
+                
                 $stmt_history = $conn->prepare("
                     SELECT a.appointment_id, a.appointment_date, ser.service_name, s.status_name
                     FROM appointments a
                     LEFT JOIN services ser ON a.service_id = ser.service_id
                     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                    WHERE a.client_id = ? AND a.appointment_id != ?
+                    WHERE a.client_id = ? 
                     ORDER BY a.appointment_date DESC
                 ");
-                $stmt_history->bind_param("ii", $client_id, $current_appt_id);
+                $stmt_history->bind_param("i", $client_id);
                 $stmt_history->execute();
                 $history_result = $stmt_history->get_result();
                 while ($row = $history_result->fetch_assoc()) {
+                    $row['is_current'] = ($row['appointment_id'] == $id);
                     $history[] = $row;
                 }
             }
@@ -83,8 +111,8 @@ if (isset($_POST['action'])) {
             echo json_encode(['success' => true, 'data' => $appt, 'history' => $history]);
 
         } catch (Exception $e) {
-            error_log("ViewDetails error (patient_record.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
+            error_log("ViewDetails error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
         }
         exit;
     }
@@ -93,8 +121,6 @@ if (isset($_POST['action'])) {
 // =======================================================
 // 3. PAGINATION & FILTERS SETUP
 // =======================================================
-
-// --- Pagination Configuration ---
 $page_no = isset($_GET['page_no']) && $_GET['page_no'] != "" ? (int)$_GET['page_no'] : 1;
 $total_records_per_page = 50; 
 $offset = ($page_no - 1) * $total_records_per_page;
@@ -103,40 +129,18 @@ $dateFilter = $_GET['date'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
 $viewFilter = $_GET['view'] ?? 'all';
 
-// --- Base Query Setup ---
+// --- Base Query ---
 $selectClauses = [
-    "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", "a.appointment_time",
-    "s.status_name", "ser.service_name"
+    "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", 
+    "s.status_name" 
 ];
 $whereClauses = ["1=1"];
 $params = [];
 $paramTypes = "";
 
-// --- Dynamic Columns ---
-$extraHeaders = '';
-$extraColumnNames = [];
-
-if ($viewFilter === 'eye_exam') {
-    $selectClauses[] = "a.wear_glasses";
-    $selectClauses[] = "a.concern";
-    $extraHeaders = "<th style='width:20%;'>Wear Glasses?</th><th style='width:20%;'>Concern</th>";
-    $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 11";
-} elseif ($viewFilter === 'ishihara') {
-    $selectClauses[] = "a.ishihara_test_type";
-    $selectClauses[] = "a.color_issues";
-    $extraHeaders = "<th style='width:20%;'>Test Type</th><th style='width:20%;'>Color Issues?</th>";
-    $extraColumnNames = ['ishihara_test_type', 'color_issues'];
-    $whereClauses[] = "a.service_id = 13";
-} elseif ($viewFilter === 'medical') {
-    $selectClauses[] = "a.certificate_purpose";
-    $extraHeaders = "<th style='width:25%;'>Purpose</th>";
-    $extraColumnNames = ['certificate_purpose'];
-    $whereClauses[] = "a.service_id = 12";
-}
-
-// --- Filters ---
-$whereClauses[] = "s.status_name IN ('Completed', 'Cancel')"; // Default Filter
+if ($viewFilter === 'eye_exam') { $whereClauses[] = "a.service_id = 11"; }
+elseif ($viewFilter === 'ishihara') { $whereClauses[] = "a.service_id = 13"; }
+elseif ($viewFilter === 'medical') { $whereClauses[] = "a.service_id = 12"; }
 
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $whereClauses[] = "DATE(a.appointment_date) = ?";
@@ -144,122 +148,68 @@ if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $paramTypes .= "s";
 }
 
-if ($search !== '') {
-    $whereClauses[] = "(a.full_name LIKE ? OR a.client_id LIKE ?)";
-    $searchTerm = "%{$search}%";
-    $params[] = $searchTerm;
-    $params[] = $searchTerm;
-    $paramTypes .= "ss";
-}
-
 // =======================================================
-// 4. GET TOTAL COUNT (For Pagination Logic)
+// 4. DATA RETRIEVAL (LATEST DATA LOGIC)
 // =======================================================
-// UPDATED: Added DISTINCT client_id to count unique patients
-$count_query_sql = "SELECT COUNT(DISTINCT a.client_id) as total_records 
-                    FROM appointments a 
-                    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id 
-                    LEFT JOIN services ser ON a.service_id = ser.service_id 
-                    WHERE " . implode(" AND ", $whereClauses);
+// Ensure we fetch the latest record ID for grouping in the table list
+$raw_query = "
+    SELECT " . implode(", ", $selectClauses) . "
+    FROM appointments a
+    INNER JOIN (
+        SELECT client_id, MAX(appointment_id) as max_id
+        FROM appointments
+        GROUP BY client_id
+    ) latest ON a.appointment_id = latest.max_id
+    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+    LEFT JOIN services ser ON a.service_id = ser.service_id
+    WHERE " . implode(" AND ", $whereClauses) . "
+    ORDER BY a.appointment_date DESC
+";
 
+$all_appointments = [];
 try {
-    $stmt_count = $conn->prepare($count_query_sql);
-    if (!empty($params)) {
-        $stmt_count->bind_param($paramTypes, ...$params);
-    }
-    $stmt_count->execute();
-    $total_records = $stmt_count->get_result()->fetch_assoc()['total_records'];
-    $total_no_of_pages = ceil($total_records / $total_records_per_page);
-    $stmt_count->close();
-} catch (Exception $e) {
-    $total_records = 0;
-    $total_no_of_pages = 1;
-}
-
-// =======================================================
-// 5. GET DATA (With Limit for Speed)
-// =======================================================
-// UPDATED: Added GROUP BY a.client_id to show only one row per patient
-$query = "SELECT " . implode(", ", $selectClauses) . "
-          FROM appointments a
-          LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-          LEFT JOIN services ser ON a.service_id = ser.service_id
-          WHERE " . implode(" AND ", $whereClauses) . "
-          GROUP BY a.client_id 
-          ORDER BY a.appointment_date DESC 
-          LIMIT ?, ?"; 
-
-try {
-    $stmt = $conn->prepare($query);
-    // Add offset and limit to params
-    $params[] = $offset;
-    $params[] = $total_records_per_page;
-    $paramTypes .= "ii";
-
+    $stmt = $conn->prepare($raw_query);
     if (!empty($params)) {
         $stmt->bind_param($paramTypes, ...$params);
     }
     $stmt->execute();
-    $appointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $result = $stmt->get_result();
+    
+    while ($row = $result->fetch_assoc()) {
+        $decrypted_name = decrypt_data($row['full_name']);
+        $client_id_str = (string)$row['client_id'];
+        
+        if ($search !== '') {
+            if (stripos($decrypted_name, $search) !== false || stripos($client_id_str, $search) !== false) {
+                $row['full_name_decrypted'] = $decrypted_name; 
+                $all_appointments[] = $row;
+            }
+        } else {
+            $row['full_name_decrypted'] = $decrypted_name;
+            $all_appointments[] = $row;
+        }
+    }
 } catch (Exception $e) {
-     error_log("Fetch Appointments error (patient_record.php): " . $e->getMessage());
-     $appointments = [];
+     error_log("Fetch Appointments error: " . $e->getMessage());
+     $all_appointments = [];
      $pageError = "Error loading appointments: " . $e->getMessage();
 }
 
-// --- Stats Query (Counts All) ---
-$countSql = "SELECT
-    COALESCE(SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END), 0) AS completed,
-    COALESCE(SUM(CASE WHEN s.status_name = 'Cancel' THEN 1 ELSE 0 END), 0) AS cancelled
-    FROM appointments a
-    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-    WHERE s.status_name IN ('Completed', 'Cancel')"; // Base filter
+// =======================================================
+// 5. PHP PAGINATION
+// =======================================================
+$total_records = count($all_appointments);
+$total_no_of_pages = ceil($total_records / $total_records_per_page);
+if ($total_no_of_pages == 0) $total_no_of_pages = 1;
 
-// Re-apply filters for accurate stats
-if ($viewFilter === 'eye_exam') { $countSql .= " AND a.service_id = 11"; }
-if ($viewFilter === 'ishihara') { $countSql .= " AND a.service_id = 13"; }
-if ($viewFilter === 'medical') { $countSql .= " AND a.service_id = 12"; }
+$appointments = array_slice($all_appointments, $offset, $total_records_per_page);
 
-// We need separate params for Stats because it doesn't use Limit/Offset
-$statsParams = [];
-$statsTypes = "";
-
-if ($dateFilter !== 'All' && !empty($dateFilter)) {
-    $countSql .= " AND DATE(a.appointment_date) = ?";
-    $statsParams[] = $dateFilter;
-    $statsTypes .= "s";
-}
-if ($search !== '') {
-    $countSql .= " AND (a.full_name LIKE ? OR a.client_id LIKE ?)";
-    $q = "%{$search}%";
-    $statsParams[] = $q;
-    $statsParams[] = $q;
-    $statsTypes .= "ss";
-}
-
-try {
-    $stmt_stats = $conn->prepare($countSql);
-    if (!empty($statsParams)) {
-        $stmt_stats->bind_param($statsTypes, ...$statsParams);
-    }
-    $stmt_stats->execute();
-    $stats = $stmt_stats->get_result()->fetch_assoc();
-} catch (Exception $e) {
-    $stats = ['completed'=>0, 'cancelled'=>0];
-}
-
-$completedCount = (int)($stats['completed'] ?? 0);
-$cancelledCount = (int)($stats['cancelled'] ?? 0);
+$totalUniquePatients = $total_records; 
 
 // Highlight Dates
 $highlight_dates = [];
 try {
-    $hl_result = $conn->query("
-        SELECT DISTINCT a.appointment_date 
-        FROM appointments a
-        JOIN appointmentstatus s ON a.status_id = s.status_id
-        WHERE s.status_name IN ('Completed', 'Cancel')
-    ");
+    $hl_result = $conn->query("SELECT DISTINCT appointment_date FROM appointments");
     if ($hl_result) {
         while ($row = $hl_result->fetch_assoc()) {
             $highlight_dates[] = $row['appointment_date'];
@@ -280,80 +230,83 @@ $js_highlight_dates = json_encode($highlight_dates);
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <style>
-/* --- Keep all your existing styles --- */
+/* --- Styles --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background:#f8f9fa; color:#223; }
+body { background:#f8f9fa; color:#223; padding-bottom: 40px; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 
-/* UPDATED: PADDING 75px LEFT AND RIGHT */
-header { display:flex; align-items:center; background:#fff; padding:12px 75px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
+/* HEADER & CONTAINER */
+header { 
+    display:flex; align-items:center; background:#fff; 
+    padding:12px 20px; 
+    box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; justify-content: space-between;
+}
+@media(min-width: 1000px) {
+    header { padding: 12px 75px; }
+}
 
-.logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
+.logo-section { display:flex; align-items:center; gap:10px; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
 nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
 nav a.active { background:#dc3545; color:#fff; }
 
-/* UPDATED: PADDING 75px LEFT AND RIGHT & WIDTH 100% */
-.container { padding:20px 75px 40px 75px; max-width:100%; margin:0 auto; }
+.container { 
+    padding:20px; 
+    max-width:100%; 
+    margin:0 auto; 
+}
+@media(min-width: 1000px) {
+    .container { padding:20px 75px 40px 75px; }
+}
 
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
-.filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 
-/* Fixed width for search input */
-#searchInput { margin-left: auto; width: 250px; min-width: 200px; }
-
-/* UPDATED: Button Group to align all buttons to the right */
-.filters .button-group {
-    margin-left: auto; /* This pushes the entire group to the right */
-    display: flex;
-    gap: 10px;
-    align-items: center;
+/* FILTERS */
+.filters { 
+    display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; 
+    background: transparent; padding: 0; border: none; box-shadow: none; border-radius: 0;
 }
+#searchInput { 
+    margin-left: auto; width: 350px; min-width: 200px; 
+}
+.filters-left-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 select, input[type="date"], input[type="text"] { padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; }
-
 input.flatpickr-input { padding: 9px 10px; border: 1px solid #dde3ea; border-radius: 8px; background: #fff; font-size: 14px; width: auto; }
 .flatpickr-day.has-appointments { background: #f8d7da; border-color: #dc3545; color: #721c24; font-weight: bold; }
 .flatpickr-day.has-appointments:hover { background: #f5c6cb; }
 
 button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
-.btn-filter { padding: 9px 15px; border-radius: 8px; border: 2px solid #dde3ea; background: #fff; color: #5a6c7d; font-weight: 700; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-.btn-filter:hover { border-color: #b0b9c4; }
-.btn-filter.active { background: #991010; color: #fff; border-color: #991010; }
 
-/* UPDATED: STATS CARD STYLE - CENTERED AND WIDER */
+/* BUTTON STYLE */
+.btn-filter { 
+    padding: 9px 15px; border-radius: 8px; border: none; 
+    background: #f1f5f9; color: #5a6c7d; font-weight: 700; 
+    cursor: pointer; font-size: 13px; transition: all 0.2s; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03); 
+    user-select: none; 
+}
+.btn-filter:hover { border-color: #b0b9c4; background: #e2e8f0; }
+.btn-filter.active { background: #991010; color: #fff; border-color: #991010; box-shadow: 0 4px 10px rgba(153, 16, 16, 0.3); }
+
+/* STATS */
 .stats { 
-    display:flex; /* Changed from grid to flex */
-    gap:16px; 
-    margin-bottom:18px; 
-    flex-wrap: wrap; 
-    justify-content: center; /* Center the cards */
+    display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); 
+    gap:12px; margin-bottom:18px; 
 }
+.stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:14px; text-align:center; }
+.stat-card h3 { margin-bottom:6px; font-size:22px; color:#991010; }
+.stat-card p { color:#6b7f86; font-size:13px; font-weight: 600; text-transform: uppercase; }
 
-.stat-card { 
-    background:#fff; 
-    border:1px solid #e6e9ee; 
-    border-radius:10px; 
-    padding:18px 24px; /* More padding */
-    text-align:center; 
-    
-    /* WIDER SETTINGS */
-    flex: 1 1 300px; /* Start at 300px width */
-    max-width: 500px; /* Cap width at 500px */
-    min-width: 250px; 
-}
-
-.stat-card h3 { margin-bottom:6px; font-size:22px; color:#21303a; }
-.stat-card p { color:#6b7f86; font-size:13px; }
-
-/* Table Styling */
-#appointmentsTable { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 14px; min-width: 900px; table-layout: fixed; }
-#appointmentsTable th, #appointmentsTable td { padding: 15px 12px; border-bottom: 1px solid #e8ecf0; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#appointmentsTable th { background-color: #f8f9fa; color: #34495e; font-weight: 700; }
-#appointmentsTable tbody tr:hover { background-color: #fcfcfc; }
+/* TABLE */
+.table-container { background: #fff; border-radius: 10px; border: 1px solid #e6e9ee; padding: 0; overflow-x: auto; margin-bottom: 20px; }
+.custom-table { width: 100%; border-collapse: collapse; min-width: 900px; table-layout: fixed; }
+.custom-table th { background: #f1f5f9; color: #4a5568; font-weight: 700; font-size: 13px; text-transform: uppercase; padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
+.custom-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.custom-table tbody tr:hover { background: #f8f9fb; }
 
 .action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
 .action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
@@ -361,7 +314,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 .detail-overlay, .confirm-modal, #loader-overlay, #actionLoader { display: none; position: fixed; inset: 0; background: rgba(2, 12, 20, 0.6); z-index: 3000; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
 .detail-overlay.show, .confirm-modal.show, #actionLoader.show { display: flex; animation: fadeIn .2s ease; }
-#loader-overlay { background: #ffffff; z-index: 99999; display: flex; flex-direction: column; transition: opacity 0.5s ease; }
+
+/* Loader CSS */
+#loader-overlay { background: #ffffff; z-index: 99999; display: flex; flex-direction: column; transition: opacity 0.3s ease; }
+#loader-overlay.hidden { opacity: 0; pointer-events: none; }
 
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
@@ -375,6 +331,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge { display: inline-block; padding: 8px 16px; border-radius: 20px; font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; }
 .badge.completed { background: #e0e7ff; color: #4f46e5; border: 2px solid #a5b4fc; }
 .badge.cancel { background: #fee; color: #dc2626; border: 2px solid #fca5a5; }
+.badge.pending { background: #fff4e6; color: #a66300; border: 2px solid #ffd280; }
+.badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
 
 .detail-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
@@ -391,13 +349,14 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 .history-section { margin-top: 20px; padding-top: 20px; border-top: 2px solid #e8ecf0; }
 .history-section h3 { font-size: 16px; color: #1a202c; margin-bottom: 12px; }
-.history-list { list-style: none; padding: 0; margin: 0; max-height: 150px; overflow-y: auto; border: 1px solid #e8ecf0; border-radius: 8px; background: #fdfdfd; }
-.history-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f3f6f9; font-size: 14px; }
+.history-list { list-style: none; padding: 0; margin: 0; max-height: 250px; overflow-y: auto; border: 1px solid #e8ecf0; border-radius: 8px; background: #fdfdfd; }
+.history-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid #f3f6f9; font-size: 14px; transition: background .1s; }
+.history-item:hover { background: #f8f9fb; }
 .history-item:last-child { border-bottom: none; }
 .history-item-info { font-weight: 600; color: #334155; }
 .history-item-info span { display: block; font-weight: 500; font-size: 13px; color: #64748b; margin-top: 2px; }
-.btn-view-history { padding: 4px 10px; font-size: 12px; font-weight: 600; background: #1d4ed8; color: #fff; border: none; border-radius: 6px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-.btn-view-history:hover { background: #1e40af; }
+.btn-view-history { padding: 6px 14px; font-size: 12px; font-weight: 600; background: #fff; color: #1d4ed8; border: 1px solid #1d4ed8; border-radius: 6px; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
+.btn-view-history:hover { background: #1d4ed8; color: #fff; }
 
 .toast-overlay { position: fixed; inset: 0; background: rgba(34, 49, 62, 0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease-out; backdrop-filter: blur(4px); }
 .toast { background: #fff; color: #1a202c; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 16px; font-weight: 600; min-width: 300px; max-width: 450px; text-align: left; animation: slideUp .3s ease; }
@@ -409,34 +368,32 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .loader-text { margin-top: 15px; font-size: 16px; font-weight: 600; color: #5a6c7d; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-/* PAGINATION STYLES */
-.pagination { display: flex; justify-content: flex-end; align-items: center; margin-top: 15px; gap: 8px; }
-.page-btn { padding: 8px 12px; border: 1px solid #dde3ea; background: #fff; color: #5a6c7d; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; transition: all 0.2s; }
-.page-btn:hover { background: #f1f5f9; border-color: #cbd5e1; }
-.page-btn.disabled { opacity: 0.5; pointer-events: none; }
-.page-info { color: #64748b; font-size: 14px; font-weight: 600; }
+/* PAGINATION */
+.pagination { display: flex; justify-content: center; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
+.pagination a { padding: 8px 16px; border: 1px solid #dde3ea; background: #fff; color: #5a6c7d; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.2s; }
+.pagination a:hover { border-color: #991010; color: #991010; }
+.pagination a.active { background: #991010; color: #fff; border-color: #991010; }
+.pagination span.disabled { padding: 8px 16px; border: 1px solid #eee; background: #f9f9f9; color: #ccc; border-radius: 8px; }
+.page-info { display:none; }
 
-#menu-toggle { display: none; background: #f1f5f9; border: 2px solid #e2e8f0; color: #334155; font-size: 24px; padding: 5px 12px; border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100; }
+#menu-toggle { display: none; background: #fff; border: 1px solid #ddd; padding: 5px 10px; font-size: 24px; cursor: pointer; border-radius: 5px; }
 
 @media (max-width: 1000px) {
   .vertical-bar { display: none; }
-  /* Override padding for mobile */
   header { padding: 12px 20px; justify-content: space-between; }
   .logo-section { margin-right: 0; }
   .container { padding: 20px; }
   #menu-toggle { display: block; }
-  nav#main-nav { display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20, 0, 0, 0.9); backdrop-filter: blur(5px); z-index: 2000; padding: 80px 20px 20px 20px; opacity: 0; visibility: hidden; transition: opacity 0.3s ease, visibility 0.3s ease; }
+  nav#main-nav { display: flex; flex-direction: column; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(20, 0, 0, 0.95); z-index: 2000; padding: 80px 20px 20px 20px; opacity: 0; visibility: hidden; transition: 0.3s ease; }
   nav#main-nav.show { opacity: 1; visibility: visible; }
-  nav#main-nav a { color: #fff; font-size: 24px; font-weight: 700; padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); }
-  nav#main-nav a:hover { background: rgba(255,255,255,0.1); }
-  nav#main-nav a.active { background: none; color: #ff6b6b; }
+  nav#main-nav a { color: #fff; font-size: 24px; font-weight: 700; padding: 15px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
 }
 @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
-@media (max-width: 600px) { 
+@media (max-width: 768px) { 
     .filters { flex-direction: column; align-items: stretch; }
-    #searchInput { width: 100%; margin-top: 10px; } 
-    .filters .button-group { margin-left: 0; width: 100%; flex-direction: column; }
-    .pagination { justify-content: center; }
+    #searchInput { width: 100%; margin-left: 0; } 
+    .filters .filters-left-group { width: 100%; justify-content: flex-start; }
+    .flatpickr-calendar { max-width: 90%; left: 50% !important; transform: translateX(-50%) !important; }
 }
 
 </style>
@@ -474,56 +431,58 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           </div>
       <?php endif; ?>
     
-      <form id="filtersForm" method="get" class="filters">
-      <div>
-        <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" id="clearViewFilter">All Records</button>
-        <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" data-view="eye_exam">Eye Exam</button>
-        <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" data-view="ishihara">Ishihara Test</button>
-        <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" data-view="medical">Medical Certificate</button>
-        <input type="hidden" name="view" id="viewFilterInput" value="<?= htmlspecialchars($viewFilter) ?>">
-      </div>
+      <div class="filters">
+      
+        <div class="filters-left-group">
+            <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" onclick="updateFilter('view', 'all')">All Records</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" onclick="updateFilter('view', 'eye_exam')">Eye Exam</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" onclick="updateFilter('view', 'ishihara')">Ishihara Test</button>
+            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" onclick="updateFilter('view', 'medical')">Medical Certificate</button>
+            
+            <div style="display:flex; gap:8px; align-items:center;">
+                <select id="dateMode" title="Filter by date">
+                    <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
+                    <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
+                </select>
+                <input type="date" id="dateVisible" title="Select date" placeholder="Pick a date..." value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
+            </div>
+        </div>
     
-      <div class="button-group">
-          <div style="display:flex;gap:8px;align-items:center;">
-            <select id="dateMode" title="Filter by date">
-                <option value="all" <?= ($dateFilter==='All' || empty($dateFilter) ) ? 'selected' : '' ?>>All Dates</option>
-                <option value="pick" <?= ($dateFilter!=='All' && !empty($dateFilter)) ? 'selected' : '' ?>>Pick Date</option>
-            </select>
-            <input type="date" id="dateVisible" title="Select date" placeholder="Pick a date..." value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : '' ?>">
-            <input type="hidden" name="date" id="dateHidden" value="<?= ($dateFilter!=='All' && !empty($dateFilter)) ? htmlspecialchars($dateFilter) : 'All' ?>">
-          </div>
+        <input type="text" id="searchInput" autocomplete="off" placeholder="Search name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
       </div>
-    
-      <input type="text" name="search" id="searchInput" placeholder="Search patient name or ID..." value="<?= htmlspecialchars($search) ?>" title="Search appointments">
-      </form>
     
       <div class="stats">
-        <div class="stat-card"><h3><?= $completedCount ?></h3><p>Completed</p></div>
-        <div class="stat-card"><h3><?= $cancelledCount ?></h3><p>Cancelled</p></div>
+        <div class="stat-card">
+            <h3><?= $totalUniquePatients ?></h3>
+            <p>Total Records</p>
+        </div>
       </div>
       
-      <div style="background:#fff;border:1px solid #e6e9ee;border-radius:10px;padding:12px; overflow-x: auto;">
-        
-        <table id="appointmentsTable">
+      <div class="table-container">
+        <table id="appointmentsTable" class="custom-table">
           <thead>
-            <tr style="text-align:left;color:#34495e;">
-              <th style="width:5%;">#</th>
-              <th style="width:35%;">Patient</th>
-              <th style="width:20%;">Patient I.D.</th>
-              <?= $extraHeaders ?>
+            <tr>
+              <th style="width:10%;">#</th>
+              <th style="width:45%;">Patient</th>
+              <th style="width:25%;">Patient I.D.</th>
               <th style="width:20%;text-align:center;">Actions</th>
             </tr>
           </thead>
           <tbody>
             <?php if (!empty($appointments)): $i=$offset; foreach ($appointments as $appt): $i++;
-              $nameParts = explode(' ', trim($appt['full_name']));
+              $decrypted_name = $appt['full_name_decrypted']; 
+              $nameParts = explode(' ', trim($decrypted_name));
               $initials = count($nameParts) > 1
                           ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1))
-                          : strtoupper(substr($appt['full_name'], 0, 1));
-              if (strlen($initials) == 1 && strlen($appt['full_name']) > 1) { $initials .= strtoupper(substr($appt['full_name'], 1, 1)); }
-              elseif (empty($initials)) { $initials = '??'; }
+                          : strtoupper(substr($decrypted_name, 0, 1));
+              
+              if (strlen($initials) == 1 && strlen($decrypted_name) > 1) { 
+                  $initials .= strtoupper(substr($decrypted_name, 1, 1)); 
+              } elseif (empty($initials)) { 
+                  $initials = '??'; 
+              }
             ?>
-              <tr data-id="<?= $appt['appointment_id'] ?>" data-status="<?= strtolower($appt['status_name']) ?>">
+              <tr data-id="<?= $appt['appointment_id'] ?>">
                 <td><?= $i ?></td>
                 
                 <td>
@@ -532,7 +491,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                       <?= htmlspecialchars($initials) ?>
                     </div>
                     <div style="font-weight:600;color:#2c3e50;overflow:hidden;text-overflow:ellipsis;">
-                      <?= htmlspecialchars(decrypt_data($appt['full_name'])) ?>
+                      <?= htmlspecialchars($decrypted_name) ?>
                     </div>
                   </div>
                 </td>
@@ -543,10 +502,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     </span>
                 </td>
                 
-                <?php foreach ($extraColumnNames as $colName): ?>
-                    <td title="<?= htmlspecialchars($appt[$colName] ?? '') ?>"><?= htmlspecialchars($appt[$colName] ?? 'N/A') ?></td>
-                <?php endforeach; ?>
-
                 <td style="text-align:center;">
                     <div style="display:flex;gap:8px;justify-content:center;">
                         <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
@@ -554,28 +509,35 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 </td>
               </tr>
             <?php endforeach; else: ?>
-              <tr><td colspan="<?= 4 + count($extraColumnNames) ?>" style="padding:40px;color:#677a82;text-align:center;background:#f8fafc;">No records found matching your filters.</td></tr>
+              <tr><td colspan="4" style="padding:40px;color:#677a82;text-align:center;background:#f8fafc;">No records found matching your filters.</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
-
-        <?php if($total_records > 0): ?>
-        <div class="pagination">
-            <span class="page-info">Page <?= $page_no ?> of <?= $total_no_of_pages ?></span>
-            
-            <a href="<?php if($page_no <= 1){ echo '#'; } else { echo "?page_no=".($page_no - 1)."&".http_build_query(array_merge($_GET, ['page_no' => null])); } ?>" 
-               class="page-btn <?php if($page_no <= 1){ echo 'disabled'; } ?>">
-               &laquo; Previous
-            </a>
-            
-            <a href="<?php if($page_no >= $total_no_of_pages){ echo '#'; } else { echo "?page_no=".($page_no + 1)."&".http_build_query(array_merge($_GET, ['page_no' => null])); } ?>" 
-               class="page-btn <?php if($page_no >= $total_no_of_pages){ echo 'disabled'; } ?>">
-               Next &raquo;
-            </a>
-        </div>
-        <?php endif; ?>
-
       </div>
+
+      <?php if ($total_no_of_pages > 1): ?>
+        <div class="pagination">
+            <?php if ($page_no > 1): ?>
+                <a href="?page_no=<?= $page_no - 1 ?>&<?= http_build_query(array_merge($_GET, ['page_no' => null])) ?>">&laquo; Previous</a>
+            <?php else: ?>
+                <span class="disabled">&laquo; Previous</span>
+            <?php endif; ?>
+
+            <?php for($p=1; $p<=$total_no_of_pages; $p++): ?>
+                <a href="?page_no=<?= $p ?>&<?= http_build_query(array_merge($_GET, ['page_no' => null])) ?>" class="<?= $p===$page_no ? 'active' : '' ?>"><?= $p ?></a>
+            <?php endfor; ?>
+
+            <?php if ($page_no < $total_no_of_pages): ?>
+                <a href="?page_no=<?= $page_no + 1 ?>&<?= http_build_query(array_merge($_GET, ['page_no' => null])) ?>">Next &raquo;</a>
+            <?php else: ?>
+                <span class="disabled">Next &raquo;</span>
+            <?php endif; ?>
+        </div>
+        <div style="text-align:center; font-size:12px; color:#666; margin-top:10px;">
+            Showing page <?= $page_no ?> of <?= $total_no_of_pages ?>
+        </div>
+      <?php endif; ?>
+
     </div>
     
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
@@ -619,6 +581,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     const datesWithAppointments = <?= $js_highlight_dates ?? '[]' ?>;
     const actionLoader = document.getElementById('actionLoader');
     const actionLoaderText = document.getElementById('actionLoaderText');
+    const pageLoader = document.getElementById('loader-overlay');
+    const mainContent = document.getElementById('main-content');
+
+    function hidePageLoader() {
+        if(pageLoader) {
+            pageLoader.classList.add('hidden'); 
+            setTimeout(() => { 
+                pageLoader.style.display = 'none'; 
+            }, 300); 
+        }
+        if(mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.animation = 'fadeInContent 0.2s ease';
+        }
+    }
+
+    setTimeout(hidePageLoader, 2500);
 
     function showActionLoader(message = 'Processing...') {
         if (actionLoaderText) actionLoaderText.textContent = message;
@@ -659,15 +638,22 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
         'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
         'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
+        'service_name': 'Service Provided', 'status_name': 'Status',
+        'appointment_date': 'Appointment Date', 'appointment_time': 'Appointment Time',
         'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
         'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
         'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
         'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason'
     };
-    const detailDisplayOrder = [
+
+    // --- MODAL FIELDS ---
+    const patientFields = ['full_name', 'age', 'gender', 'phone_number'];
+
+    const appointmentFields = [
         'full_name', 'staff_name',
-        'age', 'gender', 'phone_number',
-        'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes',
+        'service_name', 'status_name', 
+        'appointment_date', 'appointment_time',
+        'suffix', 'concern', 'symptoms', 'wear_glasses', 'notes', 
         'certificate_purpose', 'certificate_other', 'ishihara_test_type',
         'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason'
     ];
@@ -692,21 +678,23 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             modalBody.innerHTML = ''; 
             
             let contentHtml = '<div class="detail-grid">';
-            for (const key of detailDisplayOrder) {
+            for (const key of appointmentFields) {
                 if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
                     let value = d[key];
                     const label = detailLabels[key] || key;
                     let rowClass = 'detail-row';
-                    if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) { rowClass += ' full-width'; }
+                    if (['notes', 'concern', 'symptoms', 'ishihara_notes'].includes(key)) { rowClass += ' full-width'; }
+                    
                     if (key === 'appointment_date') { value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
                     else if (key === 'appointment_time') { value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
-                    else if (key === 'consent_info' || key === 'consent_reminders' || key === 'consent_terms') { value = value == 1 ? 'Yes' : 'No'; }
                     else if (key === 'status_name') { value = `<span class="badge ${value.toLowerCase()}">${value}</span>`; }
                     else { value = `<b>${value}</b>`; }
+                    
                     contentHtml += `<div class="${rowClass}"><span class="detail-label">${label}</span><div class="detail-value">${value}</div></div>`;
                 }
             }
             contentHtml += '</div>';
+            
             modalBody.innerHTML = contentHtml;
             document.getElementById('historyDetailOverlay').classList.add('show');
             document.getElementById('historyDetailOverlay').setAttribute('aria-hidden','false');
@@ -744,19 +732,14 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             modalBody.innerHTML = ''; 
             
             let contentHtml = '<div class="detail-grid">';
-            for (const key of detailDisplayOrder) {
-                if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
-                    let value = d[key];
-                    const label = detailLabels[key] || key;
-                    let rowClass = 'detail-row';
-                    if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) { rowClass += ' full-width'; }
-                    if (key === 'appointment_date') { value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
-                    else if (key === 'appointment_time') { value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
-                    else if (key === 'consent_info' || key === 'consent_reminders' || key === 'consent_terms') { value = value == 1 ? 'Yes' : 'No'; }
-                    else if (key === 'status_name') { value = `<span class="badge ${value.toLowerCase()}">${value}</span>`; }
-                    else { value = `<b>${value}</b>`; }
-                    contentHtml += `<div class="${rowClass}"><span class="detail-label">${label}</span><div class="detail-value">${value}</div></div>`;
-                }
+            for (const key of patientFields) {
+                // FIXED: REMOVED STRICT CHECKS SO EMPTY FIELDS SHOW AS "N/A"
+                // This lets you see the row instead of it disappearing
+                let value = d[key];
+                if (value === null || value === '') { value = 'N/A'; }
+                
+                const label = detailLabels[key] || key;
+                contentHtml += `<div class="detail-row"><span class="detail-label">${label}</span><div class="detail-value"><b>${value}</b></div></div>`;
             }
             contentHtml += '</div>';
 
@@ -764,11 +747,22 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 contentHtml += `<div class="history-section"><h3>Past Appointment History (Total: ${payload.history.length})</h3><ul class="history-list">`;
                 payload.history.forEach(hist => {
                     const pastDate = new Date(hist.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                    contentHtml += `<li class="history-item"><div class="history-item-info">${hist.service_name || 'Unknown Service'}<span>${pastDate}</span></div><div style="display:flex; align-items:center; gap: 8px;"><span class="badge ${(hist.status_name || 'unknown').toLowerCase()}">${hist.status_name || 'N/A'}</span><button class="btn-view-history" onclick="viewHistoryDetails(${hist.appointment_id})">View</button></div></li>`;
+                    const activeStyle = hist.is_current ? 'background:#e0f2fe; border:1px solid #bae6fd;' : '';
+                    
+                    contentHtml += `<li class="history-item" style="${activeStyle}">
+                        <div class="history-item-info">
+                            ${hist.service_name || 'Unknown Service'}
+                            <span>${pastDate}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap: 8px;">
+                            <span class="badge ${(hist.status_name || 'unknown').toLowerCase()}">${hist.status_name || 'N/A'}</span>
+                            <button class="btn-view-history" onclick="viewHistoryDetails(${hist.appointment_id})">View</button>
+                        </div>
+                    </li>`;
                 });
                 contentHtml += `</ul></div>`;
-            } else if (d.client_id) {
-                contentHtml += `<div class="history-section"><h3>Past Appointment History</h3><p style="font-size:14px; color:#64748b; text-align:center; padding:10px 0;">No other past appointments found for this client.</p></div>`;
+            } else {
+                contentHtml += `<div class="history-section"><h3>Past Appointment History</h3><p style="font-size:14px; color:#64748b; text-align:center; padding:10px 0;">No other past appointments found.</p></div>`;
             }
             
             modalBody.innerHTML = contentHtml;
@@ -804,17 +798,24 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }
     });
     
+    window.updateFilter = function(key, value) {
+        const params = new URLSearchParams(window.location.search);
+        if (value === 'All' || value === '') {
+            params.delete(key);
+        } else {
+            params.set(key, value);
+        }
+        params.set('page_no', 1); 
+        window.location.href = window.location.pathname + '?' + params.toString();
+    };
+
     (function(){
-        const form = document.getElementById('filtersForm');
-        // REMOVED STATUS ELEMENT REFERENCE
         const dateMode = document.getElementById('dateMode');
         const dateVisible = document.getElementById('dateVisible');
-        const dateHidden = document.getElementById('dateHidden');
         const search = document.getElementById('searchInput');
-        const viewInput = document.getElementById('viewFilterInput');
-        const viewButtons = document.querySelectorAll('.btn-filter');
 
         const fpInstance = flatpickr(dateVisible, {
+            disableMobile: true,
             dateFormat: "Y-m-d",
             onDayCreate: function(dObj, dStr, fp, dayElem){
                 const dateStr = fp.formatDate(dayElem.dateObj, "Y-m-d");
@@ -824,59 +825,37 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 }
             },
             onChange: function(selectedDates, dateStr, instance) {
-                if (dateHidden) dateHidden.value = dateStr;
-                if (dateMode) dateMode.value = 'pick';
-                form.submit();
+                const currentUrlParams = new URLSearchParams(window.location.search);
+                if (currentUrlParams.get('date') !== dateStr) {
+                    window.updateFilter('date', dateStr);
+                }
             }
         });
 
-        const flatpickrInput = fpInstance.input;
-        flatpickrInput.classList.add('flatpickr-input');
-        
-        if (dateMode.value === 'all') { flatpickrInput.style.display = 'none'; } 
-        else { flatpickrInput.style.display = 'inline-block'; }
+        if (dateMode.value === 'all') { 
+            fpInstance.input.style.display = 'none'; 
+        } else { 
+            fpInstance.input.style.display = 'inline-block'; 
+        }
 
         dateMode?.addEventListener('change', function(){
             if (this.value === 'all') {
-                flatpickrInput.style.display = 'none';
-                if (dateHidden) dateHidden.value = 'All';
-                form.submit();
+                window.updateFilter('date', 'All');
             } else {
-                flatpickrInput.style.display = 'inline-block';
-                fpInstance.open();
+                fpInstance.input.style.display = 'inline-block';
+                setTimeout(() => fpInstance.open(), 50);
             }
         });
-        
+
         let timer = null;
         search?.addEventListener('input', function(){
             clearTimeout(timer);
-            timer = setTimeout(()=> form.submit(), 600);
+            const val = this.value.trim();
+            timer = setTimeout(()=> {
+                window.updateFilter('search', val);
+            }, 800);
         });
 
-        viewButtons.forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const viewValue = this.getAttribute('data-view');
-                const isAllButton = this.id === 'clearViewFilter';
-                const params = new URLSearchParams();
-                if (!isAllButton && viewValue) { params.set('view', viewValue); }
-                
-                // Keep other filters
-                const dateValue = dateHidden?.value;
-                if (dateValue && dateValue !== 'All') { params.set('date', dateValue); }
-                const searchValue = search?.value;
-                if (searchValue && searchValue.trim() !== '') { params.set('search', searchValue.trim()); }
-                
-                const newUrl = params.toString() ? window.location.pathname + '?' + params.toString() : window.location.pathname;
-                
-                if (newUrl !== window.location.href) {
-                    window.location.href = newUrl;
-                    setTimeout(() => { window.location.reload(true); }, 100);
-                } else {
-                    window.location.reload(true);
-                }
-            });
-        });
     })();
 
     document.addEventListener('DOMContentLoaded', function() {
@@ -899,20 +878,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     });
 
     document.addEventListener('DOMContentLoaded', function() {
-        const loader = document.getElementById('loader-overlay');
-        const content = document.getElementById('main-content');
         const isFiltered = window.location.search.length > 1; 
-        function showContent() {
-            if (loader) {
-                loader.style.opacity = '0';
-                loader.addEventListener('transitionend', () => { loader.style.display = 'none'; }, { once: true });
-            }
-            if (content) {
-                content.style.display = 'block';
-                content.style.animation = 'fadeInContent 0.2s ease';
-            }
+        if (isFiltered) { 
+            hidePageLoader(); 
+        } else { 
+            setTimeout(hidePageLoader, 800); 
         }
-        if (isFiltered) { showContent(); } else { setTimeout(showContent, 1000); }
     });
 
     document.addEventListener('DOMContentLoaded', function() {

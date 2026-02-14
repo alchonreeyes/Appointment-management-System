@@ -79,7 +79,7 @@ try {
     $mail->isHTML(true);
     $mail->Subject = 'Verify your EyeMaster account';
     
-    $verification_link = "http://localhost/appointment-management-system/public/verify_email.php?token=" . $verification_token;
+    $verification_link = "http://eyemasteropticalclinic.great-site.netpublic/verify_email.php?token=" . $verification_token;
     
     $mail->Body = "
         <div style='font-family:Arial, sans-serif; background:#f8f9fa; padding:20px; border-radius:10px;'>

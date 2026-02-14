@@ -1,14 +1,14 @@
 <?php
 // Start session at the very beginning
 session_start();
-// Tinitiyak na ang database.php ay nasa labas ng 'admin' folder
+// Tinitiyak na ang database.php ay nasa labas ng 'staff' folder
 require_once __DIR__ . '/../database.php'; 
 
 // =======================================================
 // 1. INAYOS NA SECURITY CHECK
-//    (Pinapayagan na ngayon ang 'admin' AT 'staff')
+//    (Pinapayagan na ngayon ang 'staff' AT 'staff')
 // =======================================================
-if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] !== 'admin' && $_SESSION['user_role'] !== 'staff')) { // <-- FIX: Allowed staff
+if (!isset($_SESSION['user_id']) || ($_SESSION['user_role'] !== 'staff' && $_SESSION['user_role'] !== 'staff')) { // <-- FIX: Allowed staff
     header('Content-Type: application/json; charset=utf-8');
     echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     exit;

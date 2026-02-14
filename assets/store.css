@@ -134,7 +134,10 @@ body {
 /* Button */
 .store-actions {
     margin-top: 30px;
-}
+}   
+    .nav-links ul li a{
+        font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    }
 
 .btn-direction {
     display: block;

@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../database.php';
 
 // Security Check
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }

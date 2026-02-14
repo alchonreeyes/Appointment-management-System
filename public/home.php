@@ -480,10 +480,25 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <h1>Match Your Style & Confidence</h1>
             <p>Premium eyewear and expert eye care, all in one place.</p>
             <div class="hero-buttons">
-                <a href="browse.php" class="hero-btn primary">Browse Frames</a>
-                <a href="book_appointment.php" class="hero-btn outline">Book Exam</a>
+            <a href="browse.php" class="hero-btn primary">Browse Frames</a>
+            <a href="book_appointment.php" class="hero-btn outline">Book Exam</a>
             </div>
         </div>
+
+        <style>
+            @media (max-width: 768px) {
+            .hero-buttons {
+                display: flex;
+                flex-direction: column;
+                gap: 15px !important;
+            }
+            
+            .hero-btn {
+                width: 100%;
+                padding: 12px 20px !important;
+            }
+            }
+        </style>
     </div>
     <div class="carousel-track">
         <div class="slide"><img src="../assets/src/hero-img(3).jpg" onerror="this.src='https://images.unsplash.com/photo-1511499767150-a48a237f0083?q=80&w=1000&auto=format&fit=crop'"></div>
@@ -508,12 +523,25 @@ $featured_products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <style>
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
         .service {
-            display: none;
+            width: 100%;
+            margin: 40px auto;
+            padding: 20px 10px;
+            gap: 5px;
+        }
+        
+        .service-description i {
+            font-size: 1.3rem;
+        }
+        
+        .service-description span {
+            font-size: 0.7rem;
+            letter-spacing: 0.3px;
         }
     }
 </style>
+
 
 <section class="section-padding" style="background: #fff;">
     <div class="text-center">

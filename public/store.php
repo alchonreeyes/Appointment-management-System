@@ -32,9 +32,7 @@ session_start();
 <?php include '../includes/navbar.php'; ?>
 
 <div class="store-container">
-    <div class="breadcrumb">
-        <a href="home.php">Home</a> <span>/</span> Locations
-    </div>
+    
 
     <div class="section-header">
         <h1 class="page-title">Visit Our Clinic</h1>

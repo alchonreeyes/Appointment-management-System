@@ -24,29 +24,29 @@ function checkDataExists($conn_db, $table, $whereClause) {
 }
 
 // ======================================================================
-// 3. FILTER PARAMETERS SETUP
+// 3. FILTER PARAMETERS SETUP (UPDATED)
 // ======================================================================
 $realCurrentYear = date('Y');
 $realCurrentMonth = date('F'); 
 $realCurrentDay = date('j');   
 
+// Check if no filters are passed in URL
 $isFirstLoad = !isset($_GET['year']) && !isset($_GET['month']) && !isset($_GET['week']) && !isset($_GET['day']);
 
 if ($isFirstLoad) {
-    // Default to "Today" view on first load
-    $filterYear = $realCurrentYear;
-    $filterMonth = $realCurrentMonth;
-    $filterWeek = 'All'; // Default week to All so Day takes precedence
-    $filterDay = $realCurrentDay; 
+    // --- CHANGED HERE: Default to "All" on first load ---
+    $filterYear = 'All';
+    $filterMonth = 'All';
+    $filterWeek = 'All'; 
+    $filterDay = 'All'; 
 } else {
-    // Get parameters or default to 'All' if missing/empty
+    // Keep existing logic for when buttons are clicked
     $filterYear = isset($_GET['year']) && $_GET['year'] !== '' ? $_GET['year'] : 'All';
     $filterMonth = isset($_GET['month']) && $_GET['month'] !== '' ? $_GET['month'] : 'All';
     $filterWeek = isset($_GET['week']) && $_GET['week'] !== '' ? $_GET['week'] : 'All';
     $filterDay = isset($_GET['day']) && $_GET['day'] !== '' ? $_GET['day'] : 'All';
 }
 
-// Helper: Convert Month Name to Number (if not 'All')
 $monthNum = ($filterMonth !== 'All') ? date('m', strtotime("1 {$filterMonth} 2024")) : null;
 
 // ======================================================================
@@ -56,7 +56,6 @@ $monthNum = ($filterMonth !== 'All') ? date('m', strtotime("1 {$filterMonth} 202
 // --- A. YEAR DROPDOWN ---
 $yearDropdownItems = "<div class=\"dropdown-item " . ($filterYear === 'All' ? 'active' : '') . "\" onclick=\"applyFilter('year', 'All')\">All Years</div>";
 
-// Get Max Year from DB
 $sqlMaxYear = "SELECT MAX(YEAR(appointment_date)) as max_year FROM appointments";
 $resMax = $conn->query($sqlMaxYear);
 $dbMaxYear = ($resMax && $resMax->num_rows > 0) ? intval($resMax->fetch_assoc()['max_year']) : $realCurrentYear;
@@ -87,14 +86,13 @@ if ($filterYear !== 'All') {
         $monthDropdownItems .= "<div class=\"dropdown-item {$activeClass} {$dataClass}\" onclick=\"applyFilter('month', '{$m}')\">{$m}</div>";
     }
 } else {
-    // If Year is All, just list months without checking specific data or disable them visually
     foreach ($months as $m) {
         $activeClass = ($filterMonth == $m) ? 'active' : '';
         $monthDropdownItems .= "<div class=\"dropdown-item {$activeClass}\" onclick=\"applyFilter('month', '{$m}')\">{$m}</div>";
     }
 }
 
-// --- C. PREPARE DATE OBJECTS (Only if Year & Month are selected) ---
+// --- C. PREPARE DATE OBJECTS ---
 $daysInMonth = 31;
 $startDayLoop = 1;
 $endDayLoop = 31;
@@ -117,7 +115,6 @@ if ($filterYear !== 'All' && $filterMonth !== 'All') {
         $strStart = $startOfWeek->format('Y-m-d');
         $strEnd = $endOfWeek->format('Y-m-d');
 
-        // Check data
         $where = "DATE(a.appointment_date) BETWEEN '{$strStart}' AND '{$strEnd}'";
         $hasData = checkDataExists($conn, 'appointments', $where);
         $dataClass = $hasData ? 'has-data' : '';
@@ -125,8 +122,6 @@ if ($filterYear !== 'All' && $filterMonth !== 'All') {
 
         $weekDropdownItems .= "<div class=\"dropdown-item {$activeClass} {$dataClass}\" onclick=\"applyFilter('week', '{$weekCounter}')\">Week {$weekCounter}</div>";
 
-        // *** LOGIC FOR FILTERING DAYS BASED ON WEEK ***
-        // If the user selected THIS specific week, we capture the start/end days for the Day loop
         if ($filterWeek == $weekCounter) {
             $startDayLoop = (int)$startOfWeek->format('j');
             $endDayLoop = (int)$endOfWeek->format('j');
@@ -137,17 +132,15 @@ if ($filterYear !== 'All' && $filterMonth !== 'All') {
         if ($weekCounter > 6) break;
     }
     
-    // If "All" weeks is selected, show full month range
     if ($filterWeek === 'All') {
         $startDayLoop = 1;
         $endDayLoop = $daysInMonth;
     }
 } else {
-    // If Year or Month is "All", simpler week view (or empty)
     $weekDropdownItems = "<div class=\"dropdown-item active\">All Weeks</div>"; 
 }
 
-// --- E. DAY DROPDOWN (Dynamic based on Week) ---
+// --- E. DAY DROPDOWN ---
 $dayDropdownItems = "<div class=\"dropdown-item " . ($filterDay === 'All' ? 'active' : '') . "\" onclick=\"applyFilter('day', 'All')\">All Days</div>";
 
 if ($filterYear !== 'All' && $filterMonth !== 'All') {
@@ -164,52 +157,40 @@ if ($filterYear !== 'All' && $filterMonth !== 'All') {
     }
 }
 
-// Button Texts
 $weekBtnText = ($filterWeek === 'All') ? 'All Weeks' : "Week {$filterWeek}";
 $dayBtnText = ($filterDay === 'All') ? 'All Days' : "Day {$filterDay}";
 
 
 // ======================================================================
-// 5. BUILD THE SQL FILTER (Dynamic "All" Logic)
+// 5. BUILD THE SQL FILTER
 // ======================================================================
-
 $conditions = [];
 
-// 1. Year
 if ($filterYear !== 'All') {
     $conditions[] = "YEAR(a.appointment_date) = '{$filterYear}'";
 }
-
-// 2. Month
 if ($filterMonth !== 'All' && $monthNum) {
     $conditions[] = "MONTH(a.appointment_date) = '{$monthNum}'";
 }
 
-// 3. Day (Specific Day overrides Week)
 if ($filterDay !== 'All' && $filterMonth !== 'All' && $filterYear !== 'All') {
     $padDay = str_pad($filterDay, 2, '0', STR_PAD_LEFT);
     $selectedDate = "{$filterYear}-{$monthNum}-{$padDay}";
     $conditions[] = "DATE(a.appointment_date) = '{$selectedDate}'";
 }
-// 4. Week (Only if Day is 'All' and Week is Specific)
 elseif ($filterWeek !== 'All' && $filterMonth !== 'All' && $filterYear !== 'All') {
-    // Re-calculate the specific week range for SQL
     $wNum = intval($filterWeek);
     $wStart = (clone $firstDayOfMonth);
-    if ($wNum > 1) {
-        $wStart->modify('+' . ($wNum - 1) . ' weeks');
-    }
+    if ($wNum > 1) $wStart->modify('+' . ($wNum - 1) . ' weeks');
     $wEnd = (clone $wStart)->modify('+6 days');
-    if ($wEnd > $lastDayOfMonth) {
-        $wEnd = $lastDayOfMonth;
-    }
+    if ($wEnd > $lastDayOfMonth) $wEnd = $lastDayOfMonth;
+    
     $strStart = $wStart->format('Y-m-d');
     $strEnd = $wEnd->format('Y-m-d');
-    
     $conditions[] = "DATE(a.appointment_date) BETWEEN '{$strStart}' AND '{$strEnd}'";
 }
 
-// Combine conditions. If empty, 1=1 (Show Everything)
+// When everything is "All", $conditions is empty, so we use 1=1 (Show All)
 $statFilter = count($conditions) > 0 ? implode(' AND ', $conditions) : '1=1';
 
 
@@ -221,29 +202,16 @@ $statFilter = count($conditions) > 0 ? implode(' AND ', $conditions) : '1=1';
 $sql1 = "SELECT COUNT(a.appointment_id) FROM appointments a WHERE {$statFilter}";
 $totalAppointmentsToday = $conn->query($sql1)->fetch_array()[0] ?? 0;
 
-// 2. Total Patients
-$sql3 = "SELECT COUNT(DISTINCT a.full_name) FROM appointments a WHERE {$statFilter}";
-$totalPatients = $conn->query($sql3)->fetch_array()[0] ?? 0;
-
-// 3. Pending
-$sql5 = "SELECT COUNT(a.appointment_id) 
-         FROM appointments a
-         JOIN appointmentstatus s ON a.status_id = s.status_id
-         WHERE s.status_name = 'Pending' AND {$statFilter}";
+// 2. Pending
+$sql5 = "SELECT COUNT(a.appointment_id) FROM appointments a JOIN appointmentstatus s ON a.status_id = s.status_id WHERE s.status_name = 'Pending' AND {$statFilter}";
 $pendingAppointments = $conn->query($sql5)->fetch_array()[0] ?? 0;
 
-// 4. Completed
-$sql7 = "SELECT COUNT(a.appointment_id) 
-         FROM appointments a
-         JOIN appointmentstatus s ON a.status_id = s.status_id
-         WHERE (s.status_name = 'Completed' OR s.status_name = 'Approved') AND {$statFilter}";
+// 3. Completed
+$sql7 = "SELECT COUNT(a.appointment_id) FROM appointments a JOIN appointmentstatus s ON a.status_id = s.status_id WHERE (s.status_name = 'Completed' OR s.status_name = 'Approved') AND {$statFilter}";
 $completedToday = $conn->query($sql7)->fetch_array()[0] ?? 0;
 
-// 5. Confirmed (REPLACED MISSED WITH CONFIRMED)
-$sql_confirmed = "SELECT COUNT(a.appointment_id) 
-                FROM appointments a
-                JOIN appointmentstatus s ON a.status_id = s.status_id
-                WHERE s.status_name = 'Confirmed' AND {$statFilter}";
+// 4. Confirmed
+$sql_confirmed = "SELECT COUNT(a.appointment_id) FROM appointments a JOIN appointmentstatus s ON a.status_id = s.status_id WHERE s.status_name = 'Confirmed' AND {$statFilter}";
 $confirmedAppointments = $conn->query($sql_confirmed)->fetch_array()[0] ?? 0;
 
 // ======================================================================
@@ -277,6 +245,31 @@ $sql_weekly = "SELECT DAYNAME(a.appointment_date) AS day, COUNT(a.appointment_id
 $result_weekly = $conn->query($sql_weekly);
 $weeklyData = $result_weekly ? $result_weekly->fetch_all(MYSQLI_ASSOC) : [];
 
+// NEW: Top Services Availment
+// We filter by $statFilter AND exclude cancelled appointments
+$sql_services = "SELECT s.service_name, COUNT(a.appointment_id) as count 
+                 FROM appointments a 
+                 JOIN services s ON a.service_id = s.service_id 
+                 JOIN appointmentstatus ast ON a.status_id = ast.status_id
+                 WHERE {$statFilter} AND ast.status_name != 'Cancelled'
+                 GROUP BY s.service_name 
+                 ORDER BY count DESC";
+
+$result_services = $conn->query($sql_services);
+$serviceLabels = [];
+$serviceValues = [];
+
+if ($result_services && $result_services->num_rows > 0) {
+    while($row = $result_services->fetch_assoc()) {
+        $serviceLabels[] = $row['service_name'];
+        $serviceValues[] = (int)$row['count'];
+    }
+} else {
+    // Fallback if no data
+    $serviceLabels[] = 'No Availments';
+    $serviceValues[] = 1;
+}
+
 // Recent List
 $sql_recent = "SELECT a.full_name, ser.service_name, a.appointment_date, a.appointment_time, s.status_name
                FROM appointments a
@@ -292,11 +285,9 @@ $recentAppointments = $result_recent ? $result_recent->fetch_all(MYSQLI_ASSOC) :
 // 8. FALLBACK DATA
 // ======================================================================
 if (empty($dailyData)) {
-    // If specific date selected, use that. If "All", use today.
     $fallbackDate = ($filterDay !== 'All' && $filterYear !== 'All' && $filterMonth !== 'All') 
         ? "{$filterYear}-{$monthNum}-" . str_pad($filterDay,2,'0',STR_PAD_LEFT) 
         : date('Y-m-d');
-        
     $dailyData = [['date' => $fallbackDate, 'count' => 0]];
 }
 if (empty($statusData)) {

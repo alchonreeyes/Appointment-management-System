@@ -2,17 +2,24 @@
 session_start();
 require_once __DIR__ . '/../database.php';
 
-
 // 2. HANDLE FORM SUBMISSION
 $success_msg = '';
 $error_msg = '';
-
-if (!isset($_SESSION['staff_id']) || $_SESSION['role'] !== 'staff') {
-    header("Location: ../../public/login.php");
-    exit();
+// =======================================================
+// 1. INAYOS NA SECURITY CHECK
+// =======================================================
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
+    if (isset($_POST['action'])) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
+    } else {
+        header('Location: ../../public/login.php');
+    }
+    exit;
 }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     
     $name = trim($_POST['product_name']);
     $brand = trim($_POST['brand']);
@@ -79,7 +86,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
             
             if ($stmt->execute()) {
                 $new_product_id = $conn->insert_id; 
-                $brand_prefix = strtoupper(substr($brand, 0, 3)); // First 3 letters of brand
+                // Generate Reference ID: BRAND-YEAR-ID (e.g., AIR-2026-030)
+$brand_prefix = strtoupper(substr($brand, 0, 3)); // First 3 letters of brand
 $year = date('Y');
 $ref_id = $brand_prefix . '-' . $year . '-' . str_pad($new_product_id, 3, '0', STR_PAD_LEFT);
 

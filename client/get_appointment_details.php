@@ -1,6 +1,7 @@
 <?php
 session_start();
 require './config/db_mysqli.php';
+require './config/encryption_util.php';
 
 header('Content-Type: application/json');
 
@@ -42,8 +43,19 @@ $stmt->bind_param("ii", $appointment_id, $client['client_id']);
 $stmt->execute();
 $result = $stmt->get_result();
 $appointment = $result->fetch_assoc();
-
 if ($appointment) {
+    // Decrypt sensitive fields before sending to frontend
+    $appointment['full_name'] = decrypt_data($appointment['full_name']);
+    $appointment['phone_number'] = decrypt_data($appointment['phone_number']);
+    $appointment['occupation'] = decrypt_data($appointment['occupation']);
+    
+    if (!empty($appointment['symptoms'])) {
+        $appointment['symptoms'] = decrypt_data($appointment['symptoms']);
+    }
+    if (!empty($appointment['concern'])) {
+        $appointment['concern'] = decrypt_data($appointment['concern']);
+    }
+    
     echo json_encode(['success' => true, 'appointment' => $appointment]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Appointment not found']);

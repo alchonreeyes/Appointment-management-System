@@ -202,7 +202,7 @@ try {
         exit;
     }
 
-    // 🔥 CHECK 5: Normal limit - Max 6 appointments per 2 hours (WITH SUSPENSION)
+    // 🔥 CHECK 5: Normal   - Max 6 appointments per 2 hours (WITH SUSPENSION)
     $checkTwoHour = $pdo->prepare("
         SELECT appointment_id, appointment_date, appointment_time, service_id, created_at
         FROM appointments 

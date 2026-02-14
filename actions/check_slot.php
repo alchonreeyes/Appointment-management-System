@@ -17,7 +17,9 @@ try {
     $db = new Database();
     $pdo = $db->getConnection();
 
-    // 1. Check if entire day or partial time is closed
+    // ========================================
+    // 1. CHECK IF ENTIRE DAY OR PARTIAL TIME IS CLOSED
+    // ========================================
     $checkClosed = $pdo->prepare("
         SELECT time_from, time_to 
         FROM schedule_settings 
@@ -44,11 +46,17 @@ try {
         }
     }
 
-    // 2. Check slot availability (same as before)
+    // ========================================
+    // 2. CHECK SLOT AVAILABILITY GLOBALLY (ACROSS ALL SERVICES)
+    // ========================================
+    // ✅ KEY FIX: Remove service_id filter to check ALL services together
     $checkSlot = $pdo->prepare("
-        SELECT SUM(used_slots) as total_used, MAX(max_slots) as slot_limit
+        SELECT 
+            SUM(used_slots) as total_used, 
+            MAX(max_slots) as slot_limit
         FROM appointment_slots 
-        WHERE appointment_date = ? AND appointment_time = ?
+        WHERE appointment_date = ? 
+          AND appointment_time = ?
         GROUP BY appointment_date, appointment_time
     ");
     $checkSlot->execute([$date, $time]);
@@ -56,18 +64,48 @@ try {
     $slot = $checkSlot->fetch(PDO::FETCH_ASSOC);
 
     if (!$slot || $slot['total_used'] === null) {
-        echo json_encode(['available' => true, 'remaining' => 1]);
+        // No bookings yet for this time slot
+        echo json_encode([
+            'available' => true, 
+            'remaining' => 1,
+            'debug' => [
+                'message' => 'No bookings found for this slot',
+                'date' => $date,
+                'time' => $time
+            ]
+        ]);
     } else {
-        $remaining = 1 - intval($slot['total_used']);
+        $totalUsed = intval($slot['total_used']);
+        $slotLimit = intval($slot['slot_limit']);
+        $remaining = $slotLimit - $totalUsed;
+        
         if ($remaining > 0) {
-            echo json_encode(['available' => true, 'remaining' => $remaining]);
+            echo json_encode([
+                'available' => true, 
+                'remaining' => $remaining,
+                'debug' => [
+                    'total_used' => $totalUsed,
+                    'slot_limit' => $slotLimit,
+                    'remaining' => $remaining
+                ]
+            ]);
         } else {
-            echo json_encode(['available' => false, 'message' => 'Time slot fully booked']);
+            echo json_encode([
+                'available' => false, 
+                'message' => 'Time slot fully booked',
+                'debug' => [
+                    'total_used' => $totalUsed,
+                    'slot_limit' => $slotLimit
+                ]
+            ]);
         }
     }
 
 } catch (Exception $e) {
     error_log("check_slot.php error: " . $e->getMessage());
-    echo json_encode(['available' => false, 'message' => 'Server error']);
+    echo json_encode([
+        'available' => false, 
+        'message' => 'Server error: ' . $e->getMessage()
+    ]);
 }
 ?>
