@@ -7,7 +7,16 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 // ======================================================================
 // 1. SESSION CHECK
 // ======================================================================
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
+    // Return unauthorized JSON if it's an AJAX request, else redirect
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+        exit;
+    }
     header('Location: ../../public/login.php'); 
     exit;
 }
@@ -24,23 +33,20 @@ function checkDataExists($conn_db, $table, $whereClause) {
 }
 
 // ======================================================================
-// 3. FILTER PARAMETERS SETUP (UPDATED)
+// 3. FILTER PARAMETERS SETUP
 // ======================================================================
 $realCurrentYear = date('Y');
 $realCurrentMonth = date('F'); 
 $realCurrentDay = date('j');   
 
-// Check if no filters are passed in URL
 $isFirstLoad = !isset($_GET['year']) && !isset($_GET['month']) && !isset($_GET['week']) && !isset($_GET['day']);
 
 if ($isFirstLoad) {
-    // --- CHANGED HERE: Default to "All" on first load ---
     $filterYear = 'All';
     $filterMonth = 'All';
     $filterWeek = 'All'; 
     $filterDay = 'All'; 
 } else {
-    // Keep existing logic for when buttons are clicked
     $filterYear = isset($_GET['year']) && $_GET['year'] !== '' ? $_GET['year'] : 'All';
     $filterMonth = isset($_GET['month']) && $_GET['month'] !== '' ? $_GET['month'] : 'All';
     $filterWeek = isset($_GET['week']) && $_GET['week'] !== '' ? $_GET['week'] : 'All';
@@ -58,7 +64,14 @@ $yearDropdownItems = "<div class=\"dropdown-item " . ($filterYear === 'All' ? 'a
 
 $sqlMaxYear = "SELECT MAX(YEAR(appointment_date)) as max_year FROM appointments";
 $resMax = $conn->query($sqlMaxYear);
-$dbMaxYear = ($resMax && $resMax->num_rows > 0) ? intval($resMax->fetch_assoc()['max_year']) : $realCurrentYear;
+
+$dbMaxYear = intval($realCurrentYear); 
+if ($resMax && $resMax->num_rows > 0) {
+    $rowMax = $resMax->fetch_assoc();
+    if ($rowMax && isset($rowMax['max_year'])) {
+        $dbMaxYear = intval($rowMax['max_year']);
+    }
+}
 
 $startYear = max(intval($realCurrentYear) + 1, $dbMaxYear); 
 $endYear = 2023; 
@@ -190,7 +203,6 @@ elseif ($filterWeek !== 'All' && $filterMonth !== 'All' && $filterYear !== 'All'
     $conditions[] = "DATE(a.appointment_date) BETWEEN '{$strStart}' AND '{$strEnd}'";
 }
 
-// When everything is "All", $conditions is empty, so we use 1=1 (Show All)
 $statFilter = count($conditions) > 0 ? implode(' AND ', $conditions) : '1=1';
 
 
@@ -245,13 +257,12 @@ $sql_weekly = "SELECT DAYNAME(a.appointment_date) AS day, COUNT(a.appointment_id
 $result_weekly = $conn->query($sql_weekly);
 $weeklyData = $result_weekly ? $result_weekly->fetch_all(MYSQLI_ASSOC) : [];
 
-// NEW: Top Services Availment
-// We filter by $statFilter AND exclude cancelled appointments
+// Top Services Availment
 $sql_services = "SELECT s.service_name, COUNT(a.appointment_id) as count 
                  FROM appointments a 
                  JOIN services s ON a.service_id = s.service_id 
                  JOIN appointmentstatus ast ON a.status_id = ast.status_id
-                 WHERE {$statFilter} AND ast.status_name != 'Cancelled'
+                 WHERE {$statFilter} AND ast.status_name != 'Cancel'
                  GROUP BY s.service_name 
                  ORDER BY count DESC";
 
@@ -265,24 +276,50 @@ if ($result_services && $result_services->num_rows > 0) {
         $serviceValues[] = (int)$row['count'];
     }
 } else {
-    // Fallback if no data
     $serviceLabels[] = 'No Availments';
     $serviceValues[] = 1;
 }
 
-// Recent List
-$sql_recent = "SELECT a.full_name, ser.service_name, a.appointment_date, a.appointment_time, s.status_name
+// ======================================================================
+// 8. RECENT LIST (FIXED: WITH DECRYPTION LOOP)
+// ======================================================================
+// We need to JOIN with 'users' table in case 'full_name' in appointments is empty
+$sql_recent = "SELECT a.full_name, ser.service_name, a.appointment_date, a.appointment_time, s.status_name, u.full_name as user_full_name
                FROM appointments a
                LEFT JOIN services ser ON a.service_id = ser.service_id
                LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+               LEFT JOIN clients c ON a.client_id = c.client_id
+               LEFT JOIN users u ON c.user_id = u.id
                WHERE {$statFilter}
                ORDER BY a.appointment_date DESC, a.appointment_time DESC
                LIMIT 5"; 
+
 $result_recent = $conn->query($sql_recent);
-$recentAppointments = $result_recent ? $result_recent->fetch_all(MYSQLI_ASSOC) : [];
+$recentAppointments = [];
+
+if ($result_recent) {
+    while ($row = $result_recent->fetch_assoc()) {
+        
+        // --- FIX: DECRYPTION LOGIC WITH FALLBACK ---
+        // 1. Try appointment 'full_name'
+        // 2. If empty, try 'user_full_name'
+        // 3. Decrypt whatever we find
+        
+        if (empty($row['full_name'])) {
+            $encryptedName = !empty($row['user_full_name']) ? $row['user_full_name'] : '';
+        } else {
+            $encryptedName = $row['full_name'];
+        }
+        
+        // Decrypt the name for display
+        $row['full_name'] = !empty($encryptedName) ? decrypt_data($encryptedName) : 'N/A';
+        
+        $recentAppointments[] = $row;
+    }
+}
 
 // ======================================================================
-// 8. FALLBACK DATA
+// 9. FALLBACK DATA (For empty charts)
 // ======================================================================
 if (empty($dailyData)) {
     $fallbackDate = ($filterDay !== 'All' && $filterYear !== 'All' && $filterMonth !== 'All') 

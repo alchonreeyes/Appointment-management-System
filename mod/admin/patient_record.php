@@ -1,6 +1,13 @@
 <?php
+// =======================================================
+// UPDATED: Patient Records (FIXED DECRYPTION ISSUES)
+// =======================================================
+
 // Start session
 session_start();
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 
@@ -31,10 +38,7 @@ if (isset($_POST['action'])) {
             exit;
         }
         try {
-            // ========================================================================
-            // CRITICAL: Use EXACT SAME query structure as appointment.php
-            // This joins appointments + clients + users tables
-            // ========================================================================
+            // Join tables to get complete patient info
             $stmt = $conn->prepare("
                 SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name,
                        c.birth_date, c.age as client_age, c.gender as client_gender,
@@ -58,95 +62,73 @@ if (isset($_POST['action'])) {
             }
 
             // ========================================================================
-            // DEBUG LOGGING (check your server error logs to see what's happening)
-            // ========================================================================
-            error_log("=== PATIENT RECORD VIEWDETAILS #$id ===");
-            error_log("appointments.full_name: " . ($appt['full_name'] ?? 'NULL'));
-            error_log("users.full_name: " . ($appt['user_full_name'] ?? 'NULL'));
-            error_log("appointments.age: " . ($appt['age'] ?? 'NULL'));
-            error_log("clients.age: " . ($appt['client_age'] ?? 'NULL'));
-            error_log("appointments.gender: " . ($appt['gender'] ?? 'NULL'));
-            error_log("clients.gender: " . ($appt['client_gender'] ?? 'NULL'));
-            error_log("appointments.phone: " . ($appt['phone_number'] ?? 'NULL'));
-            error_log("users.phone: " . ($appt['user_phone_number'] ?? 'NULL'));
-
-            // ========================================================================
-            // CRITICAL: Use EXACT SAME fallback logic as appointment.php
+            // CRITICAL FIX: DECRYPTION LOGIC
             // ========================================================================
             
-            // FIX 1: FULL_NAME
-            // Check if appointment has a name
-            if (empty($appt['full_name']) || $appt['full_name'] === '') {
-                // Appointment name is empty, use user's name
-                // NOTE: users.full_name is NOT encrypted in your database!
-                if (!empty($appt['user_full_name'])) {
-                    $appt['full_name'] = $appt['user_full_name'];
-                    error_log("Using users.full_name: " . $appt['full_name']);
-                } else {
-                    $appt['full_name'] = 'N/A';
-                    error_log("No name found anywhere!");
-                }
+            // 1. FULL NAME (Fix: Decrypt the fallback value too!)
+            if (empty($appt['full_name'])) {
+                $appt['full_name'] = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
             } else {
-                // Appointment has a name - it's encrypted, so decrypt it
                 $appt['full_name'] = decrypt_data($appt['full_name']);
-                error_log("Decrypted appointments.full_name: " . $appt['full_name']);
             }
 
-            // FIX 2: AGE
-            // Check if appointment has age
-            if (($appt['age'] == 0 || empty($appt['age'])) && !empty($appt['birth_date'])) {
-                // Calculate from birth date
-                $birth = new DateTime($appt['birth_date']);
-                $today = new DateTime();
-                $appt['age'] = $today->diff($birth)->y;
-                error_log("Calculated age from birth_date: " . $appt['age']);
-            } elseif (($appt['age'] == 0 || empty($appt['age'])) && !empty($appt['client_age'])) {
-                // Use client age
-                $appt['age'] = $appt['client_age'];
-                error_log("Using clients.age: " . $appt['age']);
-            }
-
-            // FIX 3: GENDER
-            // Check if appointment has gender
-            if (empty($appt['gender']) && !empty($appt['client_gender'])) {
-                $appt['gender'] = $appt['client_gender'];
-                error_log("Using clients.gender: " . $appt['gender']);
-            }
-
-            // FIX 4: PHONE NUMBER
-            // Check if appointment has phone
+            // 2. PHONE NUMBER (Fix: Decrypt the fallback value too!)
             if (empty($appt['phone_number']) && !empty($appt['user_phone_number'])) {
-                // Use user's phone (which IS encrypted)
                 $appt['phone_number'] = decrypt_data($appt['user_phone_number']);
-                error_log("Using decrypted users.phone_number");
-            } elseif (!empty($appt['phone_number'])) {
-                // Appointment has phone - decrypt it
-                $appt['phone_number'] = decrypt_data($appt['phone_number']);
-                error_log("Decrypted appointments.phone_number");
+            } else {
+                $appt['phone_number'] = decrypt_data($appt['phone_number'] ?? '');
             }
 
-            // Decrypt remaining fields
+            // 3. AGE (Decrypt everything before calculating)
+            $birth_date_val = decrypt_data($appt['birth_date'] ?? ''); 
+            $client_age_val = decrypt_data($appt['client_age'] ?? '');
+            $appt_age_val   = decrypt_data($appt['age'] ?? ''); 
+
+            if ((empty($appt_age_val) || $appt_age_val == '0') && !empty($birth_date_val)) {
+                try {
+                    $birth = new DateTime($birth_date_val);
+                    $today = new DateTime();
+                    $appt['age'] = $today->diff($birth)->y;
+                } catch (Exception $e) {
+                    $appt['age'] = 'N/A';
+                }
+            } elseif ((empty($appt_age_val) || $appt_age_val == '0') && !empty($client_age_val)) {
+                $appt['age'] = $client_age_val;
+            } else {
+                $appt['age'] = $appt_age_val;
+            }
+
+            // 4. GENDER
+            $client_gender_val = decrypt_data($appt['client_gender'] ?? '');
+            $appt_gender_val   = decrypt_data($appt['gender'] ?? '');
+
+            if (empty($appt_gender_val) && !empty($client_gender_val)) {
+                $appt['gender'] = $client_gender_val;
+            } else {
+                $appt['gender'] = $appt_gender_val;
+            }
+
+            // 5. DECRYPT REMAINING FIELDS
             $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
             $appt['concern']      = decrypt_data($appt['concern'] ?? '');
             $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
             $appt['notes']        = decrypt_data($appt['notes'] ?? '');
+            $appt['wear_glasses'] = decrypt_data($appt['wear_glasses'] ?? '');
+            $appt['suffix']       = decrypt_data($appt['suffix'] ?? '');
+            
+            // Medical / Ishihara fields
+            $appt['certificate_purpose'] = decrypt_data($appt['certificate_purpose'] ?? '');
+            $appt['certificate_other']   = decrypt_data($appt['certificate_other'] ?? '');
+            $appt['ishihara_test_type']  = decrypt_data($appt['ishihara_test_type'] ?? '');
+            $appt['color_issues']        = decrypt_data($appt['color_issues'] ?? '');
+            $appt['ishihara_reason']     = decrypt_data($appt['ishihara_reason'] ?? '');
             $appt['previous_color_issues'] = decrypt_data($appt['previous_color_issues'] ?? '');
+            $appt['ishihara_notes']      = decrypt_data($appt['ishihara_notes'] ?? '');
+
+            // Clean up temporary fields
+            unset($appt['birth_date'], $appt['client_age'], $appt['client_gender'], $appt['user_full_name'], $appt['user_phone_number']);
             
-            // Clean up temporary fields (like appointment.php does)
-            unset($appt['birth_date']);
-            unset($appt['client_age']);
-            unset($appt['client_gender']);
-            unset($appt['user_full_name']);
-            unset($appt['user_phone_number']);
-            
-            // Log final values
-            error_log("=== FINAL VALUES ===");
-            error_log("full_name: " . $appt['full_name']);
-            error_log("age: " . $appt['age']);
-            error_log("gender: " . ($appt['gender'] ?? 'NULL'));
-            error_log("phone_number: " . ($appt['phone_number'] ? '[DECRYPTED]' : 'NULL'));
-            
-            // HISTORY FETCHING (keep as is from your original code)
+            // HISTORY FETCHING
             $history = [];
             if (!empty($appt['client_id'])) {
                 $client_id = $appt['client_id'];
@@ -192,7 +174,7 @@ $viewFilter = $_GET['view'] ?? 'all';
 // --- Base Query ---
 $selectClauses = [
     "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", 
-    "s.status_name" 
+    "s.status_name", "u.full_name as user_full_name" // Added user_full_name for fallback in table
 ];
 $whereClauses = ["1=1"];
 $params = [];
@@ -222,6 +204,8 @@ $raw_query = "
     ) latest ON a.appointment_id = latest.max_id
     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
     LEFT JOIN services ser ON a.service_id = ser.service_id
+    LEFT JOIN clients c ON a.client_id = c.client_id
+    LEFT JOIN users u ON c.user_id = u.id
     WHERE " . implode(" AND ", $whereClauses) . "
     ORDER BY a.appointment_date DESC
 ";
@@ -236,10 +220,17 @@ try {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        $decrypted_name = decrypt_data($row['full_name']);
+        // FIX: Decrypt name logic for the TABLE list as well
+        if (empty($row['full_name'])) {
+            $decrypted_name = !empty($row['user_full_name']) ? decrypt_data($row['user_full_name']) : 'N/A';
+        } else {
+            $decrypted_name = decrypt_data($row['full_name']);
+        }
+        
         $client_id_str = (string)$row['client_id'];
         
         if ($search !== '') {
+            // Case-insensitive search on decrypted name or ID
             if (stripos($decrypted_name, $search) !== false || stripos($client_id_str, $search) !== false) {
                 $row['full_name_decrypted'] = $decrypted_name; 
                 $all_appointments[] = $row;

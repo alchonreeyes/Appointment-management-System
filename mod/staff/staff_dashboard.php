@@ -3,7 +3,6 @@ session_start();
 // Location: EYE MASTER/staff/staff_dashboard.php
 
 // INCLUDE ACTION FILE
-// Ensure these paths are correct for your directory structure
 require_once __DIR__ . '/staff_dashboard-action.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 ?>
@@ -20,7 +19,7 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 
 <style>
     /* =========================================
-       LOADER & TRANSITION STYLES (From Patient Record)
+       LOADER & TRANSITION STYLES
        ========================================= */
     #loader-overlay {
         position: fixed;
@@ -290,7 +289,7 @@ require_once __DIR__ . '/../../config/encryption_util.php';
                         <?php foreach ($recentAppointments as $apt): ?>
                         <div class="recent-item">
                             <div class="recent-item-info">
-                                <h4><?= htmlspecialchars(decrypt_data($apt['full_name'])) ?></h4>
+                                <h4><?= htmlspecialchars($apt['full_name']) ?></h4>
                                 <p><?= htmlspecialchars($apt['service_name']) ?> - <?= date('g:i A', strtotime($apt['appointment_time'])) ?></p>
                             </div>
                             <span class="status <?= strtolower($apt['status_name']) ?>">
@@ -355,6 +354,12 @@ require_once __DIR__ . '/../../config/encryption_util.php';
             <button class="qr-modal-close" onclick="stopScan()">✕</button>
             <h3>Scan Appointment QR Code</h3>
             
+            <div id="messenger-warning" style="display:none; background:#fee2e2; color:#b91c1c; padding:15px; font-size:14px; border-radius:8px; margin-bottom:15px; text-align:left; border-left: 5px solid #b91c1c;">
+                <strong>⚠️ Camera Blocked by Messenger</strong><br>
+                <span style="font-size:13px; color:#333;">iOS blocks camera access inside this app.</span><br><br>
+                Please tap the <strong>3 dots (•••)</strong> or <strong>Share icon</strong> and select <strong>"Open in Browser"</strong> (Safari/Chrome) to use the scanner.
+            </div>
+
             <div class="qr-controls">
                 <select id="camera-select" onchange="onCameraSelectChange()"></select>
                 <button id="swap-camera-btn" onclick="swapCamera()" title="Switch Camera">↻</button>
@@ -366,7 +371,6 @@ require_once __DIR__ . '/../../config/encryption_util.php';
             </div>
         </div>
     </div>
-
     <div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3001;">
         <div class="confirm-card" role="dialog" aria-modal="true">
             <div class="confirm-header">
@@ -438,13 +442,14 @@ function hideActionLoader() {
 // ===================================
 // CHART DATA
 // ===================================
-const dailyData = <?php echo json_encode($dailyData); ?>;
-const statusData = <?php echo json_encode($statusData); ?>;
-const weeklyData = <?php echo json_encode($weeklyData); ?>;
+// SAFETY FIX: Use null coalescing for JS variables
+const dailyData = <?php echo json_encode($dailyData ?? []); ?>;
+const statusData = <?php echo json_encode($statusData ?? []); ?>;
+const weeklyData = <?php echo json_encode($weeklyData ?? []); ?>;
 
 // --- SERVICES DATA (New) ---
-const serviceLabels = <?php echo json_encode($serviceLabels); ?>;
-const serviceValues = <?php echo json_encode($serviceValues); ?>;
+const serviceLabels = <?php echo json_encode($serviceLabels ?? []); ?>;
+const serviceValues = <?php echo json_encode($serviceValues ?? []); ?>;
 
 const dailyLabels = dailyData.length > 0 ? dailyData.map(d => {
     const date = new Date(d.date);
@@ -683,6 +688,12 @@ let currentCameraId = null;
 let allCameras = [];
 let isScanning = false;
 
+// --- DETECT IN-APP BROWSER ---
+function isInAppBrowser() {
+    const ua = navigator.userAgent || navigator.vendor || window.opera;
+    return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1);
+}
+
 function stopScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (qrModal) qrModal.style.display = 'none';
@@ -703,6 +714,22 @@ function startScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (!qrModal) return;
     
+    // Check for In-App Browser IMMEDIATELY
+    if (isInAppBrowser()) {
+        const warning = document.getElementById('messenger-warning');
+        const controls = document.querySelector('.qr-controls');
+        const readerContainer = document.getElementById('qr-reader-container');
+
+        if(warning) warning.style.display = 'block';
+
+        // Hide camera controls/view since they likely won't work
+        if(controls) controls.style.display = 'none';
+        if(readerContainer) readerContainer.style.display = 'none';
+
+        qrModal.style.display = 'flex';
+        return; // STOP HERE
+    }
+
     // Show Modal
     qrModal.style.display = 'flex'; 
     const qrReaderId = "qr-reader";

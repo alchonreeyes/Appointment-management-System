@@ -1,4 +1,8 @@
 <?php
+// =======================================================
+// UPDATED: Staff Account Management with Encryption Fixes
+// =======================================================
+
 // Start session
 session_start();
 
@@ -73,9 +77,19 @@ if (isset($_POST['action'])) {
         }
 
         try {
+            // DUPLICATE CHECK (PHP LOOP METHOD)
+            // SQL WHERE clause won't work with Random IV encryption
+            $check = $conn->query("SELECT email FROM staff");
+            while ($row = $check->fetch_assoc()) {
+                if (decrypt_data($row['email']) === $email) {
+                    echo json_encode(['success' => false, 'message' => 'This email is already registered.']);
+                    exit;
+                }
+            }
+
             $encryptedName = encrypt_data($name);
             $encryptedEmail = encrypt_data($email);
-            $encryptedPassword = encrypt_data($password); // Encrypting password
+            $encryptedPassword = encrypt_data($password); // Warning: Passwords usually should be Hashed, not Encrypted. But following your requested flow.
 
             $stmt = $conn->prepare("INSERT INTO staff (full_name, email, password, role, status) VALUES (?, ?, ?, ?, 'Active')");
             $stmt->bind_param("ssss", $encryptedName, $encryptedEmail, $encryptedPassword, $role);
@@ -116,15 +130,15 @@ if (isset($_POST['action'])) {
         }
 
         try {
-            // Check duplicates (exclude current user)
-            $stmt_check = $conn->prepare("SELECT staff_id FROM staff WHERE email = ? AND staff_id != ? LIMIT 1");
-            $encryptedEmailToCheck = encrypt_data($email);
-            $stmt_check->bind_param("si", $encryptedEmailToCheck, $id);
-            $stmt_check->execute();
-            
-            if ($stmt_check->get_result()->num_rows > 0) {
-                echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
-                exit;
+            // DUPLICATE CHECK (PHP LOOP METHOD)
+            // Need to check if email exists for ANYONE ELSE except current user
+            $check = $conn->query("SELECT staff_id, email FROM staff");
+            while ($row = $check->fetch_assoc()) {
+                // If email matches input AND it's not the current user's ID
+                if (decrypt_data($row['email']) === $email && $row['staff_id'] != $id) {
+                    echo json_encode(['success' => false, 'message' => 'Another staff member has this email.']);
+                    exit;
+                }
             }
 
             $encryptedName = encrypt_data($name);
@@ -207,14 +221,16 @@ try {
         $staff['email'] = decrypt_data($staff['email']);
         $staff['password'] = decrypt_data($staff['password']); // Decrypt password here
         
+        // PHP-SIDE SEARCH (Since DB is encrypted)
         if ($search !== '') {
             $searchLower = strtolower($search);
+            // Search in Name, Email, or ID
             if (
                 stripos($staff['full_name'], $search) === false &&
                 stripos($staff['email'], $search) === false &&
-                stripos($staff['staff_id'], $search) === false
+                stripos((string)$staff['staff_id'], $search) === false
             ) {
-                continue; 
+                continue; // Skip if no match
             }
         }
         $staffMembers[] = $staff;

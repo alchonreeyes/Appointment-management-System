@@ -1,41 +1,42 @@
 <?php
-// Start session at the very beginning
-session_start();
-// Ensure database.php is outside the 'staff' folder
-require_once __DIR__ . '/../database.php';
+// =======================================================
+// UNIFIED APPOINTMENT MANAGEMENT (View & Actions)
+// =======================================================
 
-// Load PHPMailer using Composer autoload and Encryption Util
+// 1. INITIALIZATION
+session_start();
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+
+require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
-// Set Timezone to Philippines so "Current Date" is accurate
 date_default_timezone_set('Asia/Manila');
 
-// Add PHPMailer classes
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\SMTP;
 use PHPMailer\PHPMailer\Exception;
 
-// =======================================================
-// 1. SECURITY CHECK
-// =======================================================
+// 2. SECURITY CHECK
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     if (isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
     } else {
-        header('Location: ../../public/login.php');
+        header('Location: ../login.php');
     }
     exit;
 }
 
 // =======================================================
-// 3. SERVER-SIDE ACTION HANDLING
+// 3. SERVER-SIDE ACTION HANDLING (AJAX)
 // =======================================================
 if (isset($_POST['action'])) {
     header('Content-Type: application/json; charset=utf-8');
     $action = $_POST['action'];
 
+    // --- UPDATE STATUS ---
     if ($action === 'updateStatus') {
         $id = $_POST['id'] ?? '';
         $newStatusName = $_POST['status_name'] ?? $_POST['status'] ?? '';
@@ -47,48 +48,34 @@ if (isset($_POST['action'])) {
         }
 
         if ($newStatusName === 'Cancel' && empty($cancelReason)) {
-            echo json_encode(['success' => false, 'message' => 'A reason is required for cancellation.']);
+            echo json_encode(['success' => false, 'message' => 'Reason required for cancellation.']);
             exit;
         }
 
         try {
             mysqli_report(MYSQLI_REPORT_OFF);
 
-            // Get the status_id from status_name
+            // Get status_id
             $stmt_status = $conn->prepare("SELECT status_id FROM appointmentstatus WHERE status_name = ?");
-            if (!$stmt_status) {
-                throw new Exception("Error preparing query (stmt_status): " . $conn->error);
-            }
             $stmt_status->bind_param("s", $newStatusName);
             $stmt_status->execute();
             $result_status = $stmt_status->get_result();
-            
             if ($result_status->num_rows === 0) {
                 echo json_encode(['success' => false, 'message' => 'Invalid status name.']);
                 exit;
             }
-            
             $status_id = $result_status->fetch_assoc()['status_id'];
 
-            // Get email from 'users' table using client_id
+            // Get Current Appointment Info
             $stmt_current = $conn->prepare("
-                SELECT 
-                    a.status_id, 
-                    a.service_id, 
-                    a.appointment_date, 
-                    a.appointment_time, 
-                    a.full_name, 
-                    ser.service_name,
-                    u.email 
+                SELECT a.status_id, a.service_id, a.appointment_date, a.appointment_time, 
+                       a.full_name, ser.service_name, u.email 
                 FROM appointments a
                 LEFT JOIN services ser ON a.service_id = ser.service_id
                 LEFT JOIN clients c ON a.client_id = c.client_id
                 LEFT JOIN users u ON c.user_id = u.id
                 WHERE a.appointment_id = ?
             ");
-            if (!$stmt_current) {
-                throw new Exception("Error preparing query (stmt_current): " . $conn->error);
-            }
             $stmt_current->bind_param("i", $id);
             $stmt_current->execute();
             $current_result = $stmt_current->get_result();
@@ -103,14 +90,11 @@ if (isset($_POST['action'])) {
             $service_id = $current_appt['service_id'];
             $appointment_date = $current_appt['appointment_date'];
 
-            // ==============================================================
-            // SECURITY CHECK FOR PAST DATES (BACKEND)
-            // ==============================================================
+            // Security Check: Past Dates
             if (strtotime($appointment_date) < strtotime(date('Y-m-d'))) {
-                echo json_encode(['success' => false, 'message' => 'Cannot edit/update appointments from past dates.']);
+                echo json_encode(['success' => false, 'message' => 'Cannot update appointments from past dates.']);
                 exit;
             }
-            // ==============================================================
             
             $client_name = decrypt_data($current_appt['full_name']);
             $client_email = $current_appt['email']; 
@@ -118,90 +102,44 @@ if (isset($_POST['action'])) {
             $appointment_time = $current_appt['appointment_time'];
 
             $stmt_old_status = $conn->prepare("SELECT status_name FROM appointmentstatus WHERE status_id = ?");
-            if (!$stmt_old_status) {
-                throw new Exception("Error preparing query (stmt_old_status): " . $conn->error);
-            }
             $stmt_old_status->bind_param("i", $old_status_id);
             $stmt_old_status->execute();
             $old_status_name = $stmt_old_status->get_result()->fetch_assoc()['status_name'];
 
-
-            // ====== SLOT MANAGEMENT LOGIC ======
+            // Slot Management
             if ($old_status_name === 'Confirmed' && $newStatusName !== 'Confirmed') {
-                $stmt_release = $conn->prepare("
-                    UPDATE appointment_slots
-                    SET used_slots = GREATEST(0, used_slots - 1)
-                    WHERE service_id = ? AND appointment_date = ?
-                ");
-                if (!$stmt_release) {
-                    throw new Exception("Error preparing query (stmt_release): " . $conn->error);
-                }
+                $stmt_release = $conn->prepare("UPDATE appointment_slots SET used_slots = GREATEST(0, used_slots - 1) WHERE service_id = ? AND appointment_date = ?");
                 $stmt_release->bind_param("is", $service_id, $appointment_date);
                 $stmt_release->execute();
             }
             else if ($newStatusName === 'Confirmed' && $old_status_name !== 'Confirmed') {
-                $stmt_count = $conn->prepare("
-                    SELECT COUNT(*) as confirmed_count
-                    FROM appointments
-                    WHERE appointment_date = ?
-                    AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')
-                ");
-                if (!$stmt_count) {
-                    throw new Exception("Error preparing query (stmt_count): " . $conn->error);
-                }
+                $stmt_count = $conn->prepare("SELECT COUNT(*) as confirmed_count FROM appointments WHERE appointment_date = ? AND status_id = (SELECT status_id FROM appointmentstatus WHERE status_name = 'Confirmed')");
                 $stmt_count->bind_param("s", $appointment_date);
                 $stmt_count->execute();
-                $count_result = $stmt_count->get_result()->fetch_assoc();
+                $confirmedCount = $stmt_count->get_result()->fetch_assoc()['confirmed_count'];
                 
-                $confirmedCount = $count_result['confirmed_count'];
-                $maxSlots = 3; 
-                
-                if ($confirmedCount >= $maxSlots) {
-                    echo json_encode([
-                        'success' => false,
-                        'message' => 'No available slots for this date. All 3 slots are full (across all services).'
-                    ]);
+                if ($confirmedCount >= 3) {
+                    echo json_encode(['success' => false, 'message' => 'No available slots for this date (Max 3).']);
                     exit;
                 }
                 
-                $stmt_consume = $conn->prepare("
-                    UPDATE appointment_slots
-                    SET used_slots = used_slots + 1
-                    WHERE service_id = ? AND appointment_date = ?
-                ");
-                if (!$stmt_consume) {
-                    throw new Exception("Error preparing query (stmt_consume): " . $conn->error);
-                }
+                $stmt_consume = $conn->prepare("UPDATE appointment_slots SET used_slots = used_slots + 1 WHERE service_id = ? AND appointment_date = ?");
                 $stmt_consume->bind_param("is", $service_id, $appointment_date);
                 $stmt_consume->execute();
             }
-            // ====== END SLOT MANAGEMENT ======
 
-
-            // ====== UPDATE APPOINTMENT STATUS ======
+            // Update DB
             $stmt_update = $conn->prepare("UPDATE appointments SET status_id = ? WHERE appointment_id = ?");
-            if (!$stmt_update) {
-                throw new Exception("Error preparing query (stmt_update): " . $conn->error);
-            }
             $stmt_update->bind_param("ii", $status_id, $id);
             $stmt_update->execute();
             
             if ($stmt_update->affected_rows > 0) {
-
-                // ==================================================
-                // EMAIL SENDING LOGIC
-                // ==================================================
-                
-                $formatted_date = date('F j, Y', strtotime($appointment_date));
-                $formatted_time = date('g:i A', strtotime($appointment_time));
-                    
-                if ($newStatusName === 'Confirmed' && !empty($client_email)) {
-                    
-                    // QR CODE LOGIC
-                    $qr_data = $id; 
-                    $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($qr_data);
-
+                // Email Sending
+                if (!empty($client_email)) {
+                    $formatted_date = date('F j, Y', strtotime($appointment_date));
+                    $formatted_time = date('g:i A', strtotime($appointment_time));
                     $mail = new PHPMailer(true);
+
                     try {
                         $mail->isSMTP();
                         $mail->Host       = 'smtp.gmail.com';
@@ -210,263 +148,177 @@ if (isset($_POST['action'])) {
                         $mail->Password   = 'rhtstropgtnfgipb'; 
                         $mail->SMTPSecure = 'tls';
                         $mail->Port       = 587;
-
                         $mail->setFrom('no-reply@eyecareclinic.com', 'Eye Master Optical Clinic');
                         $mail->addAddress($client_email, $client_name); 
-
                         $mail->isHTML(true);
-                        $mail->Subject = 'Appointment Confirmed - Eye Master Optical Clinic'; 
-                        
-                        $mail->Body = "
-                        <!DOCTYPE html>
-                        <html lang='en'>
-                        <head>
-                            <meta charset='UTF-8'>
-                            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-                            <title>Appointment Confirmed</title>
-                            <style>
-                                body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f4; margin: 0; padding: 20px; }
-                                .email-container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-                                .header { background-color: #991010; color: #ffffff; padding: 30px 20px; text-align: center; }
-                                .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
-                                .content { padding: 30px; color: #333333; }
-                                .greeting { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
-                                .message { font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-                                .details-box { background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin-bottom: 30px; }
-                                .details-title { font-size: 18px; font-weight: 700; color: #991010; margin-bottom: 20px; border-bottom: 2px solid #eeeeee; padding-bottom: 10px; }
-                                .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 15px; }
-                                .detail-label { font-weight: 600; color: #555555; }
-                                .detail-value { font-weight: 700; color: #222222; }
-                                .qr-section { text-align: center; margin-top: 30px; }
-                                .qr-text { font-size: 14px; color: #666666; margin-bottom: 20px; }
-                                .qr-code { width: 200px; height: 200px; }
-                                .footer { background-color: #f8f9fa; padding: 20px; text-align: center; font-size: 12px; color: #888888; border-top: 1px solid #eeeeee; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class='email-container'>
-                                <div class='header'>
-                                    <h1>Eye Master Optical Clinic</h1>
-                                </div>
-                                <div class='content'>
-                                    <div class='greeting'>Hi {$client_name},</div>
-                                    <div class='message'>
-                                        Good news! Your appointment at <strong>Eye Master Optical Clinic</strong> has been successfully confirmed. We look forward to seeing you.
-                                    </div>
-                                    <div class='details-box'>
-                                        <div class='details-title'>Appointment Details</div>
-                                        <div class='detail-row'><span class='detail-label'>Appointment ID:</span><span class='detail-value'>#{$id}</span></div>
-                                        <div class='detail-row'><span class='detail-label'>Service:</span><span class='detail-value'>{$service_name}</span></div>
-                                        <div class='detail-row'><span class='detail-label'>Date:</span><span class='detail-value'>{$formatted_date}</span></div>
-                                        <div class='detail-row'><span class='detail-label'>Time:</span><span class='detail-value'>{$formatted_time}</span></div>
-                                    </div>
-                                    <div class='qr-section'>
-                                        <p class='qr-text'>Please present this QR code upon your arrival at the clinic. This will be used to verify your schedule.</p>
-                                        <img class='qr-code' src='{$qr_code_url}' alt='Appointment QR Code'>
-                                    </div>
-                                </div>
-                                <div class='footer'>
-                                    <p>&copy; " . date('Y') . " Eye Master Optical Clinic. All rights reserved.</p>
-                                    <p>This is an automated message. Please do not reply.</p>
-                                </div>
-                            </div>
-                        </body>
-                        </html>";
-                        
+
+                        if ($newStatusName === 'Confirmed') {
+                            $qr_code_url = "https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=" . urlencode($id);
+                            $mail->Subject = 'Appointment Confirmed - Eye Master Optical Clinic';
+                            $mail->Body = "<div style='font-family:sans-serif;padding:20px;'><h2 style='color:#16a34a;'>Confirmed!</h2><p>Hi {$client_name}, your appointment on <b>{$formatted_date} at {$formatted_time}</b> is confirmed.</p><p>Please show this QR code at the clinic:</p><img src='{$qr_code_url}' width='150'></div>";
+                        } 
+                        elseif ($newStatusName === 'Cancel') {
+                            $mail->Subject = 'Appointment Cancelled - Eye Master Optical Clinic';
+                            $mail->Body = "<div style='font-family:sans-serif;padding:20px;'><h2 style='color:#dc2626;'>Cancelled</h2><p>Hi {$client_name}, your appointment (ID: #{$id}) has been cancelled.</p><p style='background:#fee2e2;padding:10px;'><b>Reason:</b> " . nl2br(htmlspecialchars($cancelReason)) . "</p></div>";
+                        } 
+                        elseif ($newStatusName === 'Completed') {
+                            $mail->Subject = 'Appointment Completed - Eye Master Optical Clinic';
+                            $mail->Body = "<div style='font-family:sans-serif;padding:20px;'><h2 style='color:#1d4ed8;'>Completed</h2><p>Hi {$client_name}, thanks for visiting us on {$formatted_date}.</p></div>";
+                        }
                         $mail->send();
-                        error_log("Confirmation email SENT to " . $client_email);
-
-                    } catch (Exception $e) {
-                        error_log("Confirmation email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
-                    }
-                } 
-                else if ($newStatusName === 'Cancel' && !empty($client_email)) {
-                    
-                    $mail = new PHPMailer(true);
-                    try {
-                        $mail->isSMTP();
-                        $mail->Host       = 'smtp.gmail.com';
-                        $mail->SMTPAuth   = true;
-                        $mail->Username   = 'rogerjuancito0621@gmail.com';
-                        $mail->Password   = 'rhtstropgtnfgipb'; 
-                        $mail->SMTPSecure = 'tls';
-                        $mail->Port       = 587;
-
-                        $mail->setFrom('no-reply@eyecareclinic.com', 'Eye Master Optical Clinic');
-                        $mail->addAddress($client_email, $client_name); 
-
-                        $mail->isHTML(true);
-                        $mail->Subject = 'Appointment Cancelled - Eye Master Optical Clinic (ID: #' . $id . ')'; 
-                        
-                        $mail->Body    = "
-                        <!DOCTYPE html>
-                        <html lang='en'>
-                        <head><title>Cancelled</title></head>
-                        <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <div style='max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #dc2626;'>
-                                <h2 style='color: #dc2626;'>Appointment Cancelled</h2>
-                                <p>Hi <b>{$client_name}</b>,</p>
-                                <p>We regret to inform you that your appointment (ID: #{$id}) has been cancelled.</p>
-                                <div style='background: #fee2e2; padding: 10px; border-radius: 4px; margin: 10px 0;'>
-                                    <strong>Reason:</strong><br>" . nl2br(htmlspecialchars($cancelReason)) . "
-                                </div>
-                            </div>
-                        </body>
-                        </html>";
-                        
-                        $mail->send();
-                        error_log("Cancellation email SENT to " . $client_email);
-
-                    } catch (Exception $e) {
-                        error_log("Cancellation email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
-                    }
+                    } catch (Exception $e) { error_log("Email failed: " . $mail->ErrorInfo); }
                 }
-                else if ($newStatusName === 'Completed' && !empty($client_email)) {
-                    
-                    $mail = new PHPMailer(true);
-                    try {
-                        $mail->isSMTP();
-                        $mail->Host       = 'smtp.gmail.com';
-                        $mail->SMTPAuth   = true;
-                        $mail->Username   = 'rogerjuancito0621@gmail.com';
-                        $mail->Password   = 'rhtstropgtnfgipb'; 
-                        $mail->SMTPSecure = 'tls';
-                        $mail->Port       = 587;
-
-                        $mail->setFrom('no-reply@eyecareclinic.com', 'Eye Master Optical Clinic');
-                        $mail->addAddress($client_email, $client_name); 
-
-                        $mail->isHTML(true);
-                        $mail->Subject = 'Appointment Completed - Eye Master Optical Clinic (ID: #' . $id . ')'; 
-                        
-                        $mail->Body    = "
-                        <!DOCTYPE html>
-                        <html lang='en'>
-                        <head><title>Completed</title></head>
-                        <body style='font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px;'>
-                            <div style='max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; border-top: 5px solid #16a34a;'>
-                                <h2 style='color: #16a34a;'>Appointment Completed</h2>
-                                <p>Hi <b>{$client_name}</b>,</p>
-                                <p>Your appointment on <b>{$formatted_date}</b> has been successfully completed. Thank you for choosing Eye Master Optical Clinic!</p>
-                            </div>
-                        </body>
-                        </html>";
-                        
-                        $mail->send();
-                        error_log("Completion email SENT to " . $client_email);
-
-                    } catch (Exception $e) {
-                        error_log("Completion email FAILED to " . $client_email . ". Error: " . $mail->ErrorInfo);
-                    }
-                }
-
                 echo json_encode(['success' => true, 'message' => 'Status updated successfully.', 'status' => $newStatusName]);
             } else {
-                echo json_encode(['success' => false, 'message' => 'No rows updated or appointment not found.']);
+                echo json_encode(['success' => false, 'message' => 'No changes made.']);
             }
 
         } catch (Exception $e) {
-            error_log("UpdateStatus fatal error (appointment.php): " . $e->getMessage());
-            $rawMessage = $e->getMessage();
-            $safeMessage = @iconv('UTF-8', 'UTF-8//IGNORE', $rawMessage);
-            
-            if (json_encode(['message' => $safeMessage]) === false) {
-                $finalMessage = 'A critical server error occurred. Please check the PHP error log for details.';
-            } else {
-                $finalMessage = 'Server Error: ' . $safeMessage;
-            }
-            echo json_encode(['success' => false, 'message' => $finalMessage]);
+            error_log("UpdateStatus Error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()]);
         }
         exit;
     }
 
+    // --- VIEW DETAILS ---
     if ($action === 'viewDetails') {
         $id = $_POST['id'] ?? '';
-        if (!$id) {
-            echo json_encode(['success' => false, 'message' => 'Missing ID']);
-            exit;
-        }
+        if (!$id) { echo json_encode(['success' => false, 'message' => 'Missing ID']); exit; }
+        
         try {
-            // Fetch all data (a.*) including names
             $stmt = $conn->prepare("
-                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name
+                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name,
+                       c.birth_date, c.age as client_age, u.full_name as user_full_name
                 FROM appointments a
                 LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
                 LEFT JOIN services ser ON a.service_id = ser.service_id
                 LEFT JOIN staff st ON a.staff_id = st.staff_id
+                LEFT JOIN clients c ON a.client_id = c.client_id
+                LEFT JOIN users u ON c.user_id = u.id
                 WHERE a.appointment_id = ?
             ");
             $stmt->bind_param("i", $id);
             $stmt->execute();
-            $result = $stmt->get_result();
-            $appt = $result->fetch_assoc();
+            $appt = $stmt->get_result()->fetch_assoc();
 
-            if (!$appt) {
-                echo json_encode(['success' => false, 'message' => 'Appointment not found']);
-                exit;
+            if (!$appt) { echo json_encode(['success' => false, 'message' => 'Appointment not found']); exit; }
+            
+            // Decryption Logic
+            if (empty($appt['full_name'])) {
+                $appt['full_name'] = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
+            } else {
+                $appt['full_name'] = decrypt_data($appt['full_name']);
+            }
+
+            if ((empty($appt['age']) || $appt['age'] == 0) && !empty($appt['birth_date'])) {
+                $bd = decrypt_data($appt['birth_date']);
+                if(strtotime($bd)){
+                    $birth = new DateTime($bd);
+                    $today = new DateTime();
+                    $appt['age'] = $today->diff($birth)->y;
+                } else { $appt['age'] = 'N/A'; }
+            } elseif (empty($appt['age']) && !empty($appt['client_age'])) {
+                $appt['age'] = decrypt_data($appt['client_age']);
+            } else {
+                $appt['age'] = decrypt_data($appt['age']);
+            }
+
+            $fields = ['phone_number', 'occupation', 'gender', 'concern', 'symptoms', 'notes', 'wear_glasses', 
+                       'certificate_purpose', 'certificate_other', 'ishihara_test_type', 'color_issues', 'ishihara_reason', 'previous_color_issues'];
+            foreach($fields as $f) $appt[$f] = decrypt_data($appt[$f] ?? '');
+
+            // History
+            $history = [];
+            if (!empty($appt['client_id'])) {
+                $stmt_h = $conn->prepare("SELECT a.appointment_id, a.appointment_date, ser.service_name, s.status_name FROM appointments a LEFT JOIN services ser ON a.service_id = ser.service_id LEFT JOIN appointmentstatus s ON a.status_id = s.status_id WHERE a.client_id = ? AND a.appointment_id != ? ORDER BY a.appointment_date DESC");
+                $stmt_h->bind_param("ii", $appt['client_id'], $id);
+                $stmt_h->execute();
+                $res_h = $stmt_h->get_result();
+                while ($r = $res_h->fetch_assoc()) { $history[] = $r; }
             }
             
-            // =======================================================
-            // 1. DECRYPTION FOR MODAL DATA
-            // =======================================================
-            $appt['full_name']    = decrypt_data($appt['full_name']);
-            $appt['phone_number'] = decrypt_data($appt['phone_number']);
-            $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
-            $appt['concern']      = decrypt_data($appt['concern'] ?? '');
-            $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
-            $appt['notes']        = decrypt_data($appt['notes'] ?? '');
-            
-            echo json_encode(['success' => true, 'data' => $appt]);
+            echo json_encode(['success' => true, 'data' => $appt, 'history' => $history]);
 
         } catch (Exception $e) {
-            error_log("ViewDetails error (appointment.php): " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Database error fetching details.']);
+            error_log("ViewDetails Error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Database error.']);
         }
         exit;
     }
 }
 
 // =======================================================
-// 4. FILTERS, PAGINATION, STATS, and PAGE DATA
+// 4. DATA PROCESSING (CORRECTED Search + Pagination)
 // =======================================================
+// --- AUTO-CANCEL LOGIC (INSERT THIS BLOCK) ---
+try {
+    $currentDate = date('Y-m-d');
 
-// --- Filters ---
+    // 1. Release Slots for 'Confirmed' appointments that are now past due
+    // We must do this BEFORE changing the status to Cancel, so we know which slots to free up.
+    $sql_release_slots = "
+        UPDATE appointment_slots s
+        JOIN appointments a ON s.service_id = a.service_id AND s.appointment_date = a.appointment_date
+        JOIN appointmentstatus st ON a.status_id = st.status_id
+        SET s.used_slots = GREATEST(0, s.used_slots - 1)
+        WHERE a.appointment_date < ? 
+        AND st.status_name = 'Confirmed'
+    ";
+    $stmt_release = $conn->prepare($sql_release_slots);
+    $stmt_release->bind_param("s", $currentDate);
+    $stmt_release->execute();
+    $stmt_release->close();
+
+    // 2. Update Status to 'Cancel' for all Pending/Confirmed appointments in the past
+    // Note: You can change 'Cancel' to 'Missed' if you have a specific status for that.
+    $sql_auto_cancel = "
+        UPDATE appointments a
+        JOIN appointmentstatus s_current ON a.status_id = s_current.status_id
+        CROSS JOIN appointmentstatus s_target 
+        SET a.status_id = s_target.status_id
+        WHERE a.appointment_date < ? 
+        AND s_current.status_name IN ('Pending', 'Confirmed')
+        AND s_target.status_name = 'Cancel'
+    ";
+    $stmt_cancel = $conn->prepare($sql_auto_cancel);
+    $stmt_cancel->bind_param("s", $currentDate);
+    $stmt_cancel->execute();
+    $stmt_cancel->close();
+
+} catch (Exception $e) {
+    // Silently fail or log error so it doesn't break the page load
+    error_log("Auto-Cancel Error: " . $e->getMessage());
+}
+// --- END AUTO-CANCEL LOGIC ---
+// Filters
 $statusFilter = $_GET['status'] ?? 'Pending'; 
 $dateFilter = $_GET['date'] ?? 'All'; 
 $search = trim($_GET['search'] ?? '');
 $viewFilter = $_GET['view'] ?? 'all';
-
-// Determine if search is active
 $isSearchActive = !empty($search);
 
-// --- PAGINATION SETTINGS ---
-$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 10; 
-$offset = ($page - 1) * $limit;
 
-
-// --- Base Query Logic ---
+// SQL Construction
 $selectClauses = [
     "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", "a.appointment_time",
-    "s.status_name", "ser.service_name"
+    "s.status_name", "ser.service_name", "u.full_name as user_full_name"
 ];
 $whereClauses = ["1=1"];
 $params = [];
 $paramTypes = "";
 
-// --- Dynamic Columns ---
+// Dynamic Columns
 $extraHeaders = '';
 $extraColumnNames = [];
-
 if ($viewFilter === 'eye_exam') {
-    $selectClauses[] = "a.wear_glasses";
-    $selectClauses[] = "a.concern";
+    $selectClauses[] = "a.wear_glasses"; $selectClauses[] = "a.concern";
     $extraHeaders = "<th>Wear Glasses?</th><th>Concern</th>";
     $extraColumnNames = ['wear_glasses', 'concern'];
-    $whereClauses[] = "a.service_id = 11";
+    $whereClauses[] = "a.service_id = 11"; 
 } elseif ($viewFilter === 'ishihara') {
-    $selectClauses[] = "a.ishihara_test_type";
-    $selectClauses[] = "a.color_issues";
+    $selectClauses[] = "a.ishihara_test_type"; $selectClauses[] = "a.color_issues";
     $extraHeaders = "<th>Test Type</th><th>Color Issues?</th>";
     $extraColumnNames = ['ishihara_test_type', 'color_issues'];
     $whereClauses[] = "a.service_id = 12";
@@ -477,188 +329,95 @@ if ($viewFilter === 'eye_exam') {
     $whereClauses[] = "a.service_id = 13";
 }
 
-// --- Apply Standard Filters (Status/Date) ---
 if ($statusFilter !== 'All') {
     $whereClauses[] = "s.status_name = ?";
     $params[] = $statusFilter;
     $paramTypes .= "s";
 }
-
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $whereClauses[] = "DATE(a.appointment_date) = ?";
     $params[] = $dateFilter;
     $paramTypes .= "s";
 }
 
-// =======================================================
-// STRICT SEARCH LOGIC WITH DECRYPTION (PHP-SIDE FILTERING)
-// =======================================================
-$matched_ids = []; 
-$stats_counters = ['Pending' => 0, 'Confirmed' => 0, 'Cancel' => 0, 'Completed' => 0];
+// *** QUERY ALL MATCHING ROWS (NO LIMIT) ***
+$query = "
+    SELECT " . implode(", ", $selectClauses) . "
+    FROM appointments a
+    LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+    LEFT JOIN services ser ON a.service_id = ser.service_id
+    LEFT JOIN clients c ON a.client_id = c.client_id
+    LEFT JOIN users u ON c.user_id = u.id
+    WHERE " . implode(" AND ", $whereClauses) . "
+    ORDER BY a.appointment_date DESC
+";
 
-if ($isSearchActive) {
-    // 1. Fetch ALL candidates matching the Status/Date filters
-    $sqlSearch = "SELECT a.appointment_id, a.full_name, a.client_id, s.status_name, ser.service_name 
-                  FROM appointments a 
-                  LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                  LEFT JOIN services ser ON a.service_id = ser.service_id
-                  WHERE " . implode(" AND ", $whereClauses);
-                  
-    $stmtS = $conn->prepare($sqlSearch);
-    if (!empty($params)) {
-        $stmtS->bind_param($paramTypes, ...$params);
-    }
-    $stmtS->execute();
-    $resS = $stmtS->get_result();
-    
-    $search_lower = strtolower($search);
-    
-    // 2. Loop, Decrypt, and Filter
-    while ($row = $resS->fetch_assoc()) {
-        $decrypted_name = decrypt_data($row['full_name']);
-        
-        // Check for match
-        if (strpos(strtolower($row['client_id']), $search_lower) !== false ||
-            strpos(strtolower($decrypted_name), $search_lower) !== false ||
-            strpos(strtolower($row['service_name']), $search_lower) !== false ||
-            strpos(strtolower($row['status_name']), $search_lower) !== false) {
-            
-            $matched_ids[] = $row['appointment_id'];
-            
-            // Count stats for matched items on the fly
-            $statName = $row['status_name'];
-            if(isset($stats_counters[$statName])) {
-                $stats_counters[$statName]++;
-            }
-        }
-    }
-    
-    // 3. Update Global Counters for the stats bar
-    $pendingCount   = $stats_counters['Pending'];
-    $acceptedCount  = $stats_counters['Confirmed'];
-    $cancelledCount = $stats_counters['Cancel'];
-    $completedCount = $stats_counters['Completed'];
-    
-    // 4. Update Main Query Logic
-    if (empty($matched_ids)) {
-        // Search found nothing
-        $totalRows = 0;
-        $totalPages = 1;
-        $appointments = [];
-    } else {
-        $totalRows = count($matched_ids);
-        $totalPages = ceil($totalRows / $limit);
-        
-        // Slice IDs for current page
-        $page_ids = array_slice($matched_ids, $offset, $limit);
-        $ids_str = implode(',', $page_ids);
-        
-        // Fetch full details for the specific IDs on this page
-        $query = "SELECT " . implode(", ", $selectClauses) . "
-                  FROM appointments a
-                  LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                  LEFT JOIN services ser ON a.service_id = ser.service_id
-                  WHERE a.appointment_id IN ($ids_str)
-                  ORDER BY a.appointment_date DESC";
-                  
-        $appointments = $conn->query($query)->fetch_all(MYSQLI_ASSOC);
-    }
+$filteredList = [];
+// Stats counters (based on search)
+$stats = ['Pending'=>0, 'Confirmed'=>0, 'Cancel'=>0, 'Completed'=>0, 'Missed'=>0];
 
-} else {
-    // =======================================================
-    // STANDARD SQL QUERY (NO SEARCH)
-    // =======================================================
-    
-    // Count Query
-    $whereSQL = implode(" AND ", $whereClauses);
-    $countQuery = "SELECT COUNT(*) as total 
-                   FROM appointments a
-                   LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-                   LEFT JOIN services ser ON a.service_id = ser.service_id
-                   WHERE $whereSQL";
-    try {
-        $stmtCount = $conn->prepare($countQuery);
-        if (!empty($params)) {
-            $stmtCount->bind_param($paramTypes, ...$params);
-        }
-        $stmtCount->execute();
-        $totalResult = $stmtCount->get_result()->fetch_assoc();
-        $totalRows = $totalResult['total'];
-        $totalPages = ceil($totalRows / $limit);
-    } catch (Exception $e) {
-        $totalRows = 0;
-        $totalPages = 1;
-    }
-
-    // Main Data Fetch
-    $query = "SELECT " . implode(", ", $selectClauses) . "
-              FROM appointments a
-              LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-              LEFT JOIN services ser ON a.service_id = ser.service_id
-              WHERE " . implode(" AND ", $whereClauses) . "
-              ORDER BY a.appointment_date DESC
-              LIMIT ? OFFSET ?";
-    
-    $paramsForMain = $params;
-    $paramsForMain[] = $limit;
-    $paramsForMain[] = $offset;
-    $paramTypesForMain = $paramTypes . "ii";
-    
-    try {
-        $stmt = $conn->prepare($query);
-        if (!empty($paramsForMain)) {
-            $stmt->bind_param($paramTypesForMain, ...$paramsForMain);
-        }
-        $stmt->execute();
-        $appointments = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-    } catch (Exception $e) {
-         error_log("Fetch Appointments error: " . $e->getMessage());
-         $appointments = [];
-         $pageError = "Error loading appointments.";
-    }
-
-    // Stats Query (Standard SQL)
-    $countSql = "SELECT
-        COALESCE(SUM(CASE WHEN s.status_name = 'Pending' THEN 1 ELSE 0 END), 0)   AS pending,
-        COALESCE(SUM(CASE WHEN s.status_name = 'Confirmed' THEN 1 ELSE 0 END), 0) AS accepted,
-        COALESCE(SUM(CASE WHEN s.status_name = 'Cancel' THEN 1 ELSE 0 END), 0) AS cancelled,
-        COALESCE(SUM(CASE WHEN s.status_name = 'Completed' THEN 1 ELSE 0 END), 0) AS completed
-        FROM appointments a
-        LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
-        LEFT JOIN services ser ON a.service_id = ser.service_id
-        WHERE " . implode(" AND ", $whereClauses);
-    
-    try {
-        $stmt_stats = $conn->prepare($countSql);
-        if (!empty($params)) {
-            $stmt_stats->bind_param($paramTypes, ...$params); 
-        }
-        $stmt_stats->execute();
-        $stats = $stmt_stats->get_result()->fetch_assoc();
-        $pendingCount   = (int)($stats['pending']   ?? 0);
-        $acceptedCount  = (int)($stats['accepted']  ?? 0);
-        $cancelledCount = (int)($stats['cancelled'] ?? 0);
-        $completedCount = (int)($stats['completed'] ?? 0);
-    } catch (Exception $e) {
-        $pendingCount=0; $acceptedCount=0; $cancelledCount=0; $completedCount=0;
-    }
-}
-
-
-// Highlight dates logic
-$highlight_dates = [];
 try {
-    $hl_result = $conn->query("SELECT DISTINCT appointment_date FROM appointments");
-    if ($hl_result) {
-        while ($row = $hl_result->fetch_assoc()) {
-            $highlight_dates[] = $row['appointment_date'];
+    $stmt = $conn->prepare($query);
+    if (!empty($params)) {
+        $stmt->bind_param($paramTypes, ...$params);
+    }
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    while ($row = $result->fetch_assoc()) {
+        // 1. Decrypt Name (with Fallback)
+        if (empty($row['full_name'])) {
+            $row['decrypted_name'] = !empty($row['user_full_name']) ? decrypt_data($row['user_full_name']) : 'N/A';
+        } else {
+            $row['decrypted_name'] = decrypt_data($row['full_name']);
+        }
+
+        // 2. Search Filter (In PHP)
+        $match = true;
+        if ($isSearchActive) {
+            $sTerm = strtolower($search);
+            $match = false;
+            // Search in: Name, ID, Service, Status
+            if (strpos(strtolower($row['decrypted_name']), $sTerm) !== false) $match = true;
+            if (strpos(strtolower((string)$row['appointment_id']), $sTerm) !== false) $match = true;
+            if (strpos(strtolower($row['client_id'] ?? ''), $sTerm) !== false) $match = true;
+            if (strpos(strtolower($row['service_name'] ?? ''), $sTerm) !== false) $match = true;
+            if (strpos(strtolower($row['status_name'] ?? ''), $sTerm) !== false) $match = true;
+        }
+
+        // 3. Add to List & Update Stats
+        if ($match) {
+            $filteredList[] = $row;
+            // Update stats
+            $st = $row['status_name'] ?? '';
+            if (isset($stats[$st])) { $stats[$st]++; }
         }
     }
 } catch (Exception $e) {
-    error_log("Fetch highlight dates error: " . $e->getMessage());
+    error_log("Fetch Error: " . $e->getMessage());
 }
-$js_highlight_dates = json_encode($highlight_dates);
 
+// 4. Paginate the filtered list
+$totalRows = count($filteredList);
+$totalPages = ceil($totalRows / $limit);
+if ($totalPages < 1) $totalPages = 1;
+if ($page > $totalPages) $page = $totalPages;
+$offset = ($page - 1) * $limit;
+
+$appointments = array_slice($filteredList, $offset, $limit);
+
+// Extract Counts variables for HTML
+$pendingCount = $stats['Pending'];
+$acceptedCount = $stats['Confirmed'];
+$cancelledCount = $stats['Cancel'];
+$completedCount = $stats['Completed'];
+$missedCount = $stats['Missed'];
+
+// Highlight Dates
+$highlight_dates = [];
+$hl_res = $conn->query("SELECT DISTINCT appointment_date FROM appointments");
+if($hl_res) while ($r = $hl_res->fetch_assoc()) { $highlight_dates[] = $r['appointment_date']; }
+$js_highlight_dates = json_encode($highlight_dates);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -993,29 +752,33 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         </thead>
         <tbody>
             <?php if (!empty($appointments)): $i=$offset; foreach ($appointments as $appt): $i++;
-            // Decrypt the name for display and initial generation
-            $decrypted_full_name = decrypt_data($appt['full_name']);
-            
-            $nameParts = explode(' ', trim($decrypted_full_name));
-            $initials = count($nameParts) > 1 
-                ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1)) 
-                : strtoupper(substr($decrypted_full_name, 0, 1));
-            ?>
-            <tr data-id="<?= $appt['appointment_id'] ?>" data-status="<?= strtolower($appt['status_name']) ?>">
-                <td><?= $i ?></td>
-                
-                <td>
-                <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="width:36px;height:36px;border-radius:50%;background:#991010;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0; font-size:12px;">
-                    <?= htmlspecialchars($initials) ?>
-                    </div>
-                    <div>
-                    <div style="font-weight:700;color:#223;font-size:13px;">
-                        <?= htmlspecialchars($decrypted_full_name) ?>
-                    </div>
-                    </div>
-                </div>
-                </td>
+    // FIX: Get display name with fallback
+    if (empty($appt['full_name']) || $appt['full_name'] === '') {
+        $displayName = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
+    } else {
+        $displayName = decrypt_data($appt['full_name']);
+    }
+    
+    $nameParts = explode(' ', trim($displayName));
+    $initials = count($nameParts) > 1 
+        ? strtoupper(substr($nameParts[0], 0, 1) . substr(end($nameParts), 0, 1)) 
+        : strtoupper(substr($displayName, 0, 1));
+?>
+<tr data-id="<?= $appt['appointment_id'] ?>" data-status="<?= strtolower($appt['status_name']) ?>">
+    <td><?= $i ?></td>
+    
+    <td>
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#991010;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800; flex-shrink: 0; font-size:12px;">
+        <?= htmlspecialchars($initials) ?>
+        </div>
+        <div>
+        <div style="font-weight:700;color:#223;font-size:13px;">
+            <?= htmlspecialchars($displayName) ?>
+        </div>
+        </div>
+    </div>
+    </td>
 
                 <td><span style="background:#f0f4f8;padding:4px 8px;border-radius:6px;font-weight:600;font-size:12px;"><?= htmlspecialchars($appt['client_id'] ?? 'N/A') ?></span></td>
                 
@@ -1043,21 +806,18 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <?php if ($isPast): ?>
                         <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
                     
-<?php elseif ($stat === 'pending'): ?>
-    <button class="action-btn accept" onclick="updateStatus(<?= $appt['appointment_id'] ?>,'Confirmed')">Confirm</button>
-    <button class="action-btn cancel" onclick="promptForCancelReason(<?= $appt['appointment_id'] ?>)">Cancel</button>
-    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
-
-<?php elseif ($stat === 'confirmed'): ?>
-    <button class="action-btn edit" onclick="openEditModal(<?= $appt['appointment_id'] ?>)">Edit</button>
-    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
-
-<?php elseif ($stat === 'completed' || $stat === 'cancel'): ?>
-    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
-
-<?php else: ?>
-    <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
-<?php endif; ?>
+                    <?php elseif ($stat === 'pending'): ?>
+                        <button class="action-btn accept" onclick="updateStatus(<?= $appt['appointment_id'] ?>,'Confirmed')">Confirm</button>
+                        <button class="action-btn cancel" onclick="promptForCancelReason(<?= $appt['appointment_id'] ?>)">Cancel</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                    
+                    <?php elseif ($stat === 'confirmed' || $stat === 'completed' || $stat === 'cancel'): ?>
+                        <button class="action-btn edit" onclick="openEditModal(<?= $appt['appointment_id'] ?>)">Edit</button>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                    
+                    <?php else: ?>
+                        <button class="action-btn view" onclick="viewDetails(<?= $appt['appointment_id'] ?>)">View</button>
+                    <?php endif; ?>
                 </div>
                 </td>
             </tr>
@@ -1462,73 +1222,34 @@ overlay.setAttribute('aria-hidden','true');
 }
 
 function openEditModal(id) {
-    currentEditId = id;
-    showActionLoader('Loading editor...');
-    
-    fetch('appointment.php', {
-        method: 'POST',
-        headers: {'Content-Type':'application/x-www-form-urlencoded'},
-        body: new URLSearchParams({action:'viewDetails', id:id})
-    })
-    .then(res => res.json())
-    .then(payload => {
-        hideActionLoader();
-        if (!payload || !payload.success) { 
-            showToast(payload?.message || 'Failed to load details', 'error'); 
-            return; 
-        }
-        
-        const d = payload.data;
-        document.getElementById('editId').textContent = '#' + d.appointment_id;
-        document.getElementById('editPatient').textContent = d.full_name;
-        
-        const stat = (d.status_name || '').toLowerCase();
-        document.getElementById('editCurrentStatus').innerHTML = `<span class="badge ${stat}">${d.status_name}</span>`;
-        document.getElementById('editModal').dataset.oldStatus = d.status_name;
+currentEditId = id;
+showActionLoader('Loading editor...');
+fetch('appointment.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: new URLSearchParams({action:'viewDetails', id:id})
+})
+.then(res => res.json())
+.then(payload => {
+    hideActionLoader();
+    if (!payload || !payload.success) { showToast(payload?.message || 'Failed to load details', 'error'); return; }
+    const d = payload.data;
+    document.getElementById('editId').textContent = '#' + d.appointment_id;
+    document.getElementById('editPatient').textContent = d.full_name;
+    const stat = (d.status_name || '').toLowerCase();
+    document.getElementById('editCurrentStatus').innerHTML = `<span class="badge ${stat}">${d.status_name}</span>`;
+    document.getElementById('editStatusSelect').value = d.status_name;
+    document.getElementById('editModal').dataset.oldStatus = d.status_name;
 
-        // ===============================================
-        // DYNAMICALLY CREATE OPTIONS BASED ON STATUS
-        // ===============================================
-        const selectBox = document.getElementById('editStatusSelect');
-        selectBox.innerHTML = ''; // Clear existing options
-
-        let options = [];
-
-        if (d.status_name === 'Confirmed') {
-            // IF STATUS IS CONFIRMED: Show only Cancel (Completed REMOVED)
-            options = [
-                { val: 'Confirmed', text: 'Confirmed' }, // Keep current so it doesn't change automatically
-                { val: 'Cancel', text: 'Cancel' }
-            ];
-        } else {
-            // Fallback for other statuses
-            options = [
-                { val: 'Pending', text: 'Pending' },
-                { val: 'Confirmed', text: 'Confirmed' },
-                { val: 'Cancel', text: 'Cancel' },
-                { val: 'Completed', text: 'Completed' }
-            ];
-        }
-
-        // Add options to the dropdown
-        options.forEach(opt => {
-            const el = document.createElement('option');
-            el.value = opt.val;
-            el.textContent = opt.text;
-            if (opt.val === d.status_name) el.selected = true;
-            selectBox.appendChild(el);
-        });
-        // ===============================================
-
-        const overlay = document.getElementById('editModal');
-        overlay.classList.add('show');
-        overlay.setAttribute('aria-hidden','false');
-    })
-    .catch(err => { 
-        hideActionLoader();
-        console.error(err); 
-        showToast('Network error.', 'error'); 
-    });
+    const overlay = document.getElementById('editModal');
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden','false');
+})
+.catch(err => { 
+    hideActionLoader();
+    console.error(err); 
+    showToast('Network error.', 'error'); 
+});
 }
 
 function closeEditModal() {

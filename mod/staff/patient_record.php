@@ -1,6 +1,13 @@
 <?php
+// =======================================================
+// UPDATED: Patient Records (FIXED DECRYPTION ISSUES)
+// =======================================================
+
 // Start session
 session_start();
+header("Cache-Control: no-cache, must-revalidate");
+header("Pragma: no-cache");
+
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../../config/encryption_util.php';
 
@@ -31,13 +38,17 @@ if (isset($_POST['action'])) {
             exit;
         }
         try {
-            // 1. Fetch the requested appointment basic details
+            // Join tables to get complete patient info
             $stmt = $conn->prepare("
-                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name
+                SELECT a.*, s.status_name, ser.service_name, st.full_name as staff_name,
+                       c.birth_date, c.age as client_age, c.gender as client_gender,
+                       u.full_name as user_full_name, u.phone_number as user_phone_number
                 FROM appointments a
                 LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
                 LEFT JOIN services ser ON a.service_id = ser.service_id
                 LEFT JOIN staff st ON a.staff_id = st.staff_id
+                LEFT JOIN clients c ON a.client_id = c.client_id
+                LEFT JOIN users u ON c.user_id = u.id
                 WHERE a.appointment_id = ?
             ");
             $stmt->bind_param("i", $id);
@@ -50,41 +61,72 @@ if (isset($_POST['action'])) {
                 exit;
             }
 
-            // ---------------------------------------------------------
-            // FIX: ONLY OVERWRITE IF LATEST DATA IS NOT EMPTY
-            // ---------------------------------------------------------
-            if (!empty($appt['client_id'])) {
-                $client_id = $appt['client_id'];
-                
-                $stmt_latest = $conn->prepare("
-                    SELECT * FROM appointments 
-                    WHERE client_id = ? 
-                    ORDER BY appointment_date DESC, appointment_id DESC 
-                    LIMIT 1
-                ");
-                $stmt_latest->bind_param("i", $client_id);
-                $stmt_latest->execute();
-                $res_latest = $stmt_latest->get_result();
-                $latest_data = $res_latest->fetch_assoc();
-
-                if ($latest_data) {
-                    // Check !empty to ensure we don't erase valid data with blank data
-                    if (!empty($latest_data['full_name']))    $appt['full_name']    = $latest_data['full_name'];
-                    if (!empty($latest_data['age']))          $appt['age']          = $latest_data['age'];
-                    if (!empty($latest_data['phone_number'])) $appt['phone_number'] = $latest_data['phone_number'];
-                    if (!empty($latest_data['occupation']))   $appt['occupation']   = $latest_data['occupation'];
-                }
+            // ========================================================================
+            // CRITICAL FIX: DECRYPTION LOGIC
+            // ========================================================================
+            
+            // 1. FULL NAME (Fix: Decrypt the fallback value too!)
+            if (empty($appt['full_name'])) {
+                $appt['full_name'] = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
+            } else {
+                $appt['full_name'] = decrypt_data($appt['full_name']);
             }
 
-            // Decrypt Data
-            $appt['full_name']    = decrypt_data($appt['full_name']);
-            $appt['phone_number'] = decrypt_data($appt['phone_number']);
+            // 2. PHONE NUMBER (Fix: Decrypt the fallback value too!)
+            if (empty($appt['phone_number']) && !empty($appt['user_phone_number'])) {
+                $appt['phone_number'] = decrypt_data($appt['user_phone_number']);
+            } else {
+                $appt['phone_number'] = decrypt_data($appt['phone_number'] ?? '');
+            }
+
+            // 3. AGE (Decrypt everything before calculating)
+            $birth_date_val = decrypt_data($appt['birth_date'] ?? ''); 
+            $client_age_val = decrypt_data($appt['client_age'] ?? '');
+            $appt_age_val   = decrypt_data($appt['age'] ?? ''); 
+
+            if ((empty($appt_age_val) || $appt_age_val == '0') && !empty($birth_date_val)) {
+                try {
+                    $birth = new DateTime($birth_date_val);
+                    $today = new DateTime();
+                    $appt['age'] = $today->diff($birth)->y;
+                } catch (Exception $e) {
+                    $appt['age'] = 'N/A';
+                }
+            } elseif ((empty($appt_age_val) || $appt_age_val == '0') && !empty($client_age_val)) {
+                $appt['age'] = $client_age_val;
+            } else {
+                $appt['age'] = $appt_age_val;
+            }
+
+            // 4. GENDER
+            $client_gender_val = decrypt_data($appt['client_gender'] ?? '');
+            $appt_gender_val   = decrypt_data($appt['gender'] ?? '');
+
+            if (empty($appt_gender_val) && !empty($client_gender_val)) {
+                $appt['gender'] = $client_gender_val;
+            } else {
+                $appt['gender'] = $appt_gender_val;
+            }
+
+            // 5. DECRYPT REMAINING FIELDS
             $appt['occupation']   = decrypt_data($appt['occupation'] ?? '');
-            
             $appt['concern']      = decrypt_data($appt['concern'] ?? '');
             $appt['symptoms']     = decrypt_data($appt['symptoms'] ?? '');
             $appt['notes']        = decrypt_data($appt['notes'] ?? '');
+            $appt['wear_glasses'] = decrypt_data($appt['wear_glasses'] ?? '');
+            $appt['suffix']       = decrypt_data($appt['suffix'] ?? '');
+            
+            // Medical / Ishihara fields
+            $appt['certificate_purpose'] = decrypt_data($appt['certificate_purpose'] ?? '');
+            $appt['certificate_other']   = decrypt_data($appt['certificate_other'] ?? '');
+            $appt['ishihara_test_type']  = decrypt_data($appt['ishihara_test_type'] ?? '');
+            $appt['color_issues']        = decrypt_data($appt['color_issues'] ?? '');
+            $appt['ishihara_reason']     = decrypt_data($appt['ishihara_reason'] ?? '');
             $appt['previous_color_issues'] = decrypt_data($appt['previous_color_issues'] ?? '');
+            $appt['ishihara_notes']      = decrypt_data($appt['ishihara_notes'] ?? '');
+
+            // Clean up temporary fields
+            unset($appt['birth_date'], $appt['client_age'], $appt['client_gender'], $appt['user_full_name'], $appt['user_phone_number']);
             
             // HISTORY FETCHING
             $history = [];
@@ -132,7 +174,7 @@ $viewFilter = $_GET['view'] ?? 'all';
 // --- Base Query ---
 $selectClauses = [
     "a.appointment_id", "a.client_id", "a.full_name", "a.appointment_date", 
-    "s.status_name" 
+    "s.status_name", "u.full_name as user_full_name" // Added user_full_name for fallback in table
 ];
 $whereClauses = ["1=1"];
 $params = [];
@@ -162,6 +204,8 @@ $raw_query = "
     ) latest ON a.appointment_id = latest.max_id
     LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
     LEFT JOIN services ser ON a.service_id = ser.service_id
+    LEFT JOIN clients c ON a.client_id = c.client_id
+    LEFT JOIN users u ON c.user_id = u.id
     WHERE " . implode(" AND ", $whereClauses) . "
     ORDER BY a.appointment_date DESC
 ";
@@ -176,10 +220,17 @@ try {
     $result = $stmt->get_result();
     
     while ($row = $result->fetch_assoc()) {
-        $decrypted_name = decrypt_data($row['full_name']);
+        // FIX: Decrypt name logic for the TABLE list as well
+        if (empty($row['full_name'])) {
+            $decrypted_name = !empty($row['user_full_name']) ? decrypt_data($row['user_full_name']) : 'N/A';
+        } else {
+            $decrypted_name = decrypt_data($row['full_name']);
+        }
+        
         $client_id_str = (string)$row['client_id'];
         
         if ($search !== '') {
+            // Case-insensitive search on decrypted name or ID
             if (stripos($decrypted_name, $search) !== false || stripos($client_id_str, $search) !== false) {
                 $row['full_name_decrypted'] = $decrypted_name; 
                 $all_appointments[] = $row;
@@ -707,12 +758,14 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     }
 
     function closeHistoryDetailModal() {
+        
         const overlay = document.getElementById('historyDetailOverlay');
         overlay.classList.remove('show');
         overlay.setAttribute('aria-hidden','true');
     }
 
     function viewDetails(id) {
+        
         showActionLoader('Fetching details...'); 
         fetch('patient_record.php', { 
             method: 'POST',

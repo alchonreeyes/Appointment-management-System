@@ -1,24 +1,32 @@
 <?php
-session_start();
 // Location: EYE MASTER/staff/staff_dashboard_export.php
 
-// 1. Enable Error Reporting
+// 1. Session Check
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// 2. Enable Error Reporting (For Debugging)
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// 2. Load Dashboard Logic
+// =======================================================================
+// [FIX] PREVENT DOUBLE SESSION START IN INCLUDED FILE
+// =======================================================================
+define('SKIP_SESSION_START', true);
+
+// 3. Load Dashboard Logic (This provides $statFilter)
 ob_start(); 
 require_once __DIR__ . '/staff_dashboard-action.php';
 
 // =======================================================================
-// [FIX] SMART FILE LOCATOR PARA SA ENCRYPTION
+// [FIX] SMART FILE LOCATOR FOR ENCRYPTION
 // =======================================================================
-// Susubukan nitong hanapin ang encryption_util.php sa iba't ibang folder path
 $possible_paths = [
-    __DIR__ . '/../../config/encryption_util.php',        // Standard structure
-    __DIR__ . '/../config/encryption_util.php',           // 1 level up
-    $_SERVER['DOCUMENT_ROOT'] . '/config/encryption_util.php', // Root
-    $_SERVER['DOCUMENT_ROOT'] . '/capstone/config/encryption_util.php' // Localhost typical
+    __DIR__ . '/../../config/encryption_util.php',
+    __DIR__ . '/../config/encryption_util.php', 
+    $_SERVER['DOCUMENT_ROOT'] . '/config/encryption_util.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/capstone/config/encryption_util.php'
 ];
 
 $encryption_loaded = false;
@@ -32,18 +40,23 @@ foreach ($possible_paths as $path) {
 ob_end_clean(); 
 // =======================================================================
 
-// 3. Fetch Data (Full Query)
+// 4. Fetch Data (Full Query WITH FALLBACK JOINS)
+// Added JOINs to clients/users to get user_full_name if appointment name is empty
 $sql_full_list = "SELECT a.appointment_id, a.full_name, ser.service_name, 
                           a.appointment_date, a.appointment_time, s.status_name,
-                          a.phone_number, a.gender, a.age
+                          a.phone_number, a.gender, a.age,
+                          u.full_name as user_full_name
                   FROM appointments a
                   LEFT JOIN services ser ON a.service_id = ser.service_id
                   LEFT JOIN appointmentstatus s ON a.status_id = s.status_id
+                  LEFT JOIN clients c ON a.client_id = c.client_id
+                  LEFT JOIN users u ON c.user_id = u.id
                   WHERE {$statFilter} 
                   ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+
 $result_full = $conn->query($sql_full_list);
 
-// 4. Headers for Excel
+// 5. Headers for Excel
 $filename = "EyeMaster_Dashboard_Report_" . date('Y-m-d_His') . ".xls";
 header("Content-Type: application/vnd.ms-excel");
 header("Content-Disposition: attachment; filename=\"$filename\"");
@@ -55,7 +68,6 @@ header("Expires: 0");
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <style>
-        /* IBINALIK ANG ORIGINAL STYLING */
         body { font-family: Arial, sans-serif; font-size: 11pt; }
         table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
         td, th { border: 1px solid #000000; padding: 6px; vertical-align: middle; }
@@ -178,23 +190,38 @@ header("Expires: 0");
     if ($result_full && $result_full->num_rows > 0):
         while ($row = $result_full->fetch_assoc()):
             
-            // --- LOGIC: DECRYPT DATA IF FUNCTION EXISTS ---
-            $d_name  = $row['full_name'];
-            $d_phone = $row['phone_number'];
-            $d_gender= $row['gender'];
-            $d_age   = $row['age'];
+            // --- LOGIC: SELECT NAME SOURCE ---
+            if (empty($row['full_name'])) {
+                $raw_name = !empty($row['user_full_name']) ? $row['user_full_name'] : '';
+            } else {
+                $raw_name = $row['full_name'];
+            }
+
+            // Defaults
+            $d_name   = $raw_name; // Default if encryption fails
+            $d_phone  = $row['phone_number'];
+            $d_gender = $row['gender'];
+            $d_age    = $row['age'];
 
             if ($encryption_loaded && function_exists('decrypt_data')) {
                 // Attempt Decryption
-                $try_name  = decrypt_data($row['full_name']);
-                $try_phone = decrypt_data($row['phone_number']);
+                $try_name   = decrypt_data($raw_name);
+                $try_phone  = decrypt_data($row['phone_number']);
+                $try_gender = decrypt_data($row['gender']);
+                $try_age    = decrypt_data($row['age']);
 
-                // If decryption returns a valid string (not empty), use it
-                if (!empty($try_name))  $d_name  = $try_name;
-                if (!empty($try_phone)) $d_phone = $try_phone;
+                // If decryption returns valid string, use it
+                if (!empty($try_name))   $d_name   = $try_name;
+                if (!empty($try_phone))  $d_phone  = $try_phone;
+                if (!empty($try_gender)) $d_gender = $try_gender;
+                if (!empty($try_age))    $d_age    = $try_age;
             } else {
-                // If file not found, lagyan ng warning ang Excel para alam mo
-                if(!$encryption_loaded) $d_name = "[ERROR: Config File Missing] " . $row['full_name'];
+                if(!$encryption_loaded) $d_name = "[CONFIG ERROR] " . $d_name;
+            }
+            
+            // Name Fallback Final Check (Visual)
+            if (empty($d_name) || $d_name == 'N/A') {
+                $d_name = "Walk-in / Unknown";
             }
             // ----------------------------------------------
 
