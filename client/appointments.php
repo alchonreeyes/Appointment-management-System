@@ -121,7 +121,7 @@ function sendAppointmentEmail($recipient_email, $recipient_name, $subject, $appo
             </html>
             ";
         } else {
-            // Update email (existing code)
+            // Update email
             $mail->Body = "
             <!DOCTYPE html>
             <html>
@@ -232,6 +232,26 @@ if (isset($_POST['update_appointment'])) {
         $update_client = $pdo->prepare("UPDATE clients SET age = ?, gender = ?, occupation = ? WHERE user_id = ?");
         $update_client->execute([$age, $gender, $encrypted_occupation, $user_id]);
 
+        // Save Custom Fields
+        if (isset($_POST['custom_fields']) && is_array($_POST['custom_fields'])) {
+            foreach ($_POST['custom_fields'] as $field_id => $response_val) {
+                if (is_array($response_val)) {
+                    $response_val = implode(', ', $response_val);
+                }
+                // Check if response exists
+                $chk = $pdo->prepare("SELECT id FROM appointment_custom_responses WHERE appointment_id = ? AND field_id = ?");
+                $chk->execute([$appointment_id, $field_id]);
+                
+                if ($chk->rowCount() > 0) {
+                    $upd = $pdo->prepare("UPDATE appointment_custom_responses SET response_value = ? WHERE appointment_id = ? AND field_id = ?");
+                    $upd->execute([$response_val, $appointment_id, $field_id]);
+                } else {
+                    $ins = $pdo->prepare("INSERT INTO appointment_custom_responses (appointment_id, field_id, response_value) VALUES (?, ?, ?)");
+                    $ins->execute([$appointment_id, $field_id, $response_val]);
+                }
+            }
+        }
+
         // Get appointment details for email
         $appt_stmt = $pdo->prepare("
             SELECT a.*, s.service_name, u.email 
@@ -270,14 +290,13 @@ if (isset($_POST['update_appointment'])) {
 }
 
 // ==========================================
-// B. HANDLE CANCELLATION (FIXED)
+// B. HANDLE CANCELLATION
 // ==========================================
 if (isset($_POST['cancel_appointment'])) {
     $appointment_id = $_POST['appointment_id'];
     $cancellation_reason = trim($_POST['cancellation_reason']);
     
     try {
-        // Get appointment details BEFORE canceling
         $appt_query = "
             SELECT a.*, s.service_name, u.email, u.full_name
             FROM appointments a
@@ -290,19 +309,12 @@ if (isset($_POST['cancel_appointment'])) {
         $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($appt_data) {
-            // Update to cancelled status
             $cancel_stmt = $pdo->prepare("UPDATE appointments SET status_id = 5, reason_cancel = ? WHERE appointment_id = ?");
-            
             if ($cancel_stmt->execute([$cancellation_reason, $appointment_id])) {
-                
-                // Decrypt email and name for sending
                 $user_email = decrypt_data($appt_data['email']);
                 $user_full_name = decrypt_data($appt_data['full_name']);
-                
-                // Add reason to appointment data for email
                 $appt_data['reason_cancel'] = $cancellation_reason;
                 
-                // Send cancellation email
                 sendAppointmentEmail(
                     $user_email,
                     $user_full_name,
@@ -331,56 +343,48 @@ if (isset($_POST['cancel_appointment'])) {
 // ==========================================
 $filter = $_GET['filter'] ?? 'recent';
 
-$sql = "SELECT a.*, s.status_name, srv.service_name 
+$sql = "SELECT a.*, s.status_name, srv.service_name,
+               u.full_name as profile_name, u.phone_number as profile_phone,
+               c.age as profile_age, c.gender as profile_gender, c.occupation as profile_occupation
         FROM appointments a 
         JOIN appointmentstatus s ON a.status_id = s.status_id
         JOIN services srv ON a.service_id = srv.service_id
+        JOIN clients c ON a.client_id = c.client_id
+        JOIN users u ON c.user_id = u.id
         WHERE a.client_id = ?";
 
-// Add status filter
 switch($filter) {
-    case 'pending':
-        $sql .= " AND a.status_id = 1";
-        break;
-    case 'completed':
-        $sql .= " AND a.status_id = 3";
-        break;
-    case 'cancelled':
-        $sql .= " AND a.status_id = 5";
-        break;
-    case 'confirmed':
-        $sql .= " AND a.status_id = 2";
-        break;
+    case 'pending': $sql .= " AND a.status_id = 1"; break;
+    case 'completed': $sql .= " AND a.status_id = 3"; break;
+    case 'cancelled': $sql .= " AND a.status_id = 5"; break;
+    case 'confirmed': $sql .= " AND a.status_id = 2"; break;
 }
 
-// Add sorting
 switch($filter) {
-    case 'recent':
-        $sql .= " ORDER BY a.appointment_date DESC, a.appointment_time DESC";
-        break;
-    case 'oldest':
-        $sql .= " ORDER BY a.appointment_date ASC, a.appointment_time ASC";
-        break;
-    case 'alphabetical_asc':
-        $sql .= " ORDER BY srv.service_name ASC";
-        break;
-    case 'alphabetical_desc':
-        $sql .= " ORDER BY srv.service_name DESC";
-        break;
-    default:
-        $sql .= " ORDER BY a.appointment_date DESC";
+    case 'recent': $sql .= " ORDER BY a.appointment_date DESC, a.appointment_time DESC"; break;
+    case 'oldest': $sql .= " ORDER BY a.appointment_date ASC, a.appointment_time ASC"; break;
+    case 'alphabetical_asc': $sql .= " ORDER BY srv.service_name ASC"; break;
+    case 'alphabetical_desc': $sql .= " ORDER BY srv.service_name DESC"; break;
+    default: $sql .= " ORDER BY a.appointment_date DESC";
 }
 
 $stmt = $pdo->prepare($sql);
 $stmt->execute([$client_id]);
 $result_encrypted = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Decrypt all appointments
 $result = [];
 foreach ($result_encrypted as $row) {
-    $row['full_name'] = decrypt_data($row['full_name']);
-    $row['phone_number'] = decrypt_data($row['phone_number']);
-    $row['occupation'] = decrypt_data($row['occupation']);
+    $profile_name = !empty($row['profile_name']) ? decrypt_data($row['profile_name']) : '';
+    $row['full_name'] = !empty($row['full_name']) ? decrypt_data($row['full_name']) : $profile_name;
+
+    $profile_phone = !empty($row['profile_phone']) ? decrypt_data($row['profile_phone']) : '';
+    $row['phone_number'] = !empty($row['phone_number']) ? decrypt_data($row['phone_number']) : $profile_phone;
+
+    $profile_occ = !empty($row['profile_occupation']) ? decrypt_data($row['profile_occupation']) : '';
+    $row['occupation'] = !empty($row['occupation']) ? decrypt_data($row['occupation']) : $profile_occ;
+    
+    $row['age'] = (!empty($row['age']) && $row['age'] > 0) ? $row['age'] : $row['profile_age'];
+    $row['gender'] = !empty($row['gender']) ? $row['gender'] : $row['profile_gender'];
     
     if (!empty($row['symptoms'])) {
         $row['symptoms'] = decrypt_data($row['symptoms']);
@@ -393,7 +397,6 @@ foreach ($result_encrypted as $row) {
 }
 ?>
 
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -401,6 +404,32 @@ foreach ($result_encrypted as $row) {
     <title>My Appointments | Eye Master</title>
     <link rel="stylesheet" href="../assets/ojo-style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* =========================================
+           FIX FOR FULL-WIDTH NAVBAR & FOOTER
+           ========================================= */
+        html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100%;
+            overflow-x: hidden; /* Prevents horizontal scrolling */
+        }
+
+        /* Ensures the booking form stays centered and doesn't stick to the edges */
+        .form-container {
+            margin: 50px auto !important;
+            width: 95% !important;
+            max-width: 1000px !important; 
+            min-height: calc(100vh - 350px); /* Pushes the footer to the bottom */
+        }
+
+        /* Force footer to occupy full screen */
+        footer {
+            width: 100% !important;
+            display: block !important;
+            margin: 0 !important;
+        }
+    </style>
     <style>
         /* Filter Dropdown Styles */
         .filter-container {
@@ -434,10 +463,6 @@ foreach ($result_encrypted as $row) {
             background: #003a8c;
         }
 
-        .filter-btn i {
-            font-size: 14px;
-        }
-
         .filter-menu {
             display: none;
             position: absolute;
@@ -451,18 +476,14 @@ foreach ($result_encrypted as $row) {
             z-index: 1000;
         }
 
-        .filter-menu.show {
-            display: block;
-        }
+        .filter-menu.show { display: block; }
 
         .filter-section {
             padding: 8px 0;
             border-bottom: 1px solid #f3f4f6;
         }
 
-        .filter-section:last-child {
-            border-bottom: none;
-        }
+        .filter-section:last-child { border-bottom: none; }
 
         .filter-section-title {
             padding: 8px 16px;
@@ -484,25 +505,10 @@ foreach ($result_encrypted as $row) {
             font-size: 14px;
         }
 
-        .filter-option:hover {
-            background: #f9fafb;
-        }
-
-        .filter-option.active {
-            background: #eff6ff;
-            color: #004aad;
-            font-weight: 600;
-        }
-
-        .filter-option i {
-            width: 16px;
-            font-size: 12px;
-            color: #9ca3af;
-        }
-
-        .filter-option.active i {
-            color: #004aad;
-        }
+        .filter-option:hover { background: #f9fafb; }
+        .filter-option.active { background: #eff6ff; color: #004aad; font-weight: 600; }
+        .filter-option i { width: 16px; font-size: 12px; color: #9ca3af; }
+        .filter-option.active i { color: #004aad; }
 
         /* Notification Styles */
         .notification-toast {
@@ -519,61 +525,71 @@ foreach ($result_encrypted as $row) {
             animation: slideIn 0.3s ease-out;
         }
 
-        .notification-toast.show {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .notification-toast.success {
-            border-left: 4px solid #10b981;
-        }
-
-        .notification-toast.error {
-            border-left: 4px solid #ef4444;
-        }
+        .notification-toast.show { display: flex; align-items: center; gap: 12px; }
+        .notification-toast.success { border-left: 4px solid #10b981; }
+        .notification-toast.error { border-left: 4px solid #ef4444; }
 
         @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-        .reference-id-box {
-    margin-top: 20px;
-    padding: 12px 16px;
-    background: #f9fafb;
-    border-left: 3px solid #004aad;
-    border-radius: 4px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
 
-.reference-id-box .label {
-    font-size: 11px;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    font-weight: 600;
-}
+        /* Edit Modal Grid Styles & Responsiveness */
+        .ojo-form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .ojo-group.full-width { grid-column: 1 / -1; }
+        
+        .ojo-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        
+        /* NOTE: Excluded radio and checkbox to prevent them from stretching 100% */
+        .ojo-group input[type="text"], 
+        .ojo-group input[type="number"], 
+        .ojo-group select, 
+        .ojo-group textarea {
+            width: 100%;
+            padding: 8px 0;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            outline: none;
+            font-size: 0.95rem;
+            color: #333;
+            background: transparent;
+            transition: border-color 0.3s;
+        }
+        
+        .ojo-group input:focus, .ojo-group select:focus, .ojo-group textarea:focus {
+            border-bottom-color: #004aad;
+        }
 
-.reference-id-box .value {
-    font-size: 14px;
-    color: #004aad;
-    font-weight: 700;
-    font-family: 'Courier New', monospace;
-}
+        @media (max-width: 768px) {
+            .ojo-form-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            .ojo-modal {
+                padding: 25px 20px;
+                width: 95%;
+                margin: 10px auto;
+            }
+            .ojo-modal h2 { font-size: 1.4rem; }
+        }
     </style>
 </head>
 <body>
     <?php include '../includes/navbar.php' ?>
 
-    <!-- Notification Toast -->
     <div id="notificationToast" class="notification-toast">
         <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px;"></i>
         <span id="toastMessage"></span>
@@ -600,7 +616,6 @@ foreach ($result_encrypted as $row) {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                     <h3 style="margin: 0;">My Appointments</h3>
                     
-                    <!-- Filter Dropdown -->
                     <div class="filter-container">
                         <div class="filter-dropdown">
                             <button class="filter-btn" onclick="toggleFilter()">
@@ -682,10 +697,10 @@ foreach ($result_encrypted as $row) {
                                         </div>
                                     </td>
                                     <td data-label="Actions">
-                                        <a onclick='openViewModal(<?= json_encode($row) ?>)' class="action-link link-view">View</a>
+                                       <a onclick='openViewModal(<?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)' class="action-link link-view">View</a>
                                         
                                         <?php if($isPending): ?>
-                                            <a onclick='openEditModal(<?= json_encode($row) ?>)' class="action-link link-edit">Edit</a>
+                                            <a onclick='openEditModal(<?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)' class="action-link link-edit">Edit</a>
                                             <a onclick="openCancelModal(<?= $row['appointment_id'] ?>)" class="action-link link-cancel">Cancel</a>
                                         <?php endif; ?>
                                     </td>
@@ -705,7 +720,6 @@ foreach ($result_encrypted as $row) {
         </div>
     </div>
 
-    <!-- View Modal -->
     <div id="viewModal" class="ojo-modal-overlay">
         <div class="ojo-modal">
             <button class="close-modal" onclick="closeModal('viewModal')">&times;</button>
@@ -714,11 +728,15 @@ foreach ($result_encrypted as $row) {
         </div>
     </div>
 
-    <!-- Edit Modal -->
     <div id="editModal" class="ojo-modal-overlay">
         <div class="ojo-modal">
             <button class="close-modal" onclick="closeModal('editModal')">&times;</button>
             <h2>Edit Appointment</h2>
+            
+            <div style="background:#f1f5f9; border-radius:8px; padding:10px 14px; margin-bottom:15px; font-size:14px;">
+                🏥 <strong>Service:</strong> <span id="edit_service_name" style="color:#991010; font-weight:700;"></span>
+            </div>
+            
             <form method="POST" action="">
                 <input type="hidden" name="appointment_id" id="edit_id">
                 <input type="hidden" name="update_appointment" value="1">
@@ -736,20 +754,23 @@ foreach ($result_encrypted as $row) {
                 <div class="ojo-form-grid">
                     <div class="ojo-group"><label>Wears Glasses?</label><select name="wear_glasses" id="edit_glasses"><option value="Yes">Yes</option><option value="No">No</option></select></div>
                     <div class="ojo-group"><label>Symptoms</label><input type="text" name="symptoms" id="edit_symptoms"></div>
+                    <div class="ojo-group full-width"><label>Concern / Notes</label><input type="text" name="concern" id="edit_concern"></div>
                 </div>
-                <div class="ojo-group" style="margin-top: 15px;"><label>Concern / Notes</label><input type="text" name="concern" id="edit_concern"></div>
 
-                <button type="submit" class="btn-ojo" style="width:100%;">Save Changes</button>
+                <div class="ojo-group" id="edit_products_group" style="margin-top: 15px; display: none;">
+                    <label>Selected Frames (Read-Only)</label>
+                    <textarea id="edit_selected_products" readonly rows="2" style="width:100%; padding:8px; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:6px; resize:none;"></textarea>
+                    <small style="color: #64748b; font-size: 11px;">(Frames are selected during booking. Please contact the clinic for changes.)</small>
+                </div>
+
+                <div id="customFieldsEdit"></div>
+
+                <button type="submit" class="btn-ojo" style="width:100%; margin-top: 15px;">Save Changes</button>
             </form>
-            <!-- ✅ Styled Reference ID Box -->
-<div class="reference-id-box">
-    <span class="label">Reference ID</span>
-    <span class="value">${data.appointment_group_id || 'N/A'}</span>
-</div>
+
         </div>
     </div>
 
-    <!-- Cancel Modal -->
     <div id="cancelModal" class="ojo-modal-overlay">
         <div class="ojo-modal" style="max-width: 450px;">
             <button class="close-modal" onclick="closeModal('cancelModal')">&times;</button>
@@ -761,13 +782,12 @@ foreach ($result_encrypted as $row) {
                     <label>Reason for Cancellation</label>
                     <input type="text" name="cancellation_reason" required placeholder="e.g. Schedule conflict">
                 </div>
-                <button type="submit" class="btn-ojo" style="background-color: #e74c3c; width: 100%;">Confirm Cancellation</button>
+                <button type="submit" class="btn-ojo" style="background-color: #e74c3c; width: 100%; margin-top: 15px;">Confirm Cancellation</button>
             </form>
         </div>
     </div>
 
     <script>
-        // Show notification on page load
         <?php if (isset($_SESSION['success'])): ?>
             showToast('<?= addslashes($_SESSION['success']) ?>', 'success');
             <?php unset($_SESSION['success']); ?>
@@ -793,79 +813,153 @@ foreach ($result_encrypted as $row) {
                 icon.className = 'fas fa-exclamation-circle';
                 icon.style.color = '#ef4444';
             }
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-            }, 3000);
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
         }
 
         function toggleFilter() {
-            const menu = document.getElementById('filterMenu');
-            menu.classList.toggle('show');
+            document.getElementById('filterMenu').classList.toggle('show');
         }
 
-        // Close filter when clicking outside
         window.onclick = function(e) {
-            const filterMenu = document.getElementById('filterMenu');
-            const filterBtn = document.querySelector('.filter-btn');
-            
             if (!e.target.closest('.filter-dropdown')) {
-                filterMenu.classList.remove('show');
+                document.getElementById('filterMenu').classList.remove('show');
             }
-            
             if (e.target.classList.contains('ojo-modal-overlay')) {
                 e.target.style.display = 'none';
             }
         }
 
-        function closeModal(id) { 
-            document.getElementById(id).style.display = 'none'; 
-        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
         
-       function openViewModal(data) {
-    let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-    
-    let content = `
-        <div class="detail-list">
-            <div class="detail-item"><label>Date</label> <span>${formattedDate}</span></div>
-            <div class="detail-item"><label>Time</label> <span>${data.appointment_time}</span></div>
-            <div class="detail-item"><label>Service</label> <span>${data.service_name}</span></div>
-            <div class="detail-item"><label>Status</label> <span>${data.status_name}</span></div>
-            <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
-            <div class="detail-item full-width"><label>Concern</label><span>${data.concern || 'None'}</span></div>
-            ${data.reason_cancel ? `<div class="detail-item full-width" style="color:red"><label>Cancellation Reason</label><span>${data.reason_cancel}</span></div>` : ''}
-        </div>
-        
-        <!-- ✅ Add Reference ID at bottom right -->
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e5e7eb; text-align: right;">
-            <span style="font-size: 11px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px;">Reference ID</span><br>
-            <span style="font-size: 13px; color: #374151; font-weight: 600; font-family: monospace;">${data.appointment_group_id || 'N/A'}</span>
-        </div>
-    `;
-    document.getElementById('viewContent').innerHTML = content;
-    document.getElementById('viewModal').style.display = 'flex';
-}
+        function openViewModal(data) {
+            let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+            
+            document.getElementById('viewContent').innerHTML = `
+                <div class="detail-list">
+                    <div class="detail-item"><label>Date</label><span>${formattedDate}</span></div>
+                    <div class="detail-item"><label>Time</label><span>${data.appointment_time}</span></div>
+                    <div class="detail-item"><label>Service</label><span>${data.service_name}</span></div>
+                    <div class="detail-item"><label>Status</label><span>${data.status_name}</span></div>
+                    <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
+                    <div class="detail-item full-width"><label>Concern</label><span>${data.concern || 'None'}</span></div>
+                    
+                    ${data.selected_products && data.selected_products !== 'None' ? `
+                    <div class="detail-item full-width" style="background:#f0fdf4; padding:10px; border-radius:6px; border:1px solid #bbf7d0;">
+                        <label style="color:#166534; margin-bottom: 5px;">Selected Frames to Try</label>
+                        <span style="color:#15803d; font-weight:600; display:block;">👓 ${data.selected_products}</span>
+                    </div>` : ''}
+                    
+                    ${data.reason_cancel ? `<div class="detail-item full-width" style="color:red"><label>Cancellation Reason</label><span>${data.reason_cancel}</span></div>` : ''}
+                </div>
+                <div id="customFieldsView"><em style="color:#94a3b8; font-size:13px;">Loading additional info...</em></div>
+                <div style="margin-top:15px; padding-top:12px; border-top:1px solid #e5e7eb; text-align:right;">
+                    <span style="font-size:11px; color:#9ca3af; text-transform:uppercase;">Reference ID</span><br>
+                    <span style="font-size:13px; color:#374151; font-weight:600; font-family:monospace;">${data.appointment_group_id || 'N/A'}</span>
+                </div>`;
+            document.getElementById('viewModal').style.display = 'flex';
 
-        function openEditModal(data) {
-            document.getElementById('edit_id').value = data.appointment_id;
-            document.getElementById('edit_fullname').value = data.full_name || '';
-            document.getElementById('edit_phone').value = data.phone_number || '';
-            document.getElementById('edit_age').value = data.age || '';
-            document.getElementById('edit_gender').value = data.gender || 'Male';
-            document.getElementById('edit_occupation').value = data.occupation || '';
-            document.getElementById('edit_glasses').value = data.wear_glasses || 'No';
-            document.getElementById('edit_symptoms').value = data.symptoms || '';
-            document.getElementById('edit_concern').value = data.concern || '';
-            document.getElementById('editModal').style.display = 'flex';
+            fetch(`get_appointment_details.php?id=${data.appointment_id}`)
+                .then(r => r.json())
+                .then(res => {
+                    const el = document.getElementById('customFieldsView');
+                    if (!res.success || !res.custom_fields || res.custom_fields.length === 0) { el.innerHTML = ''; return; }
+                    const steps = {};
+                    res.custom_fields.forEach(f => { if (!steps[f.form_step]) steps[f.form_step] = []; steps[f.form_step].push(f); });
+                    let html = '<hr style="margin:15px 0; border-color:#e5e7eb;">';
+                    Object.keys(steps).forEach(step => {
+                        html += `<p style="font-weight:700;color:#991010;font-size:12px;text-transform:uppercase;margin:10px 0 6px;">${step}</p>`;
+                        steps[step].forEach(f => {
+                            html += `<div class="detail-item full-width"><label>${f.field_label}</label><span>${f.response_value || '<em style="color:#94a3b8">No answer</em>'}</span></div>`;
+                        });
+                    });
+                    el.innerHTML = html;
+                })
+                .catch(() => { document.getElementById('customFieldsView').innerHTML = ''; });
         }
 
         function openCancelModal(id) {
             document.getElementById('cancel_id').value = id;
             document.getElementById('cancelModal').style.display = 'flex';
         }
+
+        function openEditModal(data) {
+            document.getElementById('edit_id').value           = data.appointment_id;
+            document.getElementById('edit_service_name').textContent = data.service_name || '';
+            document.getElementById('edit_fullname').value     = data.full_name || '';
+            document.getElementById('edit_phone').value        = data.phone_number || '';
+            document.getElementById('edit_age').value          = data.age || '';
+            document.getElementById('edit_gender').value       = data.gender || 'Male';
+            document.getElementById('edit_occupation').value   = data.occupation || '';
+            document.getElementById('edit_glasses').value      = data.wear_glasses || 'No';
+            document.getElementById('edit_symptoms').value     = data.symptoms || '';
+            document.getElementById('edit_concern').value      = data.concern || '';
+
+            const productsGroup = document.getElementById('edit_products_group');
+            const productsInput = document.getElementById('edit_selected_products');
+            
+            if (data.selected_products && data.selected_products !== 'None') {
+                productsGroup.style.display = 'block';
+                productsInput.value = data.selected_products;
+            } else {
+                productsGroup.style.display = 'none';
+                productsInput.value = '';
+            }
+
+            const existingCustom = document.getElementById('customFieldsEdit');
+            if (existingCustom) existingCustom.innerHTML = '<em style="color:#94a3b8;font-size:13px;">Loading...</em>';
+
+            document.getElementById('editModal').style.display = 'flex';
+
+            fetch(`get_appointment_details.php?id=${data.appointment_id}`)
+                .then(r => r.json())
+                .then(res => {
+                    const el = document.getElementById('customFieldsEdit');
+                    if (!el || !res.success || !res.custom_fields || res.custom_fields.length === 0) { if(el) el.innerHTML=''; return; }
+                    
+                    const steps = {};
+                    res.custom_fields.forEach(f => { if (!steps[f.form_step]) steps[f.form_step] = []; steps[f.form_step].push(f); });
+                    
+                    let html = '';
+                    Object.keys(steps).forEach(step => {
+                        html += `<h4 style="margin:20px 0 10px;font-size:0.9rem;text-transform:uppercase;color:#991010;">${step}</h4>`;
+                        html += `<div class="ojo-form-grid">`; // Wraps custom fields in grid so it breaks nicely on phones
+                        
+                        steps[step].forEach(f => {
+                            const val = f.response_value || '';
+                            const req = f.is_required ? 'required' : '';
+                            const widthClass = (f.field_type === 'textarea') ? 'full-width' : 'full-width'; // Force full width for better mobile padding
+                            
+                            html += `<div class="ojo-group ${widthClass}" style="margin-bottom:10px;"><label>${f.field_label}${f.is_required ? ' *':''}</label>`;
+                            
+                            if (f.field_type === 'textarea') {
+                                html += `<textarea name="custom_fields[${f.field_id}]" ${req} rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">${val}</textarea>`;
+                            } else if (f.field_type === 'radio') {
+                                // Fixes Radio button stretching out horizontally
+                                html += `<div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 5px;">`;
+                                f.field_options.split(',').forEach(opt => {
+                                    opt = opt.trim();
+                                    html += `<label style="display:flex;align-items:center;gap:6px;font-weight:400;font-size:14px;color:#333;cursor:pointer;text-transform:none;">
+                                        <input type="radio" name="custom_fields[${f.field_id}]" value="${opt}" ${val===opt?'checked':''} ${req} style="width:auto; margin:0; box-shadow:none; border:none; padding:0;"> 
+                                        <span>${opt}</span></label>`;
+                                });
+                                html += `</div>`;
+                            } else if (f.field_type === 'select') {
+                                html += `<select name="custom_fields[${f.field_id}]" ${req} style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;background:transparent;">`;
+                                f.field_options.split(',').forEach(opt => { opt=opt.trim(); html+=`<option value="${opt}" ${val===opt?'selected':''}>${opt}</option>`; });
+                                html += `</select>`;
+                            } else {
+                                html += `<input type="text" name="custom_fields[${f.field_id}]" value="${val}" ${req} style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;background:transparent;">`;
+                            }
+                            html += `</div>`;
+                        });
+                        html += `</div>`;
+                    });
+                    el.innerHTML = html;
+                })
+                .catch(() => { const el=document.getElementById('customFieldsEdit'); if(el) el.innerHTML=''; });
+        }
     </script>
     
     <?php include '../includes/footer.php' ?>
-</
->
+</body>
 </html>

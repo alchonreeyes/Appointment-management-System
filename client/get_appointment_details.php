@@ -1,23 +1,30 @@
 <?php
 session_start();
+// REPLACE top of get_appointment_details.php:
 require './config/db_mysqli.php';
 require './config/encryption_util.php';
 
-header('Content-Type: application/json');
+// WITH:
+require_once '../config/db.php';
+require_once '../config/encryption_util.php';
+$db = new Database();
+$conn_pdo = $db->getConnection();
 
-if (!isset($_SESSION['user_id'])) {
+
+header('Content-Type: application/json');
+// WITH:
+if (!isset($_SESSION['client_id'])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit();
 }
+$user_id = $_SESSION['client_id'];
 
 $appointment_id = $_GET['id'] ?? 0;
-$user_id = $_SESSION['user_id'];
 
 // Fetch client_id
-$stmt_client = $conn->prepare("SELECT client_id FROM clients WHERE user_id = ?");
-$stmt_client->bind_param("i", $user_id);
-$stmt_client->execute();
-$client = $stmt_client->get_result()->fetch_assoc();
+$stmt_client = $conn_pdo->prepare("SELECT client_id FROM clients WHERE user_id = ?");
+$stmt_client->execute([$user_id]);
+$client = $stmt_client->fetch(PDO::FETCH_ASSOC);
 
 if (!$client) {
     echo json_encode(['success' => false, 'message' => 'Client not found']);
@@ -37,26 +44,35 @@ $query = "
     LEFT JOIN staff st ON a.staff_id = st.staff_id
     WHERE a.appointment_id = ? AND a.client_id = ?
 ";
+// WITH:
+$stmt = $conn_pdo->prepare($query);
+$stmt->execute([$appointment_id, $client['client_id']]);
+$appointment = $stmt->fetch(PDO::FETCH_ASSOC);
 
-$stmt = $conn->prepare($query);
-$stmt->bind_param("ii", $appointment_id, $client['client_id']);
-$stmt->execute();
-$result = $stmt->get_result();
-$appointment = $result->fetch_assoc();
 if ($appointment) {
-    // Decrypt sensitive fields before sending to frontend
-    $appointment['full_name'] = decrypt_data($appointment['full_name']);
+    $appointment['full_name']    = decrypt_data($appointment['full_name']);
     $appointment['phone_number'] = decrypt_data($appointment['phone_number']);
-    $appointment['occupation'] = decrypt_data($appointment['occupation']);
-    
-    if (!empty($appointment['symptoms'])) {
-        $appointment['symptoms'] = decrypt_data($appointment['symptoms']);
-    }
-    if (!empty($appointment['concern'])) {
-        $appointment['concern'] = decrypt_data($appointment['concern']);
-    }
-    
-    echo json_encode(['success' => true, 'appointment' => $appointment]);
+    $appointment['occupation']   = decrypt_data($appointment['occupation']);
+    if (!empty($appointment['symptoms'])) $appointment['symptoms'] = decrypt_data($appointment['symptoms']);
+    if (!empty($appointment['concern']))  $appointment['concern']  = decrypt_data($appointment['concern']);
+
+    // ✅ FETCH CUSTOM FIELD ANSWERS FOR THIS APPOINTMENT
+    $service_id = $appointment['service_id'];
+    $cf_stmt = $conn_pdo->prepare("
+    SELECT ff.field_id, ff.field_label, ff.field_type, ff.field_options,
+           ff.is_required, ff.form_step,
+           acr.response_value
+    FROM service_forms sf
+    JOIN form_fields ff ON ff.form_id = sf.form_id
+    LEFT JOIN appointment_custom_responses acr
+           ON acr.field_id = ff.field_id AND acr.appointment_id = ?
+    WHERE sf.service_id = ?
+    ORDER BY ff.form_step, ff.field_order ASC
+");
+$cf_stmt->execute([$appointment_id, $service_id]);
+$custom_fields = $cf_stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    echo json_encode(['success' => true, 'appointment' => $appointment, 'custom_fields' => $custom_fields]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Appointment not found']);
 }

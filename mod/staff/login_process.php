@@ -1,6 +1,6 @@
 <?php
 // FILE: staff/login_process.php
-session_name("ADMIN_SESSION"); // Pangalanan ang session
+session_name("staff_SESSION"); // Pangalanan ang session
 session_start();
 
 include '../config/db.php'; // Siguraduhin tama ang path sa database connection
@@ -13,7 +13,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $db = new Database();
     $conn = $db->getConnection();
 
-    // 1. Check Admin Credentials
+    // 1. Check staff Credentials
     $stmt = $conn->prepare("SELECT * FROM staff WHERE email = :email LIMIT 1");
     $stmt->execute([':email' => $email]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);

@@ -1,675 +1,949 @@
-    <?php
-    session_start();
+<?php
+session_start();
 
-    header("Cache-Control: no-cache, no-store, must-revalidate"); // HTTP 1.1
-    header("Pragma: no-cache"); // HTTP 1.0
-    header("Expires: 0"); // Proxies
+// 1. DATABASE & MAIL SETUP
+require_once '../config/db.php'; 
+require_once '../vendor/autoload.php';
+require_once '../config/encryption_util.php'; 
 
-    // 1. UNAHIN ANG MGA REQUIRES (Dapat nandito ang mga "tools" mo)
-    require_once '../config/db.php';
-    require_once '../config/encryption_util.php'; // <--- SIGURADUHIN NA TAMA ANG PATH NA ITO
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
-    // 2. CHECK SESSION
-    if (!isset($_SESSION['client_id'])) {
-        header("Location: login.php");
-        exit;
-    }
+// 2. SECURITY CHECK
+if (!isset($_SESSION['client_id'])) {
+    header("Location: ../public/login.php");
+    exit();
+}
 
+$user_id = $_SESSION['client_id'];
+$db = new Database();
+$pdo = $db->getConnection();
 
-    $db = new Database();
-    $pdo = $db->getConnection();
+// 3. GET CLIENT DETAILS
+$stmt = $pdo->prepare("SELECT client_id FROM clients WHERE user_id = ?");
+$stmt->execute([$user_id]);
+$client = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    // 3. FETCH DATA
-    $client_profile_data = [];
-    if (isset($_SESSION['client_id'])) {
-        $stmt = $pdo->prepare("
-            SELECT u.full_name, u.phone_number, c.age, c.gender, c.occupation, c.suffix
-            FROM users u
-            JOIN clients c ON u.id = c.user_id
-            WHERE u.id = ?
-        ");
-        $stmt->execute([$_SESSION['client_id']]);
-        $encrypted_row = $stmt->fetch(PDO::FETCH_ASSOC);
+if (!$client) {
+    session_destroy();
+    header("Location: ../public/login.php");
+    exit();
+}
+$client_id = $client['client_id'];
 
-        if ($encrypted_row) {
-            // I-copy lahat ng data (kasama ang plain text fields gaya ng age)
-            $client_profile_data = $encrypted_row;
-
-            // Debug container
-            $decrypt_debug = [
-                'function_exists' => function_exists('decrypt_data'),
-                'raw' => [
-                    'full_name' => $encrypted_row['full_name'] ?? null,
-                    'phone_number' => $encrypted_row['phone_number'] ?? null,
-                    'occupation' => $encrypted_row['occupation'] ?? null,
-                ],
-                'results' => [],
-                'errors' => [],
-            ];
-
-            // I-decrypt ang mga kailangang i-decrypt with try/catch so we can log issues
-            if (function_exists('decrypt_data')) {
-                try {
-                    $client_profile_data['full_name'] = decrypt_data($encrypted_row['full_name']);
-                    $decrypt_debug['results']['full_name'] = $client_profile_data['full_name'];
-                } catch (Throwable $e) {
-                    $decrypt_debug['errors']['full_name'] = $e->getMessage();
-                    // fallback to raw value to avoid breaking UI
-                    $client_profile_data['full_name'] = $encrypted_row['full_name'];
-                }
-
-                try {
-                    $client_profile_data['phone_number'] = decrypt_data($encrypted_row['phone_number']);
-                    $decrypt_debug['results']['phone_number'] = $client_profile_data['phone_number'];
-                } catch (Throwable $e) {
-                    $decrypt_debug['errors']['phone_number'] = $e->getMessage();
-                    $client_profile_data['phone_number'] = $encrypted_row['phone_number'];
-                }
-
-                try {
-                    $client_profile_data['occupation'] = decrypt_data($encrypted_row['occupation']);
-                    $decrypt_debug['results']['occupation'] = $client_profile_data['occupation'];
-                } catch (Throwable $e) {
-                    $decrypt_debug['errors']['occupation'] = $e->getMessage();
-                    $client_profile_data['occupation'] = $encrypted_row['occupation'];
-                }
-            } else {
-                $decrypt_debug['errors']['decrypt_function'] = 'decrypt_data() not found';
-            }
-
-            // Send debug to browser console (safe JSON encode)
-            echo '<script>console.log("decrypt debug: ", ' . json_encode($decrypt_debug, JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) . ');</script>';
-
-            // Also log to PHP error log in case browser console isn't available
-            error_log('decrypt debug: ' . json_encode($decrypt_debug));
-        }
-    }
-
-    // 4. FETCH PRODUCTS (Dito na ang ibang query mo...)
-    $productStmt = $pdo->prepare("SELECT product_id, product_name, brand, image_path, frame_type FROM products ORDER BY brand ASC, product_name ASC");
-    $productStmt->execute();
-    $available_products = $productStmt->fetchAll(PDO::FETCH_ASSOC);
-
-    ?>
-
-
-
-
-
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Book Appointment</title>
-        <link rel="stylesheet" href="../assets//appointment.css">
-        <link rel="stylesheet" href="../assets/popup.css">
-    <!-- ADD THESE TWO LINES -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-        <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    </head>
-    <style>
-        
-    </style>
-    <body>
+// ==========================================
+// HELPER FUNCTION: Send Email Notification
+// ==========================================
+function sendAppointmentEmail($recipient_email, $recipient_name, $subject, $appointment_data, $email_type = 'update') {
+    $mail = new PHPMailer(true);
     
-    <?php include '../includes/navbar.php'; ?>
-    <div class="form-container">
-        <div class="header">
-                <h4>eye glasses exam form</h4>
-                <h4>Request an Appointment</h4>
-            </div>
-            <div class="gray-line"></div>
-        <div class="appointment-container">
-        <div class="progress-container">
-    <div class="progress-step active">1</div>
-    <div class="progress-line"></div>
-    <div class="progress-step">2</div>
-    <div class="progress-line"></div>
-    <div class="progress-step">3</div>
-    <div class="progress-line"></div>
-    <div class="progress-step">4</div>
-        <div class="progress-line"></div>
-    <div class="progress-step">5</div>
-    </div>
+    try {
+        // SMTP Configuration
+        $mail->isSMTP();
+        $mail->Host = 'smtp.gmail.com';
+        $mail->SMTPAuth = true;
+        $mail->Username = 'alchonreyez@gmail.com'; // Your Gmail
+        $mail->Password = 'fdykvxfeofyyufjh';         // Your App Password
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port = 587;
 
-            <form action="../actions/appointment-action.php" method="POST" id="appointmentForm">       
-                <!-- Step 1: Patient Info -->
-                <input type="hidden" name="service_id" value="11">
-            <div class="form-step active">
-                <h2>Let's get you scheduled</h2>
+        // Recipients
+        $mail->setFrom('rogerjuancito0621@gmail.com', 'Eye Master Optical Clinic');
+        $mail->addAddress($recipient_email, $recipient_name);
+
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = $subject;
+        
+        // Format date and time
+        $formatted_date = date('F j, Y', strtotime($appointment_data['appointment_date']));
+        $formatted_time = date('g:i A', strtotime($appointment_data['appointment_time']));
+        
+        // Build email body based on type
+        if ($email_type === 'cancelled') {
+            $mail->Body = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc3545; }
+                    .detail-row { margin: 10px 0; }
+                    .label { font-weight: bold; color: #666; }
+                    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+                    .reason-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 15px 0; border-radius: 4px; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>Eye Master Optical Clinic</h1>
+                    </div>
+                    <div class='content'>
+                        <h2 style='color: #dc3545;'>Appointment Cancelled</h2>
+                        <p>Hi, <strong>{$recipient_name}</strong></p>
+                        <p>Your appointment at <strong>Eye Master Optical Clinic</strong> has been cancelled.</p>
+                        
+                        <div class='details'>
+                            <h3>Appointment Details</h3>
+                            <div class='detail-row'>
+                                <span class='label'>Appointment ID:</span> #{$appointment_data['appointment_id']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Service:</span> {$appointment_data['service_name']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Date:</span> {$formatted_date}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Time:</span> {$formatted_time}
+                            </div>
+                        </div>
+                        
+                        <div class='reason-box'>
+                            <strong>Cancellation Reason:</strong><br>
+                            {$appointment_data['reason_cancel']}
+                        </div>
+                        
+                        <p>If you wish to reschedule, please <a href='http://localhost/appointment-management-system/public/appointment.php' style='color: #991010; font-weight: bold;'>book a new appointment</a>.</p>
+                        
+                        <p>If you have any questions, please contact us.</p>
+                    </div>
+                    <div class='footer'>
+                        <p>&copy; 2026 Eye Master Optical Clinic. All rights reserved.</p>
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+        } else {
+            // Update email (existing code)
+            $mail->Body = "
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #27ae60; }
+                    .detail-row { margin: 10px 0; }
+                    .label { font-weight: bold; color: #666; }
+                    .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+                </style>
+            </head>
+            <body>
+                <div class='container'>
+                    <div class='header'>
+                        <h1>Eye Master Optical Clinic</h1>
+                    </div>
+                    <div class='content'>
+                        <h2 style='color: #27ae60;'>Appointment Updated</h2>
+                        <p>Hi, <strong>{$recipient_name}</strong></p>
+                        <p>Your appointment details have been updated successfully.</p>
+                        
+                        <div class='details'>
+                            <h3>Updated Appointment Details</h3>
+                            <div class='detail-row'>
+                                <span class='label'>Appointment ID:</span> #{$appointment_data['appointment_id']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Service:</span> {$appointment_data['service_name']}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Date:</span> {$formatted_date}
+                            </div>
+                            <div class='detail-row'>
+                                <span class='label'>Time:</span> {$formatted_time}
+                            </div>
+                        </div>
+                        
+                        <p>If you have any questions, please contact us.</p>
+                    </div>
+                    <div class='footer'>
+                        <p>&copy; 2026 Eye Master Optical Clinic. All rights reserved.</p>
+                        <p>This is an automated message. Please do not reply to this email.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            ";
+        }
+        
+        $mail->AltBody = strip_tags($mail->Body);
+        $mail->send();
+        return true;
+        
+    } catch (Exception $e) {
+        error_log("Email Error: " . $mail->ErrorInfo);
+        return false;
+    }
+}
+
+// ==========================================
+// A. HANDLE APPOINTMENT UPDATE
+// ==========================================
+if (isset($_POST['update_appointment'])) {
+    $appointment_id = $_POST['appointment_id'];
+    
+    // Get raw data from form
+    $symptoms = trim($_POST['symptoms'] ?? '');
+    $wear_glasses = $_POST['wear_glasses'] ?? '';
+    $concern = trim($_POST['concern'] ?? '');
+    $full_name = trim($_POST['full_name'] ?? '');
+    $phone_number = trim($_POST['phone_number'] ?? '');
+    $age = intval($_POST['age'] ?? 0);
+    $gender = $_POST['gender'] ?? '';
+    $occupation = trim($_POST['occupation'] ?? '');
+    
+    // Encrypt data
+    $encrypted_full_name = encrypt_data($full_name);
+    $encrypted_phone_number = encrypt_data($phone_number);
+    $encrypted_occupation = encrypt_data($occupation);
+    $encrypted_symptoms = !empty($symptoms) ? encrypt_data($symptoms) : '';
+    $encrypted_concern = !empty($concern) ? encrypt_data($concern) : '';
+
+    try {
+        $pdo->beginTransaction();
+
+        // Update appointment
+        $update_appt = $pdo->prepare("
+            UPDATE appointments 
+            SET symptoms = ?, wear_glasses = ?, concern = ?, 
+                full_name = ?, phone_number = ?, age = ?, gender = ?, occupation = ?
+            WHERE appointment_id = ? AND client_id = ? AND status_id = 1
+        ");
+        $update_appt->execute([
+            $encrypted_symptoms, $wear_glasses, $encrypted_concern, 
+            $encrypted_full_name, $encrypted_phone_number, $age, $gender, $encrypted_occupation,
+            $appointment_id, $client_id
+        ]);
+
+        // Update user table
+        $update_user = $pdo->prepare("UPDATE users SET full_name = ?, phone_number = ? WHERE id = ?");
+        $update_user->execute([$encrypted_full_name, $encrypted_phone_number, $user_id]);
+
+        // Update client table
+        $update_client = $pdo->prepare("UPDATE clients SET age = ?, gender = ?, occupation = ? WHERE user_id = ?");
+        $update_client->execute([$age, $gender, $encrypted_occupation, $user_id]);
+
+        // Get appointment details for email
+        $appt_stmt = $pdo->prepare("
+            SELECT a.*, s.service_name, u.email 
+            FROM appointments a
+            JOIN services s ON a.service_id = s.service_id
+            JOIN users u ON u.id = ?
+            WHERE a.appointment_id = ?
+        ");
+        $appt_stmt->execute([$user_id, $appointment_id]);
+        $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
+
+        $pdo->commit();
+
+        // Send email notification
+        if ($appt_data) {
+            $user_email_encrypted = $appt_data['email'];
+            $user_email = decrypt_data($user_email_encrypted);
             
+            sendAppointmentEmail(
+                $user_email,
+                $full_name,
+                'Appointment Updated - Eye Master Optical Clinic',
+                $appt_data,
+                'update'
+            );
+        }
+
+        $_SESSION['success'] = "Appointment details updated successfully.";
+
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        $_SESSION['error'] = "Update failed: " . $e->getMessage();
+    }
+    header("Location: appointments.php");
+    exit();
+}
+
+// ==========================================
+// B. HANDLE CANCELLATION (FIXED)
+// ==========================================
+if (isset($_POST['cancel_appointment'])) {
+    $appointment_id = $_POST['appointment_id'];
+    $cancellation_reason = trim($_POST['cancellation_reason']);
+    
+    try {
+        // Get appointment details BEFORE canceling
+        $appt_query = "
+            SELECT a.*, s.service_name, u.email, u.full_name
+            FROM appointments a
+            LEFT JOIN services s ON a.service_id = s.service_id
+            LEFT JOIN users u ON u.id = ?
+            WHERE a.appointment_id = ? AND a.client_id = ?
+        ";
+        $appt_stmt = $pdo->prepare($appt_query);
+        $appt_stmt->execute([$user_id, $appointment_id, $client_id]);
+        $appt_data = $appt_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($appt_data) {
+            // Update to cancelled status
+            $cancel_stmt = $pdo->prepare("UPDATE appointments SET status_id = 5, reason_cancel = ? WHERE appointment_id = ?");
+            
+            if ($cancel_stmt->execute([$cancellation_reason, $appointment_id])) {
                 
-                <div class="form-row name-row" id="formFields">
-                    <input type="text" placeholder="Enter Your Name..." name="full_name" required
-                        value="<?= htmlspecialchars($client_profile_data['full_name'] ?? '') ?>" disabled>
+                // Decrypt email and name for sending
+                $user_email = decrypt_data($appt_data['email']);
+                $user_full_name = decrypt_data($appt_data['full_name']);
+                
+                // Add reason to appointment data for email
+                $appt_data['reason_cancel'] = $cancellation_reason;
+                
+                // Send cancellation email
+                sendAppointmentEmail(
+                    $user_email,
+                    $user_full_name,
+                    'Appointment Cancelled - Eye Master Optical Clinic',
+                    $appt_data,
+                    'cancelled'
+                );
+                
+                $_SESSION['success'] = "Appointment cancelled successfully. A confirmation email has been sent.";
+            } else {
+                $_SESSION['error'] = "Failed to cancel appointment.";
+            }
+        } else {
+            $_SESSION['error'] = "Appointment not found.";
+        }
+    } catch (Exception $e) {
+        $_SESSION['error'] = "Cancellation failed: " . $e->getMessage();
+    }
+    
+    header("Location: appointments.php");
+    exit();
+}
+
+// ==========================================
+// C. FETCH APPOINTMENTS WITH FILTERING
+// ==========================================
+$filter = $_GET['filter'] ?? 'recent';
+
+$sql = "SELECT a.*, s.status_name, srv.service_name 
+        FROM appointments a 
+        JOIN appointmentstatus s ON a.status_id = s.status_id
+        JOIN services srv ON a.service_id = srv.service_id
+        WHERE a.client_id = ?";
+
+// Add status filter
+switch($filter) {
+    case 'pending':
+        $sql .= " AND a.status_id = 1";
+        break;
+    case 'completed':
+        $sql .= " AND a.status_id = 3";
+        break;
+    case 'cancelled':
+        $sql .= " AND a.status_id = 5";
+        break;
+    case 'confirmed':
+        $sql .= " AND a.status_id = 2";
+        break;
+}
+
+// Add sorting
+switch($filter) {
+    case 'recent':
+        $sql .= " ORDER BY a.appointment_date DESC, a.appointment_time DESC";
+        break;
+    case 'oldest':
+        $sql .= " ORDER BY a.appointment_date ASC, a.appointment_time ASC";
+        break;
+    case 'alphabetical_asc':
+        $sql .= " ORDER BY srv.service_name ASC";
+        break;
+    case 'alphabetical_desc':
+        $sql .= " ORDER BY srv.service_name DESC";
+        break;
+    default:
+        $sql .= " ORDER BY a.appointment_date DESC";
+}
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute([$client_id]);
+$result_encrypted = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Decrypt all appointments
+$result = [];
+foreach ($result_encrypted as $row) {
+    $row['full_name'] = decrypt_data($row['full_name']);
+    $row['phone_number'] = decrypt_data($row['phone_number']);
+    $row['occupation'] = decrypt_data($row['occupation']);
+    
+    if (!empty($row['symptoms'])) {
+        $row['symptoms'] = decrypt_data($row['symptoms']);
+    }
+    if (!empty($row['concern'])) {
+        $row['concern'] = decrypt_data($row['concern']);
+    }
+    
+    $result[] = $row;
+}
+?>
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Appointments | Eye Master</title>
+    <link rel="stylesheet" href="../assets/ojo-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Filter Dropdown Styles */
+        .filter-container {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 8px;
+        }
+
+        .filter-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .filter-btn {
+            background: #004aad;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+
+        .filter-btn:hover {
+            background: #003a8c;
+        }
+
+        .filter-btn i {
+            font-size: 14px;
+        }
+
+        .filter-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 45px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            min-width: 220px;
+            z-index: 1000;
+        }
+
+        .filter-menu.show {
+            display: block;
+        }
+
+        .filter-section {
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .filter-section:last-child {
+            border-bottom: none;
+        }
+
+        .filter-section-title {
+            padding: 8px 16px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-option {
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .filter-option:hover {
+            background: #f9fafb;
+        }
+
+        .filter-option.active {
+            background: #eff6ff;
+            color: #004aad;
+            font-weight: 600;
+        }
+
+        .filter-option i {
+            width: 16px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .filter-option.active i {
+            color: #004aad;
+        }
+
+        /* Notification Styles */
+        .notification-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .notification-toast.show {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .notification-toast.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .notification-toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .reference-id-box {
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: #f9fafb;
+            border-left: 3px solid #004aad;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .reference-id-box .label {
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .reference-id-box .value {
+            font-size: 14px;
+            color: #004aad;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <?php include '../includes/navbar.php' ?>
+
+    <div id="notificationToast" class="notification-toast">
+        <i class="fas fa-check-circle" style="color: #10b981; font-size: 20px;"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <div class="ojo-container">
+        
+        <div class="account-header">
+            <h1>MY ACCOUNT</h1>
+        </div>
+
+        <div class="account-grid">
+            <nav class="account-menu">
+                <ul>
+                    <li><a href="profile.php">Account Details</a></li>
+                    <li><a href="appointments.php" class="active">Appointments</a></li>
+                    <li><a href="settings.php">Settings</a></li>
+                    <li><a href="../actions/logout.php" style="color: #e74c3c;">Log out</a></li>
+                </ul>
+            </nav>
+
+            <main class="account-content">
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 style="margin: 0;">My Appointments</h3>
                     
-                    <select name="suffix" id="suffix" disabled>
-                        <option value="">Suffix (Optional)</option>
-                        <option value="Jr" <?= ($client_profile_data['suffix'] ?? '') === 'Jr' ? 'selected' : '' ?>>Jr</option>
-                        <option value="Sr" <?= ($client_profile_data['suffix'] ?? '') === 'Sr' ? 'selected' : '' ?>>Sr</option>
-                        <option value="Other" id="suffix_other" <?= ($client_profile_data['suffix'] ?? '') === 'Other' ? 'selected' : '' ?>>Other</option>
-                    </select>
-                    <input type="text" name="suffix_other_input" style="display: none;" id="suffix_concern" placeholder="Enter your suffix..." disabled> 
+                    <div class="filter-container">
+                        <div class="filter-dropdown">
+                            <button class="filter-btn" onclick="toggleFilter()">
+                                <i class="fas fa-filter"></i>
+                                <span>Filter</span>
+                                <i class="fas fa-chevron-down" style="font-size: 12px;"></i>
+                            </button>
+                            
+                            <div class="filter-menu" id="filterMenu">
+                                <div class="filter-section">
+                                    <div class="filter-section-title">Sort By</div>
+                                    <a href="?filter=recent" class="filter-option <?= $filter == 'recent' ? 'active' : '' ?>">
+                                        <i class="fas fa-clock"></i>
+                                        <span>Most Recent</span>
+                                    </a>
+                                    <a href="?filter=oldest" class="filter-option <?= $filter == 'oldest' ? 'active' : '' ?>">
+                                        <i class="fas fa-history"></i>
+                                        <span>Oldest First</span>
+                                    </a>
+                                    <a href="?filter=alphabetical_asc" class="filter-option <?= $filter == 'alphabetical_asc' ? 'active' : '' ?>">
+                                        <i class="fas fa-sort-alpha-down"></i>
+                                        <span>A to Z</span>
+                                    </a>
+                                    <a href="?filter=alphabetical_desc" class="filter-option <?= $filter == 'alphabetical_desc' ? 'active' : '' ?>">
+                                        <i class="fas fa-sort-alpha-up"></i>
+                                        <span>Z to A</span>
+                                    </a>
+                                </div>
+                                
+                                <div class="filter-section">
+                                    <div class="filter-section-title">Status</div>
+                                    <a href="?filter=pending" class="filter-option <?= $filter == 'pending' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #f59e0b;"></i>
+                                        <span>Pending Only</span>
+                                    </a>
+                                    <a href="?filter=confirmed" class="filter-option <?= $filter == 'confirmed' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #10b981;"></i>
+                                        <span>Confirmed Only</span>
+                                    </a>
+                                    <a href="?filter=completed" class="filter-option <?= $filter == 'completed' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #3b82f6;"></i>
+                                        <span>Completed Only</span>
+                                    </a>
+                                    <a href="?filter=cancelled" class="filter-option <?= $filter == 'cancelled' ? 'active' : '' ?>">
+                                        <i class="fas fa-circle" style="color: #ef4444;"></i>
+                                        <span>Cancelled Only</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="form-row three-cols">
-                    <select name="gender" required disabled>
-                        <option value="">Select Gender...</option>
-                        <option value="Male" <?= ($client_profile_data['gender'] ?? '') === 'Male' ? 'selected' : '' ?>>Male</option>
-                        <option value="Female" <?= ($client_profile_data['gender'] ?? '') === 'Female' ? 'selected' : '' ?>>Female</option>
-                    </select>
-                    
-                    <input type="number" name="age" placeholder="Enter your Age..." required min="1" max="120"
-                        value="<?= htmlspecialchars($client_profile_data['age'] ?? '') ?>" disabled>
-                    <p id="ageWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid age (18-120)</p>
+                <?php if (count($result) > 0): ?>
+                    <table class="ojo-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Service</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($result as $row): ?>
+                                <?php 
+                                    $statusClass = strtolower($row['status_name']); 
+                                    $isPending = ($row['status_id'] == 1);
+                                ?>
+                                <tr>
+                                    <td data-label="Date"><?= date('M d, Y', strtotime($row['appointment_date'])) ?></td>
+                                    <td data-label="Time"><?= date('h:i A', strtotime($row['appointment_time'])) ?></td>
+                                    <td data-label="Service"><?= htmlspecialchars($row['service_name']) ?></td>
+                                    <td data-label="Status">
+                                        <div class="status-indicator">
+                                            <span class="dot <?= $statusClass ?>"></span>
+                                            <?= htmlspecialchars($row['status_name']) ?>
+                                        </div>
+                                    </td>
+                                    <td data-label="Actions">
+                                       <a onclick='openViewModal(<?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)' class="action-link link-view">View</a>
+                                        
+                                        <?php if($isPending): ?>
+                                            <a onclick='openEditModal(<?= htmlspecialchars(json_encode($row), ENT_QUOTES) ?>)' class="action-link link-edit">Edit</a>
+                                            <a onclick="openCancelModal(<?= $row['appointment_id'] ?>)" class="action-link link-cancel">Cancel</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <div style="padding: 40px; text-align: center; color: #999; border-top: 1px solid #eee;">
+                        <i class="fas fa-calendar-times" style="font-size: 48px; color: #ddd; margin-bottom: 16px;"></i>
+                        <p>No appointments found with the selected filter.</p>
+                        <a href="appointments.php" class="btn-ojo" style="margin-top: 12px;">Clear Filter</a>
+                    </div>
+                <?php endif; ?>
 
-                    <input type="text" name="contact_number" placeholder="0912 345 678" maxlength="11" required
-                        value="<?= htmlspecialchars($client_profile_data['phone_number'] ?? '') ?>" disabled>
-                    <p id="phoneWarning" style="color: red; display: none; font-size: 14px;">Please enter a valid phone number (0912 345 678)</p>
+            </main>
+        </div>
+    </div>
+
+    <div id="viewModal" class="ojo-modal-overlay">
+        <div class="ojo-modal">
+            <button class="close-modal" onclick="closeModal('viewModal')">&times;</button>
+            <h2>Appointment Details</h2>
+            <div id="viewContent"></div>
+        </div>
+    </div>
+
+    <div id="editModal" class="ojo-modal-overlay">
+        <div class="ojo-modal">
+            <button class="close-modal" onclick="closeModal('editModal')">&times;</button>
+            <h2>Edit Appointment</h2>
+            <div style="background:#f1f5f9; border-radius:8px; padding:10px 14px; margin-bottom:15px; font-size:14px;">
+                🏥 <strong>Service:</strong> <span id="edit_service_name" style="color:#991010; font-weight:700;"></span>
+            </div>
+            <form method="POST" action="">
+                <input type="hidden" name="appointment_id" id="edit_id">
+                <input type="hidden" name="update_appointment" value="1">
+                
+                <h4 style="margin-top: 15px; margin-bottom: 10px; font-size: 0.9rem; text-transform:uppercase;">Personal Info</h4>
+                <div class="ojo-form-grid">
+                    <div class="ojo-group"><label>Full Name</label><input type="text" name="full_name" id="edit_fullname" required></div>
+                    <div class="ojo-group"><label>Phone</label><input type="text" name="phone_number" id="edit_phone" required></div>
+                    <div class="ojo-group"><label>Age</label><input type="number" name="age" id="edit_age" min="1" max="120" required></div>
+                    <div class="ojo-group"><label>Gender</label><select name="gender" id="edit_gender"><option value="Male">Male</option><option value="Female">Female</option></select></div>
+                    <div class="ojo-group full-width"><label>Occupation</label><input type="text" name="occupation" id="edit_occupation"></div>
                 </div>
 
-                <div class="form-row single">
-                    <input type="text" name="occupation" placeholder="Enter your Occupation..." required
-                        value="<?= htmlspecialchars($client_profile_data['occupation'] ?? '') ?>" disabled>
-                    </div>
-                
-                <button type="button" class="next-btn">Next</button>
-            </div>
+                <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 0.9rem; text-transform:uppercase;">Medical Info</h4>
+                <div class="ojo-form-grid">
+                    <div class="ojo-group"><label>Wears Glasses?</label><select name="wear_glasses" id="edit_glasses"><option value="Yes">Yes</option><option value="No">No</option></select></div>
+                    <div class="ojo-group"><label>Symptoms</label><input type="text" name="symptoms" id="edit_symptoms"></div>
+                </div>
+                <div class="ojo-group" style="margin-top: 15px;"><label>Concern / Notes</label><input type="text" name="concern" id="edit_concern"></div>
 
-           
-    <div class="form-step">
-    <h2>Choose provider & time</h2>
-    <p style="color: black;">Select an appointment date and time.</p>
+                <div class="ojo-group" id="edit_products_group" style="margin-top: 15px; display: none;">
+                    <label>Selected Frames (Read-Only)</label>
+                    <textarea id="edit_selected_products" readonly rows="2" style="width:100%; padding:8px; background-color:#f1f5f9; color:#475569; border:1px solid #cbd5e1; border-radius:6px; resize:none;"></textarea>
+                    <small style="color: #64748b; font-size: 11px;">(Frames are selected during booking. Please contact the clinic for changes.)</small>
+                </div>
 
-    <div class="appointment-row" id="row-0">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <h4 style="margin: 0; color: #1f2937;">Appointment 1</h4>
-        <span class="slot-badge" id="slot-badge-0">Select date & time</span>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="text" class="date-input" data-index="0" placeholder="Select date..." readonly>
-        </div>
-        
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
-            <select class="time-select" data-index="0">
-            <option value="">Select Time</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
-            </select>
-        </div>
-        </div>
-        
-        <div class="slot-message" id="slot-message-0" style="margin-top: 5px; padding: 5px; border-radius: 4px; font-size: 12px; display: none;"></div>
-    </div>
+                <button type="submit" class="btn-ojo" style="width:100%; margin-top: 15px;">Save Changes</button>
+            </form>
 
-    <div class="appointment-row" id="row-1" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <h4 style="margin: 0; color: #1f2937;">Appointment 2</h4>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="slot-badge" id="slot-badge-1">Select date & time</span>
-            <button type="button" class="remove-btn" onclick="hideRow(1)" style="background:none; color:red; border:none; padding:0; font-size:12px; cursor: pointer;">Remove ✕</button>
-        </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="text" class="date-input" data-index="1" placeholder="Select date..." readonly>
-        </div>
-        
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
-            <select class="time-select" data-index="1">
-            <option value="">Select Time</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
-            </select>
-        </div>
-        </div>
-        
-        <div class="slot-message" id="slot-message-1" style="margin-top: 5px; padding: 5px; border-radius: 4px; font-size: 12px; display: none;"></div>
-    </div>
-
-    <div class="appointment-row" id="row-2" style="display: none;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-        <h4 style="margin: 0; color: #1f2937;">Appointment 3</h4>
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <span class="slot-badge" id="slot-badge-2">Select date & time</span>
-            <button type="button" class="remove-btn" onclick="hideRow(2)" style="background:none; color:red; border:none; padding:0; font-size:12px; cursor: pointer;">Remove ✕</button>
-        </div>
-        </div>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Date:</label>
-        <input type="text" class="date-input" data-index="2" placeholder="Select date..." readonly>
-        </div>
-        
-        <div>
-            <label style="display: block; margin-bottom: 2px; font-weight: 600; color: #374151; font-size: 13px;">Time:</label>
-            <select class="time-select" data-index="2">
-            <option value="">Select Time</option>
-            <option value="10:00">10:00 AM</option>
-            <option value="11:00">11:00 AM</option>
-            <option value="13:00">1:00 PM</option>
-            <option value="14:00">2:00 PM</option>
-            <option value="15:00">3:00 PM</option>
-            <option value="16:00">4:00 PM</option>
-            <option value="17:00">5:00 PM</option>
-            </select>
-        </div>
-        </div>
-        
-        <div class="slot-message" id="slot-message-2" style="margin-top: 5px; padding: 5px; border-radius: 4px; font-size: 12px; display: none;"></div>
-    </div>
-    <div style="text-align: center; margin-bottom: 15px;">
-        <button type="button" id="add-appt-btn" style="background: #f0f9ff; color: #004aad; border: 1px dashed #004aad; width: 100%; padding: 8px; font-size: 13px;" >
-            + Add Another Appointment
-        </button>
-    </div>
-    <input type="hidden" id="appointment_dates_json" name="appointment_dates_json">
-    <div style="margin-top: 20px; overflow: hidden;">
-        <button type="button" class="prev-btn">Back</button>
-        <button type="button" class="next-btn">Next</button>
-    </div>
-    </div>        
-            <!-- Step 3: Symptoms -->
-        <div class="form-step">
-        <h2 style="color: #004aad; margin-top: 0; font-size: 1.4rem;">Eye Health Information</h2>
-        <p style="color: #666; margin-bottom: 10px; font-size: 0.9rem;">Please provide your current eye history.</p>
-
-        <h5 style="margin: 5px 0; font-size: 13px;">Do you currently wear Eye Glasses?</h5>
-        <div class="radio-group-horizontal">
-            <label><input type="radio" name="wear_glasses" value="Yes" required> Yes</label>
-            <label><input type="radio" name="wear_glasses" value="No" required> No</label>
-        </div>
-
-        <h5 style="margin: 10px 0 5px 0; font-size: 13px;">Do you currently wear Contact Lenses?</h5>
-        <div class="radio-group-horizontal">
-            <label><input type="radio" name="wear_contact_lenses" value="Yes" required> Yes</label>
-            <label><input type="radio" name="wear_contact_lenses" value="No" required> No</label>
-        </div>
-        
-        <h5 style="margin: 10px 0 5px 0; font-size: 13px;">Are you experiencing any eye discomfort?</h5>
-        <div class="radio-group-horizontal">
-            <label><input type="checkbox" name="symptoms[]" value="Blurred Vision"> Blurred Vision</label>
-            <label><input type="checkbox" name="symptoms[]" value="Headache"> Headache</label>
-            <label><input type="checkbox" name="symptoms[]" value="Redness"> Redness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Itchiness"> Itchiness</label>
-            <label><input type="checkbox" name="symptoms[]" value="Other" id="otherSymptom"> Other</label>
-        </div>
-
-        <input type="text" name="concern" id="concernInput" placeholder="Please describe your concern..." 
-            style="display: none; margin-top: 5px;" class="compact-input">
-
-        <div style="margin-top: 15px;">
-            <button type="button" class="prev-btn">Back</button>
-            <button type="button" class="next-btn">Next</button>
         </div>
     </div>
 
-    <div class="form-step">
-        <h2>Select Frames to Try On</h2>
-        <p style="color: #666;">Select from our top picks below, or click "See More" to view the full collection.</p>
-
-        <?php 
-            // 1. Separate products into "Top 3" and "The Rest"
-            $top_picks = array_slice($available_products, 0, 3);
-            $more_products = array_slice($available_products, 3);
-        ?>
-
-        <div class="preference-grid">
-            <?php foreach ($top_picks as $product): ?>
-                <?php 
-                    $imgSrc = $product['image_path'];
-                    if (strpos($imgSrc, '../photo/') !== false) {
-                        $imgSrc = str_replace('../photo/', '../mod/photo/', $imgSrc);
-                    }
-                    if (empty($imgSrc)) $imgSrc = 'https://placehold.co/150x80?text=No+Image';
-                ?>
-                <label class="preference-option-image product-card-select">
-                    <input type="checkbox" name="selected_products[]" value="<?= htmlspecialchars($product['product_name'] . ' (' . $product['brand'] . ')') ?>">
-                    <div class="shape-image-container" style="height: 100px;">
-                        <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                    </div>
-                    <div style="text-align: center; margin-top: 5px;">
-                        <span class="shape-label-text" style="display:block; font-weight:bold; font-size: 14px;">
-                            <?= htmlspecialchars($product['product_name']) ?>
-                        </span>
-                        <small style="color: #666; font-size: 12px;">
-                            <?= htmlspecialchars($product['brand']) ?>
-                        </small>
-                    </div>
-                </label>
-            <?php endforeach; ?>
+    <div id="cancelModal" class="ojo-modal-overlay">
+        <div class="ojo-modal" style="max-width: 450px;">
+            <button class="close-modal" onclick="closeModal('cancelModal')">&times;</button>
+            <h2 style="color: #e74c3c;">Cancel Appointment</h2>
+            <form method="POST" action="">
+                <input type="hidden" name="appointment_id" id="cancel_id">
+                <input type="hidden" name="cancel_appointment" value="1">
+                <div class="ojo-group">
+                    <label>Reason for Cancellation</label>
+                    <input type="text" name="cancellation_reason" required placeholder="e.g. Schedule conflict">
+                </div>
+                <button type="submit" class="btn-ojo" style="background-color: #e74c3c; width: 100%;">Confirm Cancellation</button>
+            </form>
         </div>
+    </div>
 
-        <?php if (count($more_products) > 0): ?>
-            <div class="see-more-btn-container">
-                <button type="button" class="btn-see-more" onclick="openProductModal()">+ See More Frames</button>
-                <p style="font-size: 12px; color: #888; margin-top: 5px;">
-                    (<?= count($more_products) ?> more styles available)
-                </p>
-            </div>
+    <script>
+        // Show notification on page load
+        <?php if (isset($_SESSION['success'])): ?>
+            showToast('<?= addslashes($_SESSION['success']) ?>', 'success');
+            <?php unset($_SESSION['success']); ?>
         <?php endif; ?>
 
-        <div id="productModal" class="product-modal-overlay">
-            <div class="product-modal-content">
-                
-                <div class="product-modal-header">
-                    <h3 style="margin:0; color:#004aad;">Full Frame Collection</h3>
-                    <button type="button" class="product-modal-close" onclick="closeProductModal()"></button>
-                </div>
+        <?php if (isset($_SESSION['error'])): ?>
+            showToast('<?= addslashes($_SESSION['error']) ?>', 'error');
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
 
-                <div class="product-modal-body">
-                    <div class="preference-grid">
-                        <?php foreach ($more_products as $product): ?>
-                            <?php 
-                                $imgSrc = $product['image_path'];
-                                if (strpos($imgSrc, '../photo/') !== false) {
-                                    $imgSrc = str_replace('../photo/', '../mod/photo/', $imgSrc);
-                                }
-                                if (empty($imgSrc)) $imgSrc = 'https://placehold.co/150x80?text=No+Image';
-                            ?>
-                            <label class="preference-option-image product-card-select">
-                                <input type="checkbox" name="selected_products[]" value="<?= htmlspecialchars($product['product_name'] . ' (' . $product['brand'] . ')') ?>">
-                                <div class="shape-image-container" style="height: 100px;">
-                                    <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($product['product_name']) ?>" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-                                </div>
-                                <div style="text-align: center; margin-top: 5px;">
-                                    <span class="shape-label-text" style="display:block; font-weight:bold; font-size: 14px;">
-                                        <?= htmlspecialchars($product['product_name']) ?>
-                                    </span>
-                                    <small style="color: #666; font-size: 12px;">
-                                        <?= htmlspecialchars($product['brand']) ?>
-                                    </small>
-                                </div>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-
-                <div style="text-align: right; padding-top: 15px; border-top: 1px solid #eee;">
-                    <button type="button" class="btn-done" onclick="closeProductModal()">Done Selecting</button>
-                </div>
-
-            </div>
-        </div>
-
-        <div style="margin-top: 30px;">
-            <button type="button" class="prev-btn">Back</button>
-            <button type="button" class="next-btn">Next</button>
-        </div>
-    </div>
-
-            <!-- Step 5: Consent -->
-        <div class="form-step">
-        <h2>Review Your Details</h2>
-        <p style="color: black;">Please review your information below before confirming.</p>
-
-        <div id="finalSummary" class="summary-box">
-            </div>
-
-        <h3>Consent & Confirmation</h3>
-
-    <div style="margin-bottom: 12px;">
-        <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
-            <input type="checkbox" name="consent_info" value="1" required> 
-            <span>I certify that the above information is correct.</span>
-        </label>
-    </div>
-
-    <div style="margin-bottom: 12px;">
-        <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
-            <input type="checkbox" name="consent_reminders" value="1"> 
-            <span>I consent to receive reminders <span class="legal-link" onclick="openLegalModal(event, 'modal-sms')">email.</span></span>
-        </label>
-    </div>
-
-    <div style="margin-bottom: 12px;">
-        <label style="display:flex; gap:10px; align-items:center; cursor: pointer;">
-            <input type="checkbox" name="consent_terms" value="1" required> 
-            <span>I agree to <span class="legal-link" onclick="openLegalModal(event, 'modal-terms')">terms & privacy policy.</span></span>
-        </label>
-    </div>
-        <div style="margin-top: 20px;">
-            <button type="button" class="prev-btn">Back</button>
-            <button type="submit" name="submit">Make an Appointment</button>
-        </div>
-    </div>
-
-        </form>
-    </div>
-    </div>
-    <!-- Booking Popup Message -->
-
-
-    <script src="../actions/appointment.js"></script>
-    <?php include '../includes/footer.php'; ?>
-    <script>
-            document.getElementById("suffix").addEventListener('change', function() {
-            const suffixConcern = document.getElementById("suffix_concern");
-            if (this.value === "Other") {
-                suffixConcern.style.display = "block";
-            } else {
-                suffixConcern.style.display = "none";
-            }
-            });
-        </script>
-    <script>
-            const ageInput = document.querySelector('input[name="age"]');
-            const phoneInput = document.querySelector('input[name="contact_number"]');
-            const ageWarning = document.getElementById('ageWarning');
-            const phoneWarning = document.getElementById('phoneWarning');
-
-            ageInput.addEventListener('blur', function() {
-                const age = parseInt(this.value);
-                if (isNaN(age) || age < 18 || age > 120) {
-                ageWarning.style.display = 'block';
-                this.value = '';
-                } else {
-                ageWarning.style.display = 'none';
-                }
-            });
-
-            phoneInput.addEventListener('input', function() {
-                let value = this.value.replace(/\s/g, '');
-                if (value.length > 11) {
-                value = value.slice(0, 11);
-                }
-                if (value.length > 0) {
-                value = value.replace(/(\d{4})(\d{3})(\d{4})/, '$1 $2 $3');
-                }
-                this.value = value;
-            });
-
-            phoneInput.addEventListener('blur', function() {
-                const phone = this.value.replace(/\s/g, '');
-                const phoneRegex = /^09\d{9}$/;
-                if (!phoneRegex.test(phone)) {
-                phoneWarning.style.display = 'block';
-                this.value = '';
-                } else {
-                phoneWarning.style.display = 'none';
-                }
-            });
-            </script>
+        function showToast(message, type) {
+            const toast = document.getElementById('notificationToast');
+            const toastMessage = document.getElementById('toastMessage');
+            const icon = toast.querySelector('i');
             
-            <script>
-                document.getElementById('otherSymptom').addEventListener('change', function() {
-            const concernInput = document.getElementById('concernInput');
-            if (this.checked) {
-                concernInput.style.display = 'block';
-                concernInput.setAttribute('required', 'required');
-            } else {
-                concernInput.style.display = 'none';
-                concernInput.removeAttribute('required');
-            }
-                });
-            </script>
-            <script>
-        // Function to Open Modal
-        function openProductModal() {
-            document.getElementById('productModal').style.display = 'flex';
-        }
-
-        // Function to Close Modal
-        function closeProductModal() {
-            document.getElementById('productModal').style.display = 'none';
+            toastMessage.textContent = message;
+            toast.className = 'notification-toast show ' + type;
             
-            // Optional: Update summary count on the main page if you want
-            // But for now, keeping it simple is best.
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+                icon.style.color = '#10b981';
+            } else {
+                icon.className = 'fas fa-exclamation-circle';
+                icon.style.color = '#ef4444';
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
         }
 
-        // Close modal if user clicks outside the white box
-        window.onclick = function(event) {
-            const modal = document.getElementById('productModal');
-            if (event.target === modal) {
-                modal.style.display = "none";
+        function toggleFilter() {
+            const menu = document.getElementById('filterMenu');
+            menu.classList.toggle('show');
+        }
+
+        // Close filter when clicking outside
+        window.onclick = function(e) {
+            const filterMenu = document.getElementById('filterMenu');
+            const filterBtn = document.querySelector('.filter-btn');
+            
+            if (!e.target.closest('.filter-dropdown')) {
+                filterMenu.classList.remove('show');
+            }
+            
+            if (e.target.classList.contains('ojo-modal-overlay')) {
+                e.target.style.display = 'none';
             }
         }
-    </script>
-    <div id="modal-certify" class="legal-modal-overlay">
-        <div class="legal-modal-content">
-            <div class="legal-modal-header">
-                <h3>Information Certification</h3>
-                <button type="button" class="legal-close" onclick="closeLegalModal('modal-certify')">&times;</button>
-            </div>
-            <div class="legal-modal-body">
-                <p><strong>Accuracy of Information:</strong></p>
-                <p>By checking this box, you declare that all personal details, medical history, and contact information provided in this form are accurate and up-to-date to the best of your knowledge.</p>
-                <p>Providing false information may affect the quality of the eye examination and medical advice given by our specialists.</p>
-            </div>
-        </div>
-    </div>
 
-    <div id="modal-comm" class="legal-modal-overlay">
-        <div class="legal-modal-content">
-            <div class="legal-modal-header">
-                <h3>Communication Consent</h3>
-                <button type="button" class="legal-close" onclick="closeLegalModal('modal-comm')">&times;</button>
-            </div>
-            <div class="legal-modal-body">
-                <p><strong>How we contact you:</strong></p>
-                <p>We value your privacy. Your phone number and email will strictly be used for:</p>
-                <ul>
-                    <li>Appointment Confirmations & Reminders</li>
-                    <li>Notification when your glasses/results are ready</li>
-                    <li>Emergency schedule changes</li>
-                </ul>
-                <p>We will <strong>never</strong> sell your contact info to third-party advertisers.</p>
-            </div>
-        </div>
-    </div>
-
-    <div id="modal-terms" class="legal-modal-overlay">
-        <div class="legal-modal-content">
-            <div class="legal-modal-header">
-                <h3>Terms & Privacy Policy</h3>
-                <button type="button" class="legal-close" onclick="closeLegalModal('modal-terms')">&times;</button>
-            </div>
-            <div class="legal-modal-body">
-                <p><strong>1. Data Privacy Act</strong></p>
-                <p>Eye Master Clinic complies with the Data Privacy Act of 2012. Your medical records are stored securely and encrypted.</p>
-                
-                <p><strong>2. Appointment Cancellation</strong></p>
-                <p>Please notify us at least 24 hours in advance if you need to cancel or reschedule.</p>
-                
-                <p><strong>3. Clinic Rights</strong></p>
-                <p>The clinic reserves the right to refuse service to patients who provide fraudulent information or display abusive behavior towards staff.</p>
-            </div>
-        </div>
-        <script>
-        // Open specific modal
-        function openLegalModal(modalId) {
-            // Prevent the checkbox from toggling when clicking the text link
-            event.preventDefault(); 
-            document.getElementById(modalId).style.display = 'flex';
+        function closeModal(id) { 
+            document.getElementById(id).style.display = 'none'; 
         }
-
-        // Close specific modal
-        function closeLegalModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        // Close modal when clicking outside
-        window.addEventListener('click', function(event) {
-            if (event.target.classList.contains('legal-modal-overlay')) {
-                event.target.style.display = 'none';
-            }
-        });
-    </script>
-    </div> 
-    <div id="modal-sms" class="legal-modal">
-        <div class="legal-modal-content">
-            <button type="button" class="close-legal" onclick="closeLegalModal('modal-sms')">&times;</button>
-            <h3 style="margin-top:0; color:#004aad;">Communication Policy</h3>
-            <p style="color:#444; line-height:1.6;">
-                We respect your inbox. By consenting to this, you agree to receive:
-            </p>
-            <ul style="color:#444; line-height:1.6; padding-left:20px;">
-                <li>Appointment confirmation details.</li>
-                <li>Reminders 24 hours before your visit.</li>
-                <li>Notifications when your glasses or results are ready.</li>
-            </ul>
-            <p style="color:#444; font-size:13px; margin-top:15px;">
-                We will never send spam or sell your contact number to third parties.
-            </p>
-        </div>
-    </div>
-
-    <div id="modal-terms" class="legal-modal">
-        <div class="legal-modal-content">
-            <button type="button" class="close-legal" onclick="closeLegalModal('modal-terms')">&times;</button>
-            <h3 style="margin-top:0; color:#004aad;">Terms & Privacy Policy</h3>
-            <div style="max-height: 300px; overflow-y: auto; color:#444; line-height:1.6;">
-                <p><strong>1. Data Privacy</strong><br>
-                Your records are kept strictly confidential in compliance with the Data Privacy Act of 2012.</p>
-                
-                <p><strong>2. Cancellations</strong><br>
-                Please notify us at least 24 hours in advance for cancellations.</p>
-                
-                <p><strong>3. Accuracy</strong><br>
-                You certify that the information provided is accurate to ensure proper medical assessment.</p>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        function openLegalModal(event, modalId) {
-            // THIS LINE STOPS THE CHECKBOX FROM CHECKING WHEN CLICKING THE LINK
-            event.preventDefault(); 
-            document.getElementById(modalId).style.display = 'flex';
-        }
-
-        function closeLegalModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        // Close modal if clicking outside the white box
-        window.onclick = function(event) {
-            if (event.target.classList.contains('legal-modal')) {
-                event.target.style.display = "none";
-            }
-        }
-    </script>
-    <script>
         
-        </script>
-    </body>
-    </html>
+      function openViewModal(data) {
+        let formattedDate = new Date(data.appointment_date).toLocaleDateString('en-US', {year:'numeric', month:'long', day:'numeric'});
+        
+        // MODIFIED: Displays the Selected Products if they exist and aren't 'None'
+        document.getElementById('viewContent').innerHTML = `
+            <div class="detail-list">
+                <div class="detail-item"><label>Date</label><span>${formattedDate}</span></div>
+                <div class="detail-item"><label>Time</label><span>${data.appointment_time}</span></div>
+                <div class="detail-item"><label>Service</label><span>${data.service_name}</span></div>
+                <div class="detail-item"><label>Status</label><span>${data.status_name}</span></div>
+                <div class="detail-item full-width"><label>Symptoms</label><span>${data.symptoms || 'None'}</span></div>
+                <div class="detail-item full-width"><label>Concern</label><span>${data.concern || 'None'}</span></div>
+                
+                ${data.selected_products && data.selected_products !== 'None' ? `
+                <div class="detail-item full-width" style="background:#f0fdf4; padding:10px; border-radius:6px; border:1px solid #bbf7d0;">
+                    <label style="color:#166534; margin-bottom: 5px;">Selected Frames to Try</label>
+                    <span style="color:#15803d; font-weight:600; display:block;">👓 ${data.selected_products}</span>
+                </div>` : ''}
+                
+                ${data.reason_cancel ? `<div class="detail-item full-width" style="color:red"><label>Cancellation Reason</label><span>${data.reason_cancel}</span></div>` : ''}
+            </div>
+            <div id="customFieldsView"><em style="color:#94a3b8; font-size:13px;">Loading additional info...</em></div>
+            <div style="margin-top:15px; padding-top:12px; border-top:1px solid #e5e7eb; text-align:right;">
+                <span style="font-size:11px; color:#9ca3af; text-transform:uppercase;">Reference ID</span><br>
+                <span style="font-size:13px; color:#374151; font-weight:600; font-family:monospace;">${data.appointment_group_id || 'N/A'}</span>
+            </div>`;
+        document.getElementById('viewModal').style.display = 'flex';
+
+        // Fetch custom answers
+        fetch(`get_appointment_details.php?id=${data.appointment_id}`)
+            .then(r => r.json())
+            .then(res => {
+                const el = document.getElementById('customFieldsView');
+                if (!res.success || !res.custom_fields || res.custom_fields.length === 0) { el.innerHTML = ''; return; }
+                const steps = {};
+                res.custom_fields.forEach(f => { if (!steps[f.form_step]) steps[f.form_step] = []; steps[f.form_step].push(f); });
+                let html = '<hr style="margin:15px 0; border-color:#e5e7eb;">';
+                Object.keys(steps).forEach(step => {
+                    html += `<p style="font-weight:700;color:#991010;font-size:12px;text-transform:uppercase;margin:10px 0 6px;">${step}</p>`;
+                    steps[step].forEach(f => {
+                        html += `<div class="detail-item full-width"><label>${f.field_label}</label><span>${f.response_value || '<em style="color:#94a3b8">No answer</em>'}</span></div>`;
+                    });
+                });
+                el.innerHTML = html;
+            })
+            .catch(() => { document.getElementById('customFieldsView').innerHTML = ''; });
+    }
+
+function openCancelModal(id) {
+    document.getElementById('cancel_id').value = id;
+    document.getElementById('cancelModal').style.display = 'flex';
+}
+
+function openEditModal(data) {
+    document.getElementById('edit_id').value           = data.appointment_id;
+    document.getElementById('edit_service_name').textContent = data.service_name || '';
+    document.getElementById('edit_fullname').value     = data.full_name || '';
+    document.getElementById('edit_phone').value        = data.phone_number || '';
+    document.getElementById('edit_age').value          = data.age || '';
+    document.getElementById('edit_gender').value       = data.gender || 'Male';
+    document.getElementById('edit_occupation').value   = data.occupation || '';
+    document.getElementById('edit_glasses').value      = data.wear_glasses || 'No';
+    document.getElementById('edit_symptoms').value     = data.symptoms || '';
+    document.getElementById('edit_concern').value      = data.concern || '';
+
+    // MODIFIED: Displays selected products in Edit Modal
+    const productsGroup = document.getElementById('edit_products_group');
+    const productsInput = document.getElementById('edit_selected_products');
+    
+    if (data.selected_products && data.selected_products !== 'None') {
+        productsGroup.style.display = 'block';
+        productsInput.value = data.selected_products;
+    } else {
+        productsGroup.style.display = 'none';
+        productsInput.value = '';
+    }
+
+    // Clear old custom fields first
+    const existingCustom = document.getElementById('customFieldsEdit');
+    if (existingCustom) existingCustom.innerHTML = '<em style="color:#94a3b8;font-size:13px;">Loading...</em>';
+
+    document.getElementById('editModal').style.display = 'flex';
+
+    // Fetch and render custom field answers as EDITABLE inputs
+    fetch(`get_appointment_details.php?id=${data.appointment_id}`)
+        .then(r => r.json())
+        .then(res => {
+            const el = document.getElementById('customFieldsEdit');
+            if (!el || !res.success || !res.custom_fields || res.custom_fields.length === 0) { if(el) el.innerHTML=''; return; }
+            const steps = {};
+            res.custom_fields.forEach(f => { if (!steps[f.form_step]) steps[f.form_step] = []; steps[f.form_step].push(f); });
+            let html = '';
+            Object.keys(steps).forEach(step => {
+                html += `<h4 style="margin:15px 0 8px;font-size:0.85rem;text-transform:uppercase;color:#991010;">${step}</h4>`;
+                steps[step].forEach(f => {
+                    const val = f.response_value || '';
+                    const req = f.is_required ? 'required' : '';
+                    html += `<div class="ojo-group" style="margin-bottom:10px;"><label>${f.field_label}${f.is_required ? ' *':''}</label>`;
+                    if (f.field_type === 'textarea') {
+                        html += `<textarea name="custom_fields[${f.field_id}]" ${req} rows="3" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">${val}</textarea>`;
+                    } else if (f.field_type === 'radio') {
+                        f.field_options.split(',').forEach(opt => {
+                            opt = opt.trim();
+                            html += `<label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:4px;">
+                                <input type="radio" name="custom_fields[${f.field_id}]" value="${opt}" ${val===opt?'checked':''} ${req}> ${opt}</label>`;
+                        });
+                    } else if (f.field_type === 'select') {
+                        html += `<select name="custom_fields[${f.field_id}]" ${req} style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">`;
+                        f.field_options.split(',').forEach(opt => { opt=opt.trim(); html+=`<option value="${opt}" ${val===opt?'selected':''}>${opt}</option>`; });
+                        html += `</select>`;
+                    } else {
+                        html += `<input type="text" name="custom_fields[${f.field_id}]" value="${val}" ${req} style="width:100%;padding:8px;border:1px solid #ddd;border-radius:6px;">`;
+                    }
+                    html += `</div>`;
+                });
+            });
+            el.innerHTML = html;
+        })
+        .catch(() => { const el=document.getElementById('customFieldsEdit'); if(el) el.innerHTML=''; });
+}
+    </script>
+    
+    <?php include '../includes/footer.php' ?>
+</body>
+</html>

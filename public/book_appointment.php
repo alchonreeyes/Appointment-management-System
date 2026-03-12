@@ -27,7 +27,12 @@ $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // ✅ CHECK WHICH SERVICES HAVE CUSTOM FORMS
-$stmtForms = $pdo->prepare("SELECT service_id FROM service_forms");
+// REPLACE lines 30-32 with:
+$stmtForms = $pdo->prepare("
+    SELECT DISTINCT sf.service_id 
+    FROM service_forms sf
+    INNER JOIN form_fields ff ON ff.form_id = sf.form_id
+");
 $stmtForms->execute();
 $servicesWithForms = $stmtForms->fetchAll(PDO::FETCH_COLUMN);
 
@@ -250,15 +255,16 @@ function formatServiceTitle($title) {
                             $desc = $service['description'];
                             
                             // ✅ CHECK IF SERVICE HAS CUSTOM FORM
-                            $is_custom = in_array($sId, $servicesWithForms);
-                            
-                            // ✅ DETERMINE BOOKING PAGE
-                            if ($is_custom) {
-                                $link = '../public/custom_service.php?service_id=' . $sId;
-                            } else {
-                                // Use stored booking_page or default to appointment.php
-                                $link = $service['booking_page'] ?? '../public/appointment.php';
-                            }
+                            // System services (is_system_service = 1) always use their own booking_page
+// Only non-system services with custom forms go to custom_service.php
+$is_system = $service['is_system_service'] == 1;
+$is_custom = in_array((int)$sId, array_map('intval', $servicesWithForms));
+
+if (!$is_system && $is_custom) {
+    $link = '../public/custom_service.php?service_id=' . $sId;
+} else {
+    $link = $service['booking_page'] ?? '../public/appointment.php';
+}
                             
                             $myParticulars = $groupedParticulars[$sId] ?? [];
                             $benefits = array_filter($myParticulars, fn($p) => $p['category'] === 'benefit');

@@ -23,7 +23,7 @@ date_default_timezone_set('Asia/Manila');
 // =======================================================
 // 1. SECURITY CHECK
 // =======================================================
-if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
+if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
     if (isset($_POST['action'])) {
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['success' => false, 'message' => 'Unauthorized access.']);
@@ -48,24 +48,8 @@ if (isset($_POST['action'])) {
         $error = '';
 
         if ($field === 'full_name') {
-            if (empty($value)) {
-                $error = 'Full name is required.';
-            } elseif (strlen($value) < 3) {
-                $error = 'Full name must be at least 3 characters.';
-            } else {
-                // Duplicate Name Check (Handling Encrypted DB)
-                try {
-                    $check = $conn->query("SELECT staff_id, full_name FROM staff");
-                    while ($row = $check->fetch_assoc()) {
-                        if (strtolower(decrypt_data($row['full_name'])) === strtolower($value) && $row['staff_id'] != $staff_id) {
-                            $error = 'This name is already registered to another staff member.';
-                            break;
-                        }
-                    }
-                } catch(Exception $e) {
-                    $error = 'Database error verifying name.';
-                }
-            }
+            if (empty($value)) $error = 'Full name is required.';
+            elseif (strlen($value) < 3) $error = 'Full name must be at least 3 characters.';
         } 
         elseif ($field === 'email') {
             if (empty($value)) {
@@ -157,7 +141,7 @@ if (isset($_POST['action'])) {
                 <div style='font-family:sans-serif; padding:20px; background:#f4f4f4;'>
                     <div style='background:#fff; padding:20px; border-radius:8px; max-width:500px; margin:0 auto; border-top:5px solid #16a34a;'>
                         <h2 style='color:#16a34a;'>Verification Code</h2>
-                        <p>A request was made to link this email to a Staff Account. Please provide this code to your Administrator:</p>
+                        <p>A request was made to link this email to a Staff Account. Please provide this code to your staffistrator:</p>
                         <h1 style='font-size:32px; letter-spacing:5px; color:#333; text-align:center; padding:10px; background:#f9f9f9; border-radius:5px;'>{$otp}</h1>
                         <p style='color:#666; font-size:12px;'>This code is valid for 5 minutes.</p>
                     </div>
@@ -234,16 +218,7 @@ if (isset($_POST['action'])) {
         }
 
         try {
-            // Duplicate Name Check
-            $checkName = $conn->query("SELECT full_name FROM staff");
-            while ($row = $checkName->fetch_assoc()) {
-                if (strtolower(decrypt_data($row['full_name'])) === strtolower($name)) {
-                    echo json_encode(['success' => false, 'message' => 'This name is already registered to another staff member.']);
-                    exit;
-                }
-            }
-
-            // Duplicate Email check just in case
+            // Final Duplicate check just in case
             $check = $conn->query("SELECT email FROM staff");
             while ($row = $check->fetch_assoc()) {
                 if (decrypt_data($row['email']) === $email) {
@@ -322,16 +297,7 @@ if (isset($_POST['action'])) {
                 }
             }
 
-            // Duplicate Name Check
-            $checkName = $conn->query("SELECT staff_id, full_name FROM staff");
-            while ($row = $checkName->fetch_assoc()) {
-                if (strtolower(decrypt_data($row['full_name'])) === strtolower($name) && $row['staff_id'] != $id) {
-                    echo json_encode(['success' => false, 'message' => 'Another staff member has this name.']);
-                    exit;
-                }
-            }
-
-            // Duplicate Email Check
+            // Duplicate Check
             $check = $conn->query("SELECT staff_id, email FROM staff");
             while ($row = $check->fetch_assoc()) {
                 if (decrypt_data($row['email']) === $email && $row['staff_id'] != $id) {
@@ -722,11 +688,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       </div>
       <button id="menu-toggle" aria-label="Open navigation"><i class="fa-solid fa-bars"></i></button>
       <nav id="main-nav">
-        <a href="admin_dashboard.php">🏠 Dashboard</a>
+        <a href="staff_dashboard.php">🏠 Dashboard</a>
         <a href="appointment.php">📅 Appointments</a>
         <a href="patient_record.php">📘 Patient Record</a>
         <a href="product.php">💊 Product & Services</a>
-        <a href="account.php" class="active">👤 Account</a>
         <a href="profile.php">🔍 Profile</a>
       </nav>
     </header>

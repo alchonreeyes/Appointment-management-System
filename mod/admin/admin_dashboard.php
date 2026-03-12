@@ -19,6 +19,28 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 
 <style>
     /* =========================================
+       100% RESPONSIVE BASE
+       ========================================= */
+    body {
+        max-width: 100vw;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+    }
+
+    header { 
+        display:flex; align-items:center; background:#fff; 
+        padding:12px 75px; 
+        box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; justify-content: space-between;
+    }
+    
+    .dashboard { 
+        padding: 20px 75px 40px 75px; 
+        max-width: 100%; 
+        margin: 0 auto; 
+    }
+
+    /* =========================================
        LOADER & TRANSITION STYLES
        ========================================= */
     #loader-overlay {
@@ -57,13 +79,12 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 
-    /* Main Content Fade In */
     #main-content {
-        display: none; /* Hidden by default until loader finishes */
+        display: none; 
     }
 
-    /* Action Loader (Processing...) */
     #actionLoader { 
         display: none; 
         position: fixed; 
@@ -86,7 +107,58 @@ require_once __DIR__ . '/../../config/encryption_util.php';
     .toast-icon { font-size: 24px; font-weight: 800; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
     .toast.success { border-top: 4px solid #16a34a; } .toast.success .toast-icon { background: #16a34a; }
     .toast.error { border-top: 4px solid #dc2626; } .toast.error .toast-icon { background: #dc2626; }
-    @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+    /* =========================================
+       MODALS - BLURRED, LOCKED & SCROLLABLE
+       ========================================= */
+    .detail-overlay, .confirm-modal, .qr-modal-overlay, .popup-overlay { 
+        display: none; position: fixed; inset: 0; background: rgba(2, 12, 20, 0.6); 
+        z-index: 3000; align-items: center; justify-content: center; padding: 20px; 
+        backdrop-filter: blur(4px); 
+    }
+    
+    /* FIX APPLIED HERE: Added .qr-modal-overlay.show */
+    .detail-overlay.show, .confirm-modal.show, .qr-modal-overlay.show, .popup-overlay.active { display: flex; animation: fadeIn .2s ease; }
+    
+    .detail-card, .confirm-card, #popup { 
+        max-width: 96%; background: #fff; border-radius: 16px; padding: 0; 
+        box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; 
+        max-height: 85vh; 
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .detail-card { width: 700px; }
+    .confirm-card { width: 440px; padding: 24px; }
+    #popup { width: 400px; padding: 24px; }
+    
+    .qr-modal-content {
+        background: #fff; padding: 24px; border-radius: 16px; width: 500px; max-width: 96%;
+        box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease;
+        max-height: 85vh; display: flex; flex-direction: column; overflow-y: auto;
+        position: relative;
+    }
+
+    .detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;}
+    .detail-title { font-weight: 800; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 10px; }
+    .detail-id { background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; }
+
+    #detailModalBody { padding: 24px 28px; overflow-y: auto; font-size: 15px; } 
+    .detail-actions, .confirm-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; flex-shrink: 0; }
+    
+    .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
+    .btn-close { background: #fff; color: #4a5568; border: 2px solid #e2e8f0; }
+    .btn-accept { background: linear-gradient(135deg, #16a34a, #15803d); color: #fff; }
+    .btn-cancel { background: linear-gradient(135deg, #dc2626, #b91c1c); color: #fff; }
+
+    .confirm-header { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; flex-shrink: 0; }
+    .confirm-icon { width: 56px; height: 56px; border-radius: 12px; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 28px; flex-shrink: 0; }
+    .confirm-icon.danger { background: linear-gradient(135deg, #dc2626, #b91c1c); }
+    .confirm-title { font-weight: 800; color: #1a202c; font-size: 20px; }
+    .confirm-msg { color: #4a5568; font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
+    #reasonInputWrapper { margin-bottom: 20px; }
+    #cancelReasonInput { width: 100%; padding: 10px; font-family: 'Segoe UI', sans-serif; font-size: 14px; border: 2px solid #e2e8f0; border-radius: 8px; resize: vertical; min-height: 80px; }
+    #cancelReasonInput:focus { border-color: #991010; outline: none; }
 
     /* =========================================
        EXISTING DASHBOARD STYLES
@@ -113,6 +185,7 @@ require_once __DIR__ . '/../../config/encryption_util.php';
     #camera-select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; max-width: 200px; background: white; }
     #swap-camera-btn { padding: 8px 12px; background-color: #34495e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; transition: background 0.3s; }
     #swap-camera-btn:hover { background-color: #2c3e50; }
+    .qr-modal-close { position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 20px; cursor: pointer; color: #555; }
 
     /* Export Button */
     .btn-export {
@@ -123,6 +196,14 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 
     /* Charts Grid */
     .charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 20px; margin-bottom: 20px; }
+
+    /* Mobile Responsive Fixes */
+    @media (max-width: 1000px) {
+        header { padding: 12px 20px; }
+        .dashboard { padding: 20px; }
+        .charts-grid { grid-template-columns: 1fr; }
+        .bottom-section { flex-direction: column; }
+    }
 
     /* Print Styles */
     @media print {
@@ -154,7 +235,7 @@ require_once __DIR__ . '/../../config/encryption_util.php';
 <div id="main-content">
     
     <div id="toast-overlay-global" class="toast-overlay" style="z-index: 10000;"></div>
-    <div class="popup-overlay" onclick="closePopup()"></div>
+    <div class="popup-overlay" id="popupOverlay"></div>
 
     <header>
         <div class="logo-section">
@@ -304,7 +385,6 @@ require_once __DIR__ . '/../../config/encryption_util.php';
                 <div class="qr-section">
                     <div class="qr-code-display">
                         <?php 
-                            // 1. Find the latest CONFIRMED appointment to show as a test
                             $qrTestSql = "SELECT appointment_id FROM appointments 
                                           JOIN appointmentstatus s ON appointments.status_id = s.status_id 
                                           WHERE s.status_name = 'Confirmed' 
@@ -325,12 +405,12 @@ require_once __DIR__ . '/../../config/encryption_util.php';
         </div>
     </div>
 
-    <div id="popup">
+    <div id="popup" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3001;">
         <div id="popup-header"><h3>Confirmation</h3></div>
         <div id="popup-content"></div>
-        <div id="popup-actions" style="display: flex; justify-content: flex-end; gap: 10px;">
-            <button id="confirmActionBtn" style="display: none; background: #27ae60;">Confirm</button>
-            <button onclick="closePopup()">Close</button>
+        <div id="popup-actions" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+            <button id="confirmActionBtn" class="btn-small btn-accept" style="display: none;">Confirm</button>
+            <button class="btn-small btn-close" onclick="closePopup()">Close</button>
         </div>
     </div>
 
@@ -340,20 +420,20 @@ require_once __DIR__ . '/../../config/encryption_util.php';
                 <div class="detail-title" id="detail-title">Appointment Details</div>
                 <span class="detail-id" id="detail-id">#0</span>
             </div>
-            <div id="detailModalBody" style="padding: 24px 28px; max-height: 70vh; overflow-y: auto; font-size: 15px;"></div>
+            <div id="detailModalBody"></div>
             <div class="detail-actions">
                 <input type="hidden" id="modal_appointment_id" value="">
                 <button class="btn-small btn-close" onclick="closeAppointmentDetailModal()">Back</button>
-                <button class="btn-small btn-cancel" style="background: #dc2626; color: white;" onclick="promptScannedCancel()">Cancel</button>
-                <button class="btn-small btn-accept" style="background: #16a34a; color: white;" onclick="updateScannedStatus('Completed')">Complete</button>
+                <button class="btn-small btn-cancel" onclick="promptScannedCancel()">Cancel</button>
+                <button class="btn-small btn-accept" onclick="updateScannedStatus('Completed')">Complete</button>
             </div>
         </div>
     </div>
 
-    <div class="qr-modal-overlay" id="qrScannerModal" style="display: none;">
+    <div class="qr-modal-overlay" id="qrScannerModal">
         <div class="qr-modal-content">
             <button class="qr-modal-close" onclick="stopScan()">✕</button>
-            <h3>Scan Appointment QR Code</h3>
+            <h3 style="margin-bottom: 15px;">Scan Appointment QR Code</h3>
             
             <div id="messenger-warning" style="display:none; background:#fee2e2; color:#b91c1c; padding:15px; font-size:14px; border-radius:8px; margin-bottom:15px; text-align:left; border-left: 5px solid #b91c1c;">
                 <strong>⚠️ Camera Blocked by Messenger</strong><br>
@@ -366,13 +446,14 @@ require_once __DIR__ . '/../../config/encryption_util.php';
                 <button id="swap-camera-btn" onclick="swapCamera()" title="Switch Camera">↻</button>
             </div>
 
-            <p>Hold the QR code steady in the center of the frame.</p>
+            <p style="text-align: center; margin-bottom: 15px; color: #555;">Hold the QR code steady in the center of the frame.</p>
             <div id="qr-reader-container">
                 <div id="qr-reader"></div>
             </div>
         </div>
     </div>
-    <div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3001;">
+
+    <div id="reasonModal" class="confirm-modal" aria-hidden="true" style="z-index: 3005;">
         <div class="confirm-card" role="dialog" aria-modal="true">
             <div class="confirm-header">
                 <div class="confirm-icon danger">!</div>
@@ -393,7 +474,9 @@ require_once __DIR__ . '/../../config/encryption_util.php';
         &copy; <?= date('Y') ?> EyeMaster. All rights reserved.
     </footer>
 
-</div> <div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
+</div> 
+
+<div id="actionLoader" class="detail-overlay" style="z-index: 9990;" aria-hidden="true">
     <div class="loader-card" style="background: #fff; border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
         <div class="loader-spinner" style="border-top-color: #991010; width: 32px; height: 32px; border-width: 4px; flex-shrink: 0;"></div>
         <p id="actionLoaderText" style="font-weight: 600; color: #334155; font-size: 15px;">Processing...</p>
@@ -422,7 +505,7 @@ function hidePageLoader() {
     }
 }
 
-// Initial Page Load Timer (Matches patient_record.php feel)
+// Initial Page Load Timer
 setTimeout(hidePageLoader, 1500);
 
 function showActionLoader(message = 'Processing...') {
@@ -443,12 +526,9 @@ function hideActionLoader() {
 // ===================================
 // CHART DATA
 // ===================================
-// SAFETY FIX: Use null coalescing for JS variables
 const dailyData = <?php echo json_encode($dailyData ?? []); ?>;
 const statusData = <?php echo json_encode($statusData ?? []); ?>;
 const weeklyData = <?php echo json_encode($weeklyData ?? []); ?>;
-
-// --- SERVICES DATA (New) ---
 const serviceLabels = <?php echo json_encode($serviceLabels ?? []); ?>;
 const serviceValues = <?php echo json_encode($serviceValues ?? []); ?>;
 
@@ -463,10 +543,10 @@ const statusValues = statusData.length > 0 ? statusData.map(s => parseInt(s.coun
 
 const statusColors = statusData.length > 0 ? statusData.map(s => {
     const status = s.status_name.toLowerCase(); 
-    if (status.includes('completed') || status.includes('approved')) return '#27ae60'; // Green
-    if (status.includes('pending')) return '#f39c12'; // Orange
-    if (status.includes('confirmed')) return '#8bc34a'; // Light Green
-    if (status.includes('cancel') || status.includes('missed')) return '#e74c3c'; // Red
+    if (status.includes('completed') || status.includes('approved')) return '#27ae60'; 
+    if (status.includes('pending')) return '#f39c12'; 
+    if (status.includes('confirmed')) return '#8bc34a'; 
+    if (status.includes('cancel') || status.includes('missed')) return '#e74c3c'; 
     return '#95a5a6';
 }) : ['#e0e0e0'];
 
@@ -523,28 +603,10 @@ new Chart(ctx2, {
     }
 });
 
-// ==========================================
-// TOP SERVICES CHART (Pie/Doughnut)
-// ==========================================
+// Top Services Chart
 const ctxServices = document.getElementById('servicesChart').getContext('2d');
-
-// GENERATED GREEN PALETTE (Dark to Light)
-const serviceColors = [
-    '#145A32', // Darkest Green
-    '#196F3D',
-    '#1E8449',
-    '#229954',
-    '#27AE60',
-    '#2ECC71',
-    '#52BE80',
-    '#7DCEA0',
-    '#A9DFBF',
-    '#C3E6CB'  // Lightest Green
-];
-
-const finalServiceColors = (serviceLabels[0] === 'No Availments') 
-    ? ['#e0e0e0'] // Grey for empty
-    : serviceColors;
+const serviceColors = ['#145A32', '#196F3D', '#1E8449', '#229954', '#27AE60', '#2ECC71', '#52BE80', '#7DCEA0', '#A9DFBF', '#C3E6CB'];
+const finalServiceColors = (serviceLabels[0] === 'No Availments') ? ['#e0e0e0'] : serviceColors;
 
 new Chart(ctxServices, {
     type: 'doughnut', 
@@ -565,13 +627,7 @@ new Chart(ctxServices, {
         plugins: {
             legend: {
                 position: 'right', 
-                labels: { 
-                    padding: 10, 
-                    boxWidth: 12,
-                    font: { size: 11 }, 
-                    usePointStyle: true, 
-                    pointStyle: 'circle' 
-                }
+                labels: { padding: 10, boxWidth: 12, font: { size: 11 }, usePointStyle: true, pointStyle: 'circle' }
             },
             tooltip: {
                 callbacks: {
@@ -612,11 +668,10 @@ new Chart(ctx3, {
     }
 });
 
-// ... Helper functions ...
 const popup = document.getElementById('popup');
 const popupHeader = document.getElementById('popup-header');
 const popupContent = document.getElementById('popup-content');
-const popupOverlay = document.querySelector('.popup-overlay');
+const popupOverlay = document.getElementById('popupOverlay');
 const confirmBtn = document.getElementById('confirmActionBtn');
 
 function showGlobalToast(msg, type = 'success') {
@@ -647,12 +702,12 @@ function openPopup(header, content, isConfirmation = false, callback = null) {
         confirmBtn.style.display = 'none';
         confirmBtn.onclick = null;
     }
-    popup.classList.add('active');
+    popup.style.display = 'block';
     popupOverlay.classList.add('active');
 }
 
 function closePopup() { 
-    popup.classList.remove('active');
+    popup.style.display = 'none';
     popupOverlay.classList.remove('active');
     const qrModal = document.getElementById('qrScannerModal');
     if (qrModal && qrModal.style.display !== 'none') stopScan();
@@ -680,8 +735,18 @@ document.addEventListener('click', function(e) {
     }
 });
 
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') {
+        closePopup();
+        closeAppointmentDetailModal();
+        stopScan();
+        const reasonModal = document.getElementById('reasonModal');
+        if (reasonModal) reasonModal.classList.remove('show');
+    }
+});
+
 // ==========================================
-// UPDATED QR SCANNER LOGIC WITH CAMERA SWAP
+// QR SCANNER LOGIC
 // ==========================================
 
 let html5QrCode = null;
@@ -689,7 +754,6 @@ let currentCameraId = null;
 let allCameras = [];
 let isScanning = false;
 
-// --- DETECT IN-APP BROWSER ---
 function isInAppBrowser() {
     const ua = navigator.userAgent || navigator.vendor || window.opera;
     return (ua.indexOf("FBAN") > -1) || (ua.indexOf("FBAV") > -1) || (ua.indexOf("Instagram") > -1);
@@ -697,7 +761,7 @@ function isInAppBrowser() {
 
 function stopScan() {
     const qrModal = document.getElementById('qrScannerModal');
-    if (qrModal) qrModal.style.display = 'none';
+    if (qrModal) qrModal.classList.remove('show');
 
     if (html5QrCode && isScanning) {
         html5QrCode.stop().then(() => {
@@ -715,27 +779,22 @@ function startScan() {
     const qrModal = document.getElementById('qrScannerModal');
     if (!qrModal) return;
     
-    // Check for In-App Browser IMMEDIATELY
     if (isInAppBrowser()) {
         const warning = document.getElementById('messenger-warning');
         const controls = document.querySelector('.qr-controls');
         const readerContainer = document.getElementById('qr-reader-container');
 
         if(warning) warning.style.display = 'block';
-
-        // Hide camera controls/view since they likely won't work
         if(controls) controls.style.display = 'none';
         if(readerContainer) readerContainer.style.display = 'none';
 
-        qrModal.style.display = 'flex';
-        return; // STOP HERE
+        qrModal.classList.add('show');
+        return; 
     }
 
-    // Show Modal
-    qrModal.style.display = 'flex'; 
+    qrModal.classList.add('show'); 
     const qrReaderId = "qr-reader";
 
-    // Initialize if not already done
     if(!html5QrCode) {
         html5QrCode = new Html5Qrcode(qrReaderId);
     }
@@ -744,9 +803,8 @@ function startScan() {
         if (devices && devices.length) {
             allCameras = devices;
             const cameraSelect = document.getElementById('camera-select');
-            cameraSelect.innerHTML = ""; // Clear options
+            cameraSelect.innerHTML = ""; 
 
-            // 1. Populate the Dropdown
             let backCameraId = null;
 
             devices.forEach((device, index) => {
@@ -755,17 +813,14 @@ function startScan() {
                 option.text = device.label || `Camera ${index + 1}`;
                 cameraSelect.appendChild(option);
 
-                // Try to auto-detect the "back" camera to use as default
                 if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('environment')) {
                     backCameraId = device.id;
                 }
             });
 
-            // 2. Select the best initial camera (Back prefered, otherwise last one)
             currentCameraId = backCameraId ? backCameraId : devices[devices.length - 1].id;
             cameraSelect.value = currentCameraId;
 
-            // 3. Start the scan
             runCamera(currentCameraId);
 
         } else {
@@ -776,11 +831,9 @@ function startScan() {
     });
 }
 
-// Helper function to actually start/restart the stream
 function runCamera(cameraId) {
     if(!html5QrCode) return;
 
-    // If already scanning, stop first, then start new
     if (isScanning) {
         html5QrCode.stop().then(() => {
             isScanning = false;
@@ -794,18 +847,12 @@ function runCamera(cameraId) {
 function startQrCodeInstance(cameraId) {
     html5QrCode.start(
         cameraId, 
-        { 
-            fps: 10, 
-            qrbox: { width: 250, height: 250 } // Standard Box
-        },
+        { fps: 10, qrbox: { width: 250, height: 250 } },
         (qrCodeMessage) => { 
-            // SUCCESS CALLBACK
             stopScan(); 
             processScannedData(qrCodeMessage); 
         },
-        (errorMessage) => { 
-            // IGNORE SCAN ERRORS (common while moving camera)
-        }
+        (errorMessage) => { }
     ).then(() => {
         isScanning = true;
         currentCameraId = cameraId;
@@ -815,7 +862,6 @@ function startQrCodeInstance(cameraId) {
     });
 }
 
-// Triggered when user selects from dropdown
 function onCameraSelectChange() {
     const select = document.getElementById('camera-select');
     const newId = select.value;
@@ -824,24 +870,16 @@ function onCameraSelectChange() {
     }
 }
 
-// Triggered when user clicks the "Cycle/Swap" button
 function swapCamera() {
     if (allCameras.length < 2) {
         showGlobalToast('Only one camera available', 'warning');
         return;
     }
-
-    // Find current index
     let currentIndex = allCameras.findIndex(c => c.id === currentCameraId);
-    
-    // Calculate next index (cycle)
     let nextIndex = (currentIndex + 1) % allCameras.length;
     let nextCameraId = allCameras[nextIndex].id;
 
-    // Update Dropdown UI
     document.getElementById('camera-select').value = nextCameraId;
-
-    // Run
     runCamera(nextCameraId);
 }
 
@@ -866,19 +904,30 @@ function openAppointmentDetailModal(payload) {
     document.getElementById('detail-id').textContent = '#' + d.appointment_id;
     const modalBody = document.getElementById('detailModalBody');
     modalBody.innerHTML = ''; 
+    
+    // UPDATED: Kasama na dito ang Email, Phone at Address!
     const labels = {
-        'full_name': 'Patient Name', 'status_name': 'Status', 'service_name': 'Service',
+        'full_name': 'Patient Name', 'email': 'Email Address', 'phone_number': 'Phone Number', 'address': 'Home Address',
+        'status_name': 'Status', 'service_name': 'Service',
         'staff_name': 'Staff Assigned', 'appointment_date': 'Date', 'appointment_time': 'Time',
-        'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
+        'gender': 'Gender', 
         'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
         'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
         'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
         'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
         'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
         'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason',
-        'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)',
+        'consent_info': 'Consent (Info)', 'consent_reminders': 'Consent (Reminders)', 'consent_terms': 'Consent (Terms)'
     };
-    const displayOrder = ['full_name', 'status_name', 'service_name', 'staff_name', 'appointment_date', 'appointment_time', 'age', 'gender', 'phone_number', 'occupation', 'suffix', 'symptoms', 'concern', 'wear_glasses', 'notes', 'certificate_purpose', 'certificate_other', 'ishihara_test_type', 'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason', 'consent_info', 'consent_reminders', 'consent_terms'];
+    
+    // REMOVED 'age' from the display order below
+    const displayOrder = [
+        'full_name', 'email', 'phone_number', 'address', 'gender', 'occupation', 'suffix', 
+        'status_name', 'service_name', 'staff_name', 'appointment_date', 'appointment_time', 
+        'symptoms', 'concern', 'wear_glasses', 'notes', 'certificate_purpose', 'certificate_other', 
+        'ishihara_test_type', 'ishihara_purpose', 'color_issues', 'previous_color_issues', 
+        'ishihara_notes', 'ishihara_reason', 'consent_info', 'consent_reminders', 'consent_terms'
+    ];
     
     let contentHtml = '<div class="detail-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">';
     for (const key of displayOrder) {
@@ -887,7 +936,9 @@ function openAppointmentDetailModal(payload) {
             const label = labels[key] || key;
             let rowClass = 'detail-row';
             let style = 'background: #f8f9fb; padding: 12px 14px; border-radius: 8px; border: 1px solid #e8ecf0;';
-            if (['notes', 'symptoms', 'concern', 'ishihara_notes'].includes(key)) style += ' grid-column: 1 / -1;';
+            
+            // UPDATED: Pati Address at Email, ginawa nating full width just in case mahaba
+            if (['notes', 'symptoms', 'concern', 'ishihara_notes', 'address', 'email'].includes(key)) style += ' grid-column: 1 / -1;';
             
             if (key === 'appointment_date') value = preformatted.date;
             else if (key === 'appointment_time') value = preformatted.time;
@@ -930,9 +981,13 @@ function promptScannedCancel() {
     const submitBtn = document.getElementById('reasonSubmit');
     const backBtn = document.getElementById('reasonBack');
     reasonInput.value = ''; 
-    modal.classList.add('show'); modal.setAttribute('aria-hidden', 'false');
+    modal.classList.add('show'); 
+    
     let onKey; 
-    function cleanUp() { modal.classList.remove('show'); modal.setAttribute('aria-hidden', 'true'); document.removeEventListener('keydown', onKey); }
+    function cleanUp() { 
+        modal.classList.remove('show'); 
+        document.removeEventListener('keydown', onKey); 
+    }
     submitBtn.onclick = () => {
         const reason = reasonInput.value.trim();
         if (reason === '') return showGlobalToast('Reason required.', 'error');

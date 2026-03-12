@@ -36,9 +36,46 @@ if (isset($_POST['action'])) {
     $action = $_POST['action'];
     $table = $_POST['table'] ?? 'products';
 
-    if (!in_array($table, ['products', 'services', 'schedule'])) {
-        echo json_encode(['success' => false, 'message' => 'Invalid table.']);
+    // --- REAL-TIME DUPLICATE CHECKER ---
+    if ($action === 'checkProductName') {
+        $name = trim($_POST['name'] ?? '');
+        $id = $_POST['id'] ?? '';
+        
+        $sql = "SELECT product_id FROM products WHERE product_name = ?";
+        if ($id) $sql .= " AND product_id != ?";
+        
+        $stmt = $conn->prepare($sql);
+        if ($id) $stmt->bind_param("si", $name, $id);
+        else $stmt->bind_param("s", $name);
+        
+        $stmt->execute();
+        $exists = $stmt->get_result()->num_rows > 0;
+        echo json_encode(['success' => true, 'exists' => $exists]);
         exit;
+    }
+
+    if ($action === 'checkServiceName') {
+        $name = trim($_POST['name'] ?? '');
+        $id = $_POST['id'] ?? '';
+        
+        $sql = "SELECT service_id FROM services WHERE service_name = ?";
+        if ($id) $sql .= " AND service_id != ?";
+        
+        $stmt = $conn->prepare($sql);
+        if ($id) $stmt->bind_param("si", $name, $id);
+        else $stmt->bind_param("s", $name);
+        
+        $stmt->execute();
+        $exists = $stmt->get_result()->num_rows > 0;
+        echo json_encode(['success' => true, 'exists' => $exists]);
+        exit;
+    }
+
+    if (!in_array($table, ['products', 'services', 'schedule'])) {
+        if(!in_array($action, ['checkProductName', 'checkServiceName'])) {
+            echo json_encode(['success' => false, 'message' => 'Invalid table.']);
+            exit;
+        }
     }
 
     $idColumn = 'product_id';
@@ -159,7 +196,6 @@ if (isset($_POST['action'])) {
             $time_from = trim($_POST['time_from'] ?? '');
             $time_to = trim($_POST['time_to'] ?? '');
             
-            // Validation
             if (!$schedule_date) {
                 echo json_encode(['success' => false, 'message' => 'Server validation failed: Date is required.']);
                 exit;
@@ -170,36 +206,28 @@ if (isset($_POST['action'])) {
                 exit;
             }
 
-            // Convert empty strings to NULL for database
             $time_from = (!empty($time_from)) ? $time_from : null;
             $time_to = (!empty($time_to)) ? $time_to : null;
             
-            // --- TIME VALIDATION ---
             if ($time_from !== null && $time_to !== null) {
                 $ts_from = strtotime($time_from);
                 $ts_to = strtotime($time_to);
-                $ts_open = strtotime("07:00:00");
-                $ts_close = strtotime("18:00:00"); // 6:00 PM
+                $ts_open = strtotime("08:00:00");
+                $ts_close = strtotime("18:00:00");
 
-                // 1. Check if End time is before Start time
                 if ($ts_from >= $ts_to) {
                     echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
                     exit;
                 }
-
-                // 2. Check Operating Hours (07:00 AM - 6:00 PM)
                 if ($ts_from < $ts_open || $ts_to > $ts_close || $ts_from > $ts_close || $ts_to < $ts_open) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid Time: Store only operates from 7:00 AM to 6:00 PM.']);
+                    echo json_encode(['success' => false, 'message' => 'Invalid Time: Store only operates from 8:00 am to 6:00 PM.']);
                     exit;
                 }
-
-                // 3. Check Minimum Duration (1 Hour = 3600 seconds)
                 if (($ts_to - $ts_from) < 3600) {
                     echo json_encode(['success' => false, 'message' => 'Minimum closure duration is 1 hour.']);
                     exit;
                 }
 
-                // 4. CHECK IF TIME HAS PASSED (If date is today)
                 $currentDate = date('Y-m-d');
                 $currentTime = date('H:i');
 
@@ -210,10 +238,8 @@ if (isset($_POST['action'])) {
                     }
                 }
             }
-            // ---------------------------
 
             try {
-                // Ensure date is not already booked (double check server side)
                 $stmt_check = $conn->prepare("SELECT id FROM schedule_settings WHERE schedule_date = ? AND status = 'Closed'");
                 $stmt_check->bind_param("s", $schedule_date);
                 $stmt_check->execute();
@@ -227,22 +253,11 @@ if (isset($_POST['action'])) {
                     VALUES (?, 'Closed', ?, ?, ?)
                 ");
                 
-                if (!$stmt_insert) {
-                    echo json_encode(['success' => false, 'message' => 'Database prepare error: ' . $conn->error]);
-                    exit;
-                }
-                
                 $stmt_insert->bind_param("ssss", $schedule_date, $reason, $time_from, $time_to);
-                
-                if (!$stmt_insert->execute()) {
-                    echo json_encode(['success' => false, 'message' => 'Database execute error: ' . $stmt_insert->error]);
-                    exit;
-                }
-                
+                $stmt_insert->execute();
                 echo json_encode(['success' => true, 'message' => 'Store closure set successfully.']);
                 
             } catch (Exception $e) {
-                error_log("EXCEPTION: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Exception: ' . $e->getMessage()]);
             }
         } else {
@@ -265,7 +280,6 @@ if (isset($_POST['action'])) {
                 $stmt_insert->execute();
                 echo json_encode(['success' => true, 'message' => 'Service added successfully']);
             } catch (Exception $e) {
-                error_log("AddService error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during add.']);
             }
         }
@@ -305,9 +319,54 @@ if (isset($_POST['action'])) {
                 $stmt_update = $conn->prepare("UPDATE products SET product_name=?, description=?, gender=?, brand=?, lens_type=?, frame_type=?, image_path=? WHERE product_id=?");
                 $stmt_update->bind_param("sssssssi", $name, $desc, $gender, $brand, $lens_type, $frame_type, $imageToSave, $id);
                 $stmt_update->execute();
+
+                // ----------------------------------------------------
+                // Handle Gallery Image Deletions
+                // ----------------------------------------------------
+                if (!empty($_POST['removed_gallery'])) {
+                    $removed_images = json_decode($_POST['removed_gallery'], true);
+                    if (is_array($removed_images) && count($removed_images) > 0) {
+                        $stmt_del_gal = $conn->prepare("DELETE FROM product_gallery WHERE product_id = ? AND image_path = ?");
+                        foreach ($removed_images as $r_img) {
+                            $stmt_del_gal->bind_param("is", $id, $r_img);
+                            $stmt_del_gal->execute();
+                            if (file_exists($r_img)) {
+                                @unlink($r_img);
+                            }
+                        }
+                    }
+                }
+
+                // ----------------------------------------------------
+                // Handle Gallery Image Additions
+                // ----------------------------------------------------
+                if (isset($_FILES['gallery_images'])) {
+                    $uploadDir = __DIR__ . '/../photo/';
+                    if (!is_dir($uploadDir)) mkdir($uploadDir, 0777, true);
+                    
+                    $fileCount = is_array($_FILES['gallery_images']['name']) ? count($_FILES['gallery_images']['name']) : 0;
+                    for ($i = 0; $i < $fileCount; $i++) {
+                        if ($_FILES['gallery_images']['error'][$i] === UPLOAD_ERR_OK) {
+                            $fileName = uniqid() . '_gal_' . basename($_FILES['gallery_images']['name'][$i]);
+                            $targetPath = '../photo/' . $fileName; 
+                            $fullTargetPath = $uploadDir . $fileName;
+                            
+                            $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                            $fileType = mime_content_type($_FILES['gallery_images']['tmp_name'][$i]);
+                            
+                            if (in_array($fileType, $allowedTypes)) {
+                                if (move_uploaded_file($_FILES['gallery_images']['tmp_name'][$i], $fullTargetPath)) {
+                                    $stmt_ins_gal = $conn->prepare("INSERT INTO product_gallery (product_id, image_path) VALUES (?, ?)");
+                                    $stmt_ins_gal->bind_param("is", $id, $targetPath);
+                                    $stmt_ins_gal->execute();
+                                }
+                            }
+                        }
+                    }
+                }
+
                 echo json_encode(['success' => true, 'message' => 'Product updated successfully']);
             } catch (Exception $e) {
-                error_log("EditProduct error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during update.']);
             }
         
@@ -326,26 +385,22 @@ if (isset($_POST['action'])) {
             if (!empty($time_from) && !empty($time_to)) {
                 $ts_from = strtotime($time_from);
                 $ts_to = strtotime($time_to);
-                $ts_open = strtotime("07:00:00");
+                $ts_open = strtotime("08:00:00");
                 $ts_close = strtotime("18:00:00");
 
-                // 1. Time Order
                 if ($ts_from >= $ts_to) {
                     echo json_encode(['success' => false, 'message' => 'Time From must be earlier than Time To.']);
                     exit;
                 }
-                // 2. Operating Hours Check (07:00 - 18:00)
                 if ($ts_from < $ts_open || $ts_to > $ts_close || $ts_from > $ts_close || $ts_to < $ts_open) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid Time: Store only operates from 7:00 AM to 6:00 PM.']);
+                    echo json_encode(['success' => false, 'message' => 'Invalid Time: Store only operates from 8:00 am to 6:00 PM.']);
                     exit;
                 }
-                // 3. Minimum Duration Check (1 Hour)
                 if (($ts_to - $ts_from) < 3600) {
                     echo json_encode(['success' => false, 'message' => 'Minimum closure duration is 1 hour.']);
                     exit;
                 }
                 
-                // 4. CHECK IF TIME HAS PASSED (If date is today)
                 $currentDate = date('Y-m-d');
                 $currentTime = date('H:i');
 
@@ -381,7 +436,6 @@ if (isset($_POST['action'])) {
                 echo json_encode(['success' => true, 'message' => 'Store closure updated successfully.']);
                 
             } catch (Exception $e) {
-                error_log("EditClosure error: " . $e->getMessage());
                 if ($conn->errno == 1062) { 
                       echo json_encode(['success' => false, 'message' => 'Cannot move schedule: The new date already has a setting.']);
                  } else {
@@ -410,7 +464,6 @@ if (isset($_POST['action'])) {
                 $stmt_update->execute();
                 echo json_encode(['success' => true, 'message' => 'Service updated successfully']);
             } catch (Exception $e) {
-                error_log("EditService error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Database error during update.']);
             }
         }
@@ -429,6 +482,17 @@ if (isset($_POST['action'])) {
                 $stmt_img->bind_param("i", $id);
                 $stmt_img->execute();
                 $imagePath = $stmt_img->get_result()->fetch_assoc()['image_path'];
+                
+                // Remove gallery images too
+                $stmt_gal = $conn->prepare("SELECT image_path FROM product_gallery WHERE product_id = ?");
+                $stmt_gal->bind_param("i", $id);
+                $stmt_gal->execute();
+                $gal_res = $stmt_gal->get_result();
+                while($g_row = $gal_res->fetch_assoc()) {
+                    if(file_exists($g_row['image_path'])) @unlink($g_row['image_path']);
+                }
+                $conn->query("DELETE FROM product_gallery WHERE product_id = " . intval($id));
+
                 $stmt_del = $conn->prepare("DELETE FROM products WHERE product_id = ?");
                 $stmt_del->bind_param("i", $id);
                 $stmt_del->execute();
@@ -446,7 +510,6 @@ if (isset($_POST['action'])) {
             }
             echo json_encode(['success' => true, 'message' => ucfirst(rtrim($table, 's')) . ' removed successfully']);
         } catch (Exception $e) {
-            error_log("Remove error: " . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Database error during removal.']);
         }
         exit;
@@ -458,6 +521,9 @@ if (isset($_POST['action'])) {
 // =======================================================
 $brandFilter = $_GET['brand'] ?? 'All';
 $search = trim($_GET['search'] ?? '');
+$monthFilter = $_GET['month'] ?? 'All';
+$yearFilter = $_GET['year'] ?? 'All';
+
 $params = [];
 $paramTypes = "";
 if ($activeTable === 'products') {
@@ -480,13 +546,23 @@ if ($activeTable === 'products') {
 } elseif ($activeTable === 'schedule') {
     $query = "SELECT * FROM schedule_settings WHERE 1=1";
      if ($search !== '') {
-        $query .= " AND (schedule_date LIKE ? OR reason LIKE ?)";
+        $query .= " AND (id LIKE ? OR reason LIKE ?)";
         $searchTerm = "%{$search}%";
         $params[] = $searchTerm;
         $params[] = $searchTerm;
         $paramTypes .= "ss";
     }
-    $query .= " ORDER BY schedule_date DESC";
+    if ($monthFilter !== 'All') {
+        $query .= " AND MONTH(schedule_date) = ?";
+        $params[] = $monthFilter;
+        $paramTypes .= "i";
+    }
+    if ($yearFilter !== 'All') {
+        $query .= " AND YEAR(schedule_date) = ?";
+        $params[] = $yearFilter;
+        $paramTypes .= "i";
+    }
+    $query .= " ORDER BY schedule_date ASC";
 
 } else {
     $query = "SELECT * FROM services WHERE 1=1";
@@ -507,7 +583,6 @@ try {
     $stmt->execute();
     $items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 } catch (Exception $e) {
-    error_log("Fetch Items error: " . $e->getMessage());
     $items = [];
     $pageError = "Error loading items: " . $e->getMessage();
 }
@@ -539,11 +614,21 @@ if ($activeTable === 'products') {
     $countParams = [];
     $countParamTypes = "";
     if ($search !== '') {
-        $countSql .= " AND (schedule_date LIKE ? OR reason LIKE ?)";
+        $countSql .= " AND (id LIKE ? OR reason LIKE ?)";
         $q = "%{$search}%";
         $countParams[] = $q;
         $countParams[] = $q;
         $countParamTypes .= "ss";
+    }
+    if ($monthFilter !== 'All') {
+        $countSql .= " AND MONTH(schedule_date) = ?";
+        $countParams[] = $monthFilter;
+        $countParamTypes .= "i";
+    }
+    if ($yearFilter !== 'All') {
+        $countSql .= " AND YEAR(schedule_date) = ?";
+        $countParams[] = $yearFilter;
+        $countParamTypes .= "i";
     }
 } else {
     $countSql = "SELECT COUNT(*) AS total FROM services WHERE 1=1";
@@ -565,7 +650,6 @@ try {
     $stmt_stats->execute();
     $stats = $stmt_stats->get_result()->fetch_assoc();
 } catch (Exception $e) {
-    error_log("Fetch Stats error: " . $e->getMessage());
     $stats = [];
 }
 $brands = [];
@@ -576,15 +660,26 @@ if ($activeTable === 'products') {
         $stmt_cat->execute();
         $brands = $stmt_cat->get_result()->fetch_all(MYSQLI_ASSOC);
     } catch (Exception $e) {
-        error_log("Fetch Brands error: " . $e->getMessage());
         $brands = [];
     }
 }
 
-// --- Fetch Schedule Dates for Calendar Highlighting (Only Closures) ---
+// Fetch distinct years for schedule dropdown
+$scheduleYears = [];
+if ($activeTable === 'schedule') {
+    try {
+        $yearStmt = $conn->prepare("SELECT DISTINCT YEAR(schedule_date) as yr FROM schedule_settings WHERE status = 'Closed' ORDER BY yr DESC");
+        $yearStmt->execute();
+        $resYears = $yearStmt->get_result();
+        while($row = $resYears->fetch_assoc()) {
+            $scheduleYears[] = $row['yr'];
+        }
+    } catch(Exception $e) {}
+}
+
+// --- Fetch Schedule Dates for Calendar Highlighting ---
 $closureDates = [];
 try {
-    // --- UPDATED: Use DATE_FORMAT to ensure strict YYYY-MM-DD format ---
     $scheduleQuery = "SELECT DATE_FORMAT(schedule_date, '%Y-%m-%d') as schedule_date FROM schedule_settings WHERE status = 'Closed'";
     $stmt_schedule = $conn->prepare($scheduleQuery);
     $stmt_schedule->execute();
@@ -593,7 +688,6 @@ try {
         $closureDates[] = $row['schedule_date'];
     }
 } catch (Exception $e) {
-    error_log("Fetch Schedule Dates error: " . $e->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -606,108 +700,66 @@ try {
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
 <style>
-/* ... (Lahat ng CSS mo - kinopya ko lang) ... */
+/* --- 100% RESPONSIVE BASE --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background:#f8f9fa; color:#223; }
+body { background:#f8f9fa; color:#223; padding-bottom: 40px; max-width: 100vw; overflow-x: hidden; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 
-/* UPDATED: PADDING 75px LEFT AND RIGHT */
-header { display:flex; align-items:center; background:#fff; padding:12px 75px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; }
-
+/* HEADER */
+header { display:flex; align-items:center; background:#fff; padding:12px 75px 12px 75px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative; z-index:100; justify-content: space-between; }
 .logo-section { display:flex; align-items:center; gap:10px; margin-right:auto; }
 .logo-section img { height:32px; border-radius:4px; object-fit:cover; }
 nav { display:flex; gap:8px; align-items:center; }
-nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; }
+nav a { text-decoration:none; padding:8px 12px; color:#5a6c7d; border-radius:6px; font-weight:600; font-size: 14px; }
 nav a.active { background:#dc3545; color:#fff; }
 
-/* UPDATED: PADDING 75px LEFT AND RIGHT */
+/* CONTAINER */
 .container { padding:20px 75px 40px 75px; max-width:100%; margin:0 auto; }
 
 .header-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; gap:12px; }
 .header-row h2 { font-size:20px; color:#2c3e50; }
 
-/* UPDATED: RIGHT ALIGN BUTTONS */
+/* TABLE TOGGLES */
 .table-toggle { display:flex; gap:8px; margin-bottom:16px; flex-wrap: wrap; justify-content: flex-end; }
-
 .toggle-btn { padding:10px 20px; border-radius:8px; border:2px solid #e6e9ee; background:#fff; cursor:pointer; font-weight:700; transition:all .2s; }
 .toggle-btn.active { background:#dc3545; color:#fff; border-color:#dc3545; }
 .toggle-btn:hover:not(.active) { background:#f8f9fa; border-color:#dc3545; }
+
+/* FILTERS */
 .filters { display:flex; gap:10px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
 select, input[type="text"], input[type="date"], input[type="time"] { 
-    padding:9px 10px; 
-    border:1px solid #dde3ea; 
-    border-radius:8px; 
-    background:#fff; 
-    font-size: 14px;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding:9px 10px; border:1px solid #dde3ea; border-radius:8px; background:#fff; font-size: 14px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 input#formScheduleDate {
     background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%236B7280'%3E%3Cpath d='M14 2H12V1C12 0.447715 11.5523 0 11 0C10.4477 0 10 0.447715 10 1V2H6V1C6 0.447715 5.55228 0 5 0C4.44772 0 4 0.447715 4 1V2H2C0.89543 2 0 2.89543 0 4V14C0 15.1046 0.89543 16 2 16H14C15.1046 16 16 15.1046 16 14V4C16 2.89543 15.1046 2 14 2ZM14 14H2V7H14V14ZM14 5H2V4H14V5Z'/%3E%3C/svg%3E") no-repeat right 10px center;
     background-size: 16px 16px;
     cursor: pointer;
 }
+#searchInput { width: 333px; margin-left: 0; }
+.filters .button-group { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.filters .add-btn { padding-top: 9px; padding-bottom: 9px; font-size: 14px; margin: 0; }
 
-/* UPDATED: Search Input - Long (333px) and Left-Aligned */
-#searchInput {
-    width: 333px; 
-    margin-left: 0; 
-}
+button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
+.add-btn { background:#28a745; color:#fff; padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
+.add-btn:hover { background:#218838; transform:translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
 
-/* UPDATED: Button Group to align all buttons to the right */
-.filters .button-group {
-    margin-left: auto; /* This pushes the entire group to the right */
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
+/* STATS */
+.stats { display:flex; gap:16px; margin-bottom:18px; flex-wrap: wrap; justify-content: center; }
+.stat-card { background:#fff; border:1px solid #e6e9ee; border-radius:10px; padding:18px 24px; text-align:center; flex: 1 1 300px; max-width: 500px; min-width: 250px; }
+.stat-card h3 { margin-bottom:6px; font-size:24px; color:#21303a; }
+.stat-card p { color:#6b7f86; font-size:14px; font-weight: 600; }
 
-.filters .add-btn {
-    padding-top: 9px;
-    padding-bottom: 9px;
-    font-size: 14px;
-    margin: 0; 
-}
-
-
-/* --- TABLE CSS FROM APPOINTMENT.PHP (BALANCED SPACING) --- */
+/* TABLE */
 .table-container { background: #fff; border-radius: 10px; border: 1px solid #e6e9ee; padding: 0; overflow-x: auto; margin-bottom: 20px; }
-.custom-table { width: 100%; border-collapse: collapse; min-width: 900px; table-layout: fixed; }
+.custom-table { width: 100%; border-collapse: collapse; min-width: 800px; table-layout: fixed; }
 .custom-table th { background: #f1f5f9; color: #4a5568; font-weight: 700; font-size: 13px; text-transform: uppercase; padding: 12px 15px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
 .custom-table td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-table tbody tr:hover { background: #f8f9fb; }
 
-button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:700; }
-.add-btn { background:#28a745; color:#fff; padding:10px 16px; border-radius:8px; border:none; cursor:pointer; font-weight:700; transition:all .2s; }
-.add-btn:hover { background:#218838; transform:translateY(-1px); }
-
-/* UPDATED: STATS CARD STYLE - CENTERED AND WIDER */
-.stats { 
-    display:flex; /* Changed from grid to flex */
-    gap:16px; 
-    margin-bottom:18px; 
-    flex-wrap: wrap; 
-    justify-content: center; /* Center the cards */
-}
-
-.stat-card { 
-    background:#fff; 
-    border:1px solid #e6e9ee; 
-    border-radius:10px; 
-    padding:18px 24px; /* More padding */
-    text-align:center; 
-    
-    /* WIDER SETTINGS */
-    flex: 1 1 300px; /* Start at 300px width */
-    max-width: 500px; /* Cap width at 500px */
-    min-width: 250px; 
-}
-
-.stat-card h3 { margin-bottom:6px; font-size:24px; color:#21303a; }
-.stat-card p { color:#6b7f86; font-size:14px; font-weight: 600; }
-
-.action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; }
-.action-btn:hover { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
+.action-btn { padding:8px 12px; border-radius:8px; border:none; color:#fff; font-weight:700; cursor:pointer; font-size:13px; transition:all .2s; margin-right: 4px; margin-bottom: 4px; }
+.action-btn:hover:not(.disabled) { transform:translateY(-1px); box-shadow:0 4px 8px rgba(0,0,0,0.15); }
+.action-btn.disabled { opacity: 0.6; cursor: not-allowed; }
 .view { background:#1d4ed8; }
 .edit { background:#28a745; }
 .remove { background:#dc3545; }
@@ -717,182 +769,112 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge.inactive { background:#fee; color:#dc2626; border:2px solid #fca5a5; }
 .badge.available { background:#e0f2fe; color:#0284c7; border:2px solid #7dd3fc; }
 .badge.closure { background:#fee2e2; color:#b91c1c; border:2px solid #fca5a5; font-weight: 700; }
+
+/* MODALS - SCROLLABLE & RESPONSIVE */
 .detail-overlay, .form-overlay, .remove-overlay { display:none; position:fixed; inset:0; background:rgba(2,12,20,0.6); z-index:3000; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
 .detail-overlay.show, .form-overlay.show, .remove-overlay.show { display:flex; animation:fadeIn .2s ease; }
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
-.detail-card, .form-card { width:700px; max-width:96%; background:#fff; border-radius:16px; padding:0; box-shadow:0 20px 60px rgba(8,15,30,0.25); animation:slideUp .3s ease; }
+
+.detail-card, .form-card { 
+    width:700px; 
+    max-width:96%; 
+    background:#fff; 
+    border-radius:16px; 
+    padding:0; 
+    box-shadow:0 20px 60px rgba(8,15,30,0.25); 
+    animation:slideUp .3s ease; 
+    max-height: 85vh; /* Responsive Height */
+    display: flex;
+    flex-direction: column;
+}
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
-.detail-header { background:linear-gradient(135deg, #991010 0%, #6b1010 100%); padding:24px 28px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; }
+
+.detail-header { background:linear-gradient(135deg, #991010 0%, #6b1010 100%); padding:24px 28px; border-radius:16px 16px 0 0; display:flex; justify-content:space-between; align-items:center; flex-shrink: 0; }
 .detail-title { font-weight:800; color:#fff; font-size:22px; display:flex; align-items:center; gap:10px; }
 .detail-title:before { content:'📦'; font-size:24px; }
 .detail-id { background:rgba(255,255,255,0.2); color:#fff; padding:6px 14px; border-radius:20px; font-weight:700; font-size:14px; }
-.detail-content { padding:28px; display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+
+.detail-content, .form-body, .remove-body { 
+    padding:28px; 
+    overflow-y: auto; /* Makes long forms scrollable */
+}
+
+.detail-content { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
 .detail-section { display:flex; flex-direction:column; gap:18px; }
 .detail-row { background:#f8f9fb; padding:14px 16px; border-radius:10px; border:1px solid #e8ecf0; }
 .detail-label { font-weight:700; color:#4a5568; font-size:12px; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px; }
 .detail-value { color:#1a202c; font-weight:600; font-size:15px; }
-.detail-actions, .form-actions { padding:20px 28px; background:#f8f9fb; border-radius:0 0 16px 16px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #e8ecf0; }
+
+.detail-actions, .form-actions { padding:20px 28px; background:#f8f9fb; border-radius:0 0 16px 16px; display:flex; gap:10px; justify-content:flex-end; border-top:1px solid #e8ecf0; flex-shrink: 0; }
 .btn-small { padding:10px 18px; border-radius:8px; border:none; cursor:pointer; font-weight:700; font-size:14px; transition:all .2s; }
 .btn-small:hover { transform:translateY(-1px); }
 .btn-close { background:#fff; color:#4a5568; border:2px solid #e2e8f0; }
-.form-card { width:700px; } 
-.form-body { padding:28px; max-height: 70vh; overflow-y: auto; }
+
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .form-group { margin-bottom:0; } 
 .form-group.full-width { grid-column: 1 / -1; }
 .form-group label { display:block; font-weight:700; color:#4a5568; font-size:13px; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; }
 .form-group input, .form-group select, .form-group textarea { width:100%; padding:10px 12px; border:1px solid #dde3ea; border-radius:8px; font-size:14px; transition: border-color 0.2s ease; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #991010; outline: none; }
 .form-group textarea { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height:1.5; }
-/* --- START: Image Preview Fix --- */
-.form-image-preview { 
-    display: flex; 
-    gap: 15px; 
-    flex-direction: column;
-    align-items: flex-start;
-}
-.form-image-preview img { 
-    width: 80px; 
-    height: 80px; 
-    border-radius: 8px; 
-    object-fit: cover; 
-    border: 2px solid #e2e8f0; 
-    display: none; 
-    margin-top: 10px;
-}
-/* --- END: Image Preview Fix --- */
+
+/* Validation Message */
+.val-msg { font-size: 12px; margin-top: 4px; font-weight: 600; display: block; min-height: 15px;}
+
+/* Image Preview */
+.form-image-preview { display: flex; gap: 15px; flex-direction: column; align-items: flex-start; }
+.form-image-preview img { width: 80px; height: 80px; border-radius: 8px; object-fit: cover; border: 2px solid #e2e8f0; display: none; margin-top: 10px; }
 .form-image-preview input[type="file"] { width: 100%; padding: 0; border: none; }
 .form-image-preview input[type="file"]::file-selector-button { padding: 8px 12px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; background-color: #f1f5f9; color: #475569; transition: all .2s; }
 .form-image-preview input[type="file"]::file-selector-button:hover { background-color: #e2e8f0; }
-.btn-save { background:#28a745; color:#fff; }
+
+.btn-save { background:#28a745; color:#fff; transition: all 0.2s; } 
 .btn-save:hover { background:#218838; }
-.btn-danger { background: #dc3545; color: #fff; }
-.btn-danger:hover { background: #c82333; }
-.remove-body { padding: 28px; font-size: 16px; line-height: 1.6; color: #333; }
+.btn-save:disabled { background: #94a3b8; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.btn-danger { background: #dc3545; color: #fff; } .btn-danger:hover { background: #c82333; }
+.remove-body { font-size: 16px; line-height: 1.6; color: #333; }
 .remove-body strong { color: #c82333; font-weight: 700; }
 #date-helper-message { font-size: 13px; margin-top: 6px; font-weight: 600; color: #5a6c7d; transition: color 0.2s ease; }
-@media (max-width:900px) { .detail-content { grid-template-columns:1fr; } }
+
+/* TOASTS & LOADERS */
 .toast-overlay { position: fixed; inset: 0; background: rgba(34, 49, 62, 0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 1; transition: opacity 0.3s ease-out; backdrop-filter: blur(4px); }
 .toast { background: #fff; color: #1a202c; padding: 24px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 16px; font-weight: 600; min-width: 300px; max-width: 450px; text-align: left; animation: slideUp .3s ease; }
 .toast-icon { font-size: 24px; font-weight: 800; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
 .toast-message { font-size: 15px; line-height: 1.5; }
-.toast.success { border-top: 4px solid #16a34a; }
-.toast.success .toast-icon { background: #16a34a; }
-.toast.error { border-top: 4px solid #dc2626; }
-.toast.error .toast-icon { background: #dc2626; }
+.toast.success { border-top: 4px solid #16a34a; } .toast.success .toast-icon { background: #16a34a; }
+.toast.error { border-top: 4px solid #dc2626; } .toast.error .toast-icon { background: #dc2626; }
 
-/* --- PAGE LOADER STYLES --- */
-#loader-overlay { 
-    position: fixed; 
-    inset: 0; 
-    background: #ffffff; 
-    z-index: 99999; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    transition: opacity 0.3s ease; 
-}
-#loader-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-}
-.loader-spinner { 
-    width: 50px; 
-    height: 50px; 
-    border-radius: 50%; 
-    border: 5px solid #f3f3f3; 
-    border-top: 5px solid #991010; 
-    animation: spin 1s linear infinite; 
-}
-.loader-text { 
-    margin-top: 15px; 
-    font-size: 16px; 
-    font-weight: 600; 
-    color: #5a6c7d; 
-}
+#loader-overlay { position: fixed; inset: 0; background: #ffffff; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.3s ease; }
+#loader-overlay.hidden { opacity: 0; pointer-events: none; }
+.loader-spinner { width: 50px; height: 50px; border-radius: 50%; border: 5px solid #f3f3f3; border-top: 5px solid #991010; animation: spin 1s linear infinite; }
+.loader-text { margin-top: 15px; font-size: 16px; font-weight: 600; color: #5a6c7d; }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 @keyframes fadeInContent { from { opacity: 0; } to { opacity: 1; } }
 
-#main-content {
-    display: none; /* Hidden by default until loaded */
-}
+#main-content { display: none; }
 
-/* --- ACTION LOADER STYLES --- */
-#actionLoader {
-    display: none; 
-    position: fixed; 
-    inset: 0; 
-    background: rgba(2, 12, 20, 0.6); 
-    z-index: 9990; 
-    align-items: center; 
-    justify-content: center; 
-    padding: 20px; 
-    backdrop-filter: blur(4px);
-}
-#actionLoader.show { 
-    display: flex; 
-    animation: fadeIn .2s ease; 
-}
-#actionLoader .loader-card {
-    background: #fff; 
-    border-radius: 12px; 
-    padding: 24px; 
-    display: flex; 
-    align-items: center; 
-    gap: 16px; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-#actionLoader .loader-spinner {
-    border-top-color: #991010; 
-    width: 32px; 
-    height: 32px; 
-    border-width: 4px; 
-    flex-shrink: 0;
-}
-#actionLoaderText {
-    font-weight: 600; 
-    color: #334155; 
-    font-size: 15px;
-}
+#actionLoader { display: none; position: fixed; inset: 0; background: rgba(2, 12, 20, 0.6); z-index: 9990; align-items: center; justify-content: center; padding: 20px; backdrop-filter: blur(4px); }
+#actionLoader.show { display: flex; animation: fadeIn .2s ease; }
+#actionLoader .loader-card { background: #fff; border-radius: 12px; padding: 24px; display: flex; align-items: center; gap: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+#actionLoader .loader-spinner { border-top-color: #991010; width: 32px; height: 32px; border-width: 4px; flex-shrink: 0; }
+#actionLoaderText { font-weight: 600; color: #334155; font-size: 15px; }
 
 .zoom-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:4000; align-items:center; justify-content:center; backdrop-filter:blur(5px); cursor: zoom-out; }
 .zoom-overlay.show { display:flex; animation:fadeIn .2s ease; }
 .zoom-overlay img { max-width: 90%; max-height: 90%; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); cursor: default; }
+
 #menu-toggle { display: none; background: #f1f5f9; border: 2px solid #e2e8f0; color: #334155; font-size: 24px; padding: 5px 12px; border-radius: 8px; cursor: pointer; margin-left: 10px; z-index: 2100; }
 
-/* --- START: CSS PARA SA CALENDAR --- */
-.flatpickr-day.flatpickr-closed,
-.flatpickr-day.flatpickr-closed:hover {
-    background: #fca5a5 !important;
-    color: #b91c1c !important;
-    border-color: #f87171 !important;
-    font-weight: 700;
-    cursor: not-allowed;
-}
-.flatpickr-day.flatpickr-hasslots,
-.flatpickr-day.flatpickr-hasslots:hover {
-    background: #e0f2fe !important;
-    color: #0284c7 !important;
-    border-color: #7dd3fc !important;
-    font-weight: 700;
-    cursor: not-allowed; 
-}
-.flatpickr-day.flatpickr-hasslots.flatpickr-disabled:hover,
-.flatpickr-day.flatpickr-closed.flatpickr-disabled:hover {
-    background: #e0f2fe !important;
-    color: #0284c7 !important;
-}
-.flatpickr-day.flatpickr-hasslots:not(.flatpickr-disabled),
-.flatpickr-day.flatpickr-closed:not(.flatpickr-disabled) {
-     background: #bfdbfe !important; 
-     color: #1d4ed8 !important;
-     cursor: pointer !important;
-}
-/* --- END: CSS PARA SA CALENDAR --- */
+/* CALENDAR COLORS */
+.flatpickr-day.flatpickr-closed, .flatpickr-day.flatpickr-closed:hover { background: #fca5a5 !important; color: #b91c1c !important; border-color: #f87171 !important; font-weight: 700; cursor: not-allowed; }
+.flatpickr-day.flatpickr-hasslots, .flatpickr-day.flatpickr-hasslots:hover { background: #e0f2fe !important; color: #0284c7 !important; border-color: #7dd3fc !important; font-weight: 700; cursor: not-allowed;  }
+.flatpickr-day.flatpickr-hasslots.flatpickr-disabled:hover, .flatpickr-day.flatpickr-closed.flatpickr-disabled:hover { background: #e0f2fe !important; color: #0284c7 !important; }
+.flatpickr-day.flatpickr-hasslots:not(.flatpickr-disabled), .flatpickr-day.flatpickr-closed:not(.flatpickr-disabled) { background: #bfdbfe !important; color: #1d4ed8 !important; cursor: pointer !important; }
 
+/* MOBILE RESPONSIVE */
 @media (max-width: 1000px) {
   .vertical-bar { display: none; }
-  /* Reset padding for mobile */
   header { padding: 12px 20px; justify-content: space-between; }
   .logo-section { margin-right: 0; }
   .container { padding: 20px; }
@@ -906,8 +888,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 @media (max-width: 600px) { 
     .filters { flex-direction: column; align-items: stretch; } 
     #searchInput { width: 100%; margin-right: 0; } 
-    .button-group { width: 100%; margin-left: 0; justify-content: space-between; }
+    .button-group { width: 100%; margin-left: 0; justify-content: space-between; flex-wrap: wrap; gap: 8px;}
     .filters .add-btn { width: 100%; }
+    .detail-content { grid-template-columns:1fr; }
+    .form-grid { grid-template-columns:1fr; }
 }
 </style>
 </head>
@@ -967,6 +951,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       <?php endif; ?>
     
       <form id="filtersForm" method="get" class="filters" onsubmit="return false;"> <input type="hidden" name="table" id="filterTable" value="<?= htmlspecialchars($activeTable) ?>">
+        
         <?php if ($activeTable === 'products'): ?>
         <select name="brand" id="brandFilter">
             <option value="All" <?= $brandFilter==='All'?'selected':'' ?>>All Brands</option>
@@ -977,9 +962,33 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <?php endforeach; ?>
         </select>
         <?php endif; ?>
+
+        <?php if ($activeTable === 'schedule'): ?>
+        <select name="month" id="monthFilter">
+            <option value="All" <?= $monthFilter === 'All' ? 'selected' : '' ?>>All Months</option>
+            <option value="1" <?= $monthFilter == '1' ? 'selected' : '' ?>>January</option>
+            <option value="2" <?= $monthFilter == '2' ? 'selected' : '' ?>>February</option>
+            <option value="3" <?= $monthFilter == '3' ? 'selected' : '' ?>>March</option>
+            <option value="4" <?= $monthFilter == '4' ? 'selected' : '' ?>>April</option>
+            <option value="5" <?= $monthFilter == '5' ? 'selected' : '' ?>>May</option>
+            <option value="6" <?= $monthFilter == '6' ? 'selected' : '' ?>>June</option>
+            <option value="7" <?= $monthFilter == '7' ? 'selected' : '' ?>>July</option>
+            <option value="8" <?= $monthFilter == '8' ? 'selected' : '' ?>>August</option>
+            <option value="9" <?= $monthFilter == '9' ? 'selected' : '' ?>>September</option>
+            <option value="10" <?= $monthFilter == '10' ? 'selected' : '' ?>>October</option>
+            <option value="11" <?= $monthFilter == '11' ? 'selected' : '' ?>>November</option>
+            <option value="12" <?= $monthFilter == '12' ? 'selected' : '' ?>>December</option>
+        </select>
+        <select name="year" id="yearFilter">
+            <option value="All" <?= $yearFilter === 'All' ? 'selected' : '' ?>>All Years</option>
+            <?php foreach($scheduleYears as $yr): ?>
+                <option value="<?= htmlspecialchars($yr) ?>" <?= $yearFilter == $yr ? 'selected' : '' ?>><?= htmlspecialchars($yr) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php endif; ?>
         
         <input type="text" name="search" id="searchInput" 
-               placeholder="<?= $activeTable === 'schedule' ? 'Search date (YYYY-MM-DD) or reason...' : 'Search name or ID...' ?>" 
+               placeholder="<?= $activeTable === 'schedule' ? 'Search ID or Reason...' : 'Search name or ID...' ?>" 
                value="<?= htmlspecialchars($search) ?>">
         
         <div class="button-group">
@@ -998,7 +1007,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             <button type="button" class="add-btn" style="background-color: #17a2b8;" onclick="window.location.href='particulars.php'">
                 📋 Manage Particulars
             </button>
-
 
             <?php else: ?>
             <button type="button" class="add-btn" onclick="openAddModal()">
@@ -1081,7 +1089,11 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                 </tr>
               </thead>
               <tbody>
-                <?php if ($items): $i=0; foreach ($items as $item): $i++; ?>
+                <?php 
+                $today = date('Y-m-d');
+                if ($items): $i=0; foreach ($items as $item): $i++; 
+                  $isPast = ($item['schedule_date'] < $today);
+                ?>
                   <tr>
                     <td style="text-align: center;"><?= $i ?></td>
                     <td>
@@ -1113,8 +1125,13 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
                     <td>
                       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
                         <button class="action-btn view" onclick="viewDetails('<?= $item['id'] ?>')">View</button>
-                        <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
-                        <button class="action-btn remove" onclick="openRemoveModal('<?= $item['id'] ?>', 'Schedule on <?= htmlspecialchars(addslashes($item['schedule_date'])) ?>')">Remove</button>
+                        <?php if ($isPast): ?>
+                          <button class="action-btn disabled" style="background:#94a3b8;" title="Cannot edit past schedule">Edit</button>
+                          <button class="action-btn disabled" style="background:#94a3b8;" title="Cannot remove past schedule">Remove</button>
+                        <?php else: ?>
+                          <button class="action-btn edit" onclick="openEditModal(<?= htmlspecialchars(json_encode($item)) ?>)">Edit</button>
+                          <button class="action-btn remove" onclick="openRemoveModal('<?= $item['id'] ?>', 'Schedule on <?= htmlspecialchars(addslashes($item['schedule_date'])) ?>')">Remove</button>
+                        <?php endif; ?>
                       </div>
                     </td>
                   </tr>
@@ -1162,7 +1179,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             </table>
             <?php endif; ?>
           </div>
-      </div> </div>
+      </div> 
+    </div>
     
     <div id="detailOverlay" class="detail-overlay" aria-hidden="true">
       <div class="detail-card" role="dialog" aria-labelledby="detailTitle">
@@ -1184,7 +1202,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           <div class="detail-title" id="formTitle">Add Item</div>
         </div>
         <div class="form-body">
-          <form id="itemForm" onsubmit="return false;"> 
+          <form id="itemForm" onsubmit="return false;" enctype="multipart/form-data"> 
             <input type="hidden" id="formItemId">
             <input type="hidden" id="formCurrentImage">
             <input type="hidden" id="formTable" value="<?= $activeTable ?>">
@@ -1194,8 +1212,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           </form>
         </div>
         <div class="form-actions">
-          <button class="btn-small btn-save" onclick="saveItem()">Save</button>
           <button class="btn-small btn-close" onclick="closeFormModal()">Cancel</button>
+          <button class="btn-small btn-save" onclick="saveItem()" id="btnSave" disabled>Save</button>
         </div>
       </div>
     </div>
@@ -1214,8 +1232,8 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
           <input type="hidden" id="removeItemId">
         </div>
         <div class="form-actions">
-          <button class="btn-small btn-danger" onclick="confirmRemove()">Yes, Remove</button>
           <button class="btn-small btn-close" onclick="closeRemoveModal()">Cancel</button>
+          <button class="btn-small btn-danger" onclick="confirmRemove()">Yes, Remove</button>
         </div>
       </div>
     </div>
@@ -1229,7 +1247,6 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     
     <script>
     const currentTable = '<?= $activeTable ?>';
-    // --- FIX: Pass both arrays to JS ---
     const closureDates = <?= json_encode($closureDates) ?>;
     
     let currentFlatpickrInstance = null;
@@ -1251,15 +1268,202 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }
     }
 
-    // Initial Page Load Timer
     setTimeout(hidePageLoader, 1500);
 
-    // --- END PAGE LOADING LOGIC ---
-    </script>
-    
-    <script>
-    
-    // --- START: Idinagdag ang Action Loader Functions ---
+    // --- REAL-TIME VALIDATION LOGIC ---
+    let formState = {};
+
+    function validateWholeForm() {
+        const saveBtn = document.getElementById('btnSave');
+        let isValid = true;
+        for (let key in formState) {
+            if (!formState[key]) { isValid = false; break; }
+        }
+        saveBtn.disabled = !isValid;
+    }
+
+    // Toggle logic for Custom Others
+    function toggleCustomInput(type) {
+        const select = document.getElementById(`form${type}Type`);
+        const input = document.getElementById(`form${type}TypeOther`);
+        if (select.value === 'Other') {
+            input.style.display = 'block';
+        } else {
+            input.style.display = 'none';
+        }
+        // Validations handle it inside checkLensFrame dynamically
+    }
+
+    function removeGalleryImage(btn, path) {
+        const removedInput = document.getElementById('formRemovedGallery');
+        let removed = JSON.parse(removedInput.value);
+        removed.push(path);
+        removedInput.value = JSON.stringify(removed);
+        btn.parentElement.remove();
+    }
+
+    function attachRealTimeValidation() {
+        const table = document.getElementById('formTable').value;
+        const itemId = document.getElementById('formItemId').value;
+        formState = {}; // Reset
+
+        if (table === 'products') {
+            const nameInput = document.getElementById('formProductName');
+            const brandInput = document.getElementById('formBrand');
+            const descInput = document.getElementById('formDescription');
+            const fileInput = document.getElementById('formImage');
+            
+            formState.name = !!nameInput.value;
+            formState.brand = !!brandInput.value;
+            formState.desc = !!descInput.value;
+            formState.file = itemId ? true : false; // Required if new
+
+            // Check duplicate Product Name
+            let timer;
+            nameInput.addEventListener('input', function() {
+                clearTimeout(timer);
+                const val = this.value.trim();
+                const msg = document.getElementById('nameMsg');
+                
+                if (val.length < 3) {
+                    msg.innerHTML = '<span style="color:#dc2626;">❌ Minimum 3 characters</span>';
+                    formState.name = false; validateWholeForm(); return;
+                }
+                msg.innerHTML = '<span style="color:#f59e0b;">Checking...</span>';
+                formState.name = false; validateWholeForm();
+                
+                timer = setTimeout(() => {
+                    fetch('product.php', {
+                        method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({action: 'checkProductName', name: val, id: itemId})
+                    }).then(r=>r.json()).then(res => {
+                        if (res.exists) {
+                            msg.innerHTML = '<span style="color:#dc2626;">❌ Name already exists</span>';
+                            formState.name = false;
+                        } else {
+                            msg.innerHTML = '<span style="color:#16a34a;">✅ Available</span>';
+                            formState.name = true;
+                        }
+                        validateWholeForm();
+                    });
+                }, 500);
+            });
+
+            // Generic empty check
+            brandInput.addEventListener('input', function() {
+                const msg = document.getElementById('brandMsg');
+                if (this.value.trim() === '') { msg.innerHTML = '<span style="color:#dc2626;">❌ Required</span>'; formState.brand = false; }
+                else { msg.innerHTML = '<span style="color:#16a34a;">✅ Looks good</span>'; formState.brand = true; }
+                validateWholeForm();
+            });
+
+            descInput.addEventListener('input', function() {
+                const msg = document.getElementById('descMsg');
+                if (this.value.trim() === '') { msg.innerHTML = '<span style="color:#dc2626;">❌ Required</span>'; formState.desc = false; }
+                else { msg.innerHTML = '<span style="color:#16a34a;">✅ Looks good</span>'; formState.desc = true; }
+                validateWholeForm();
+            });
+
+            if(fileInput) {
+                fileInput.addEventListener('change', function() {
+                    const msg = document.getElementById('fileMsg');
+                    if (!this.files[0] && !itemId) {
+                        msg.innerHTML = '<span style="color:#dc2626;">❌ File required</span>'; formState.file = false;
+                    } else {
+                        msg.innerHTML = '<span style="color:#16a34a;">✅ File ready</span>'; formState.file = true;
+                    }
+                    validateWholeForm();
+                });
+            }
+
+            // Custom Lens/Frame validation
+            const lensSelect = document.getElementById('formLensType');
+            const frameSelect = document.getElementById('formFrameType');
+            const lensOther = document.getElementById('formLensTypeOther');
+            const frameOther = document.getElementById('formFrameTypeOther');
+            
+            const checkLensFrame = () => {
+                let lValid = lensSelect.value !== '';
+                if (lensSelect.value === 'Other' && lensOther.value.trim() === '') lValid = false;
+                
+                let fValid = frameSelect.value !== '';
+                if (frameSelect.value === 'Other' && frameOther.value.trim() === '') fValid = false;
+                
+                formState.lens = lValid;
+                formState.frame = fValid;
+                validateWholeForm();
+            };
+
+            if (lensSelect) lensSelect.addEventListener('change', checkLensFrame);
+            if (frameSelect) frameSelect.addEventListener('change', checkLensFrame);
+            if (lensOther) lensOther.addEventListener('input', checkLensFrame);
+            if (frameOther) frameOther.addEventListener('input', checkLensFrame);
+            
+            checkLensFrame(); // Call once initially
+
+        } else if (table === 'services') {
+            const nameInput = document.getElementById('formServiceName');
+            const descInput = document.getElementById('formDescription');
+            
+            formState.name = !!nameInput.value;
+            formState.desc = !!descInput.value;
+
+            let timer;
+            nameInput.addEventListener('input', function() {
+                clearTimeout(timer);
+                const val = this.value.trim();
+                const msg = document.getElementById('nameMsg');
+                
+                if (val.length < 3) {
+                    msg.innerHTML = '<span style="color:#dc2626;">❌ Minimum 3 characters</span>';
+                    formState.name = false; validateWholeForm(); return;
+                }
+                msg.innerHTML = '<span style="color:#f59e0b;">Checking...</span>';
+                formState.name = false; validateWholeForm();
+                
+                timer = setTimeout(() => {
+                    fetch('product.php', {
+                        method: 'POST', headers: {'Content-Type':'application/x-www-form-urlencoded'},
+                        body: new URLSearchParams({action: 'checkServiceName', name: val, id: itemId})
+                    }).then(r=>r.json()).then(res => {
+                        if (res.exists) {
+                            msg.innerHTML = '<span style="color:#dc2626;">❌ Service already exists</span>';
+                            formState.name = false;
+                        } else {
+                            msg.innerHTML = '<span style="color:#16a34a;">✅ Available</span>';
+                            formState.name = true;
+                        }
+                        validateWholeForm();
+                    });
+                }, 500);
+            });
+
+            descInput.addEventListener('input', function() {
+                const msg = document.getElementById('descMsg');
+                if (this.value.trim() === '') { msg.innerHTML = '<span style="color:#dc2626;">❌ Required</span>'; formState.desc = false; }
+                else { msg.innerHTML = '<span style="color:#16a34a;">✅ Looks good</span>'; formState.desc = true; }
+                validateWholeForm();
+            });
+
+        } else if (table === 'schedule') {
+            const reasonInput = document.getElementById('formReason');
+            formState.reason = !!reasonInput.value;
+            formState.date = !!document.getElementById('formScheduleDate').value;
+            formState.time = true; // Handled by validateScheduleTime()
+
+            reasonInput.addEventListener('input', function() {
+                const msg = document.getElementById('reasonMsg');
+                if (this.value.trim() === '') { msg.innerHTML = '<span style="color:#dc2626;">❌ Required</span>'; formState.reason = false; }
+                else { msg.innerHTML = '<span style="color:#16a34a;">✅ Looks good</span>'; formState.reason = true; }
+                validateWholeForm();
+            });
+        }
+        
+        // Trigger initial check for Edit mode
+        validateWholeForm();
+    }
+
+
     const actionLoader = document.getElementById('actionLoader');
     const actionLoaderText = document.getElementById('actionLoaderText');
 
@@ -1277,9 +1481,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             actionLoader.setAttribute('aria-hidden', 'true');
         }
     }
-    // --- END: Action Loader Functions ---
 
-    
     function showToast(msg, type = 'success') {
         const overlay = document.createElement('div');
         overlay.className = 'toast-overlay';
@@ -1303,7 +1505,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     }
     
     function viewDetails(id) {
-      showActionLoader('Fetching details...'); // --- FIX: Show loader ---
+      showActionLoader('Fetching details...'); 
       fetch('product.php', {
         method: 'POST',
         headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -1311,7 +1513,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       })
       .then(res => res.json())
       .then(payload => {
-        hideActionLoader(); // --- FIX: Hide loader ---
+        hideActionLoader(); 
         if (!payload || !payload.success) {
           showToast(payload?.message || 'Failed to load details', 'error');
           return;
@@ -1319,11 +1521,11 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         const d = payload.data;
         const table = payload.table;
         // For products, show reference_id; for others, show primary ID
-if (table === 'products') {
-    document.getElementById('detailId').textContent = d.reference_id || '#' + d.product_id;
-} else {
-    document.getElementById('detailId').textContent = '#' + (d.id || d.service_id);
-}
+        if (table === 'products') {
+            document.getElementById('detailId').textContent = d.reference_id || '#' + d.product_id;
+        } else {
+            document.getElementById('detailId').textContent = '#' + (d.id || d.service_id);
+        }
         let contentHTML = '';
         
         if (table === 'products') {
@@ -1372,7 +1574,7 @@ if (table === 'products') {
 
     <div class="detail-row" style="grid-column: 1 / -1;">
       <span class="detail-label">Description</span>
-      <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; font-weight: 500;">${d.description || 'N/A'}</div>
+      <div class="detail-value" style="white-space: pre-wrap; font-weight: 500;">${d.description || 'N/A'}</div>
     </div>
     `;
 } else if (table === 'schedule') { 
@@ -1424,7 +1626,7 @@ if (table === 'products') {
             </div>
             <div class="detail-row" style="grid-column: 1 / -1;">
               <span class="detail-label">Description</span>
-              <div class="detail-value" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto; font-weight: 500;">${d.description || 'N/A'}</div>
+              <div class="detail-value" style="white-space: pre-wrap; font-weight: 500;">${d.description || 'N/A'}</div>
             </div>
           `;
         }
@@ -1436,7 +1638,7 @@ if (table === 'products') {
         overlay.setAttribute('aria-hidden','false');
       })
       .catch(err => {
-        hideActionLoader(); // --- FIX: Hide loader on error ---
+        hideActionLoader(); 
         console.error(err);
         showToast('Network error while fetching details', 'error');
       });
@@ -1466,11 +1668,35 @@ if (table === 'products') {
       overlay.setAttribute('aria-hidden','false');
     }
     
+    // Updated to fetch existing gallery images correctly before opening edit modal
     function openEditModal(itemData) {
+        if (currentTable === 'products') {
+            showActionLoader('Loading details...');
+            fetch('product.php', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: new URLSearchParams({action: 'viewDetails', id: itemData.product_id, table: 'products'})
+            }).then(r => r.json()).then(res => {
+                hideActionLoader();
+                if (res.success) {
+                    _openEditModalWithData(res.data);
+                } else {
+                    showToast('Failed to load product details', 'error');
+                }
+            }).catch(err => {
+                hideActionLoader();
+                showToast('Network error', 'error');
+            });
+        } else {
+            _openEditModalWithData(itemData);
+        }
+    }
+
+    function _openEditModalWithData(data) {
       document.getElementById('formTitle').textContent = `Edit ${currentTable === 'products' ? 'Product' : (currentTable === 'services' ? 'Service' : 'Store Closure')}`;
       document.getElementById('formTable').value = currentTable;
       
-      populateFormFields(itemData);
+      populateFormFields(data);
       
       const overlay = document.getElementById('formOverlay');
       overlay.classList.add('show');
@@ -1488,10 +1714,36 @@ if (table === 'products') {
         const imgSrc = isEditingProduct ? data.image_path : '';
         const imgDisplay = isEditingProduct ? 'block' : 'none'; 
 
+        const lensOptions = ["Single Vision", "Bifocal", "Progressive", "Reading", "Photochromic", "Blue Light"];
+        const currentLens = data ? data.lens_type : '';
+        const isCustomLens = data && currentLens && !lensOptions.includes(currentLens);
+
+        const frameOptions = ["Full Rim", "Half Rim", "Rimless"];
+        const currentFrame = data ? data.frame_type : '';
+        const isCustomFrame = data && currentFrame && !frameOptions.includes(currentFrame);
+
+        let galleryHTML = `<div class="form-group full-width" style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+            <label>Additional Gallery Images (Optional)</label>
+            <div id="existingGalleryPreview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px;">`;
+        
+        if (data && data.gallery) {
+            data.gallery.forEach(img => {
+                galleryHTML += `<div style="position:relative; display:inline-block;" class="existing-gallery-item">
+                    <img src="${img.image_path}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd;">
+                    <button type="button" onclick="removeGalleryImage(this, '${img.image_path}')" style="position:absolute; top:-5px; right:-5px; background:red; color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer;">✕</button>
+                </div>`;
+            });
+        }
+        galleryHTML += `</div>
+            <input type="file" id="formGalleryImages" multiple accept="image/png, image/jpeg, image/gif">
+            <input type="hidden" id="formRemovedGallery" value="[]">
+            <div id="newGalleryPreview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
+        </div>`;
+
         fieldsHTML = `
   <div class="form-grid">
     ${data ? `
-    <div class="form-group">
+    <div class="form-group full-width">
       <label>Reference ID (Auto-Generated)</label>
       <input type="text" value="${data.reference_id}" readonly style="background:#f0f0f0; cursor:not-allowed;">
     </div>
@@ -1499,10 +1751,12 @@ if (table === 'products') {
     <div class="form-group">
       <label for="formProductName">Product Name *</label>
               <input type="text" id="formProductName" required value="${data ? data.product_name : ''}">
+              <span id="nameMsg" class="val-msg"></span>
             </div>
             <div class="form-group">
               <label for="formBrand">Brand *</label>
               <input type="text" id="formBrand" required value="${data ? data.brand : ''}">
+              <span id="brandMsg" class="val-msg"></span>
             </div>
             <div class="form-group">
               <label for="formGender">Gender *</label>
@@ -1514,33 +1768,32 @@ if (table === 'products') {
             </div>
             <div class="form-group">
               <label for="formLensType">Lens Type *</label>
-              <select id="formLensType">
-                <option value="" ${data && !data.lens_type ? 'selected' : ''}>Select...</option>
-                <option value="Single Vision" ${data && data.lens_type === 'Single Vision' ? 'selected' : ''}>Single Vision</option>
-                <option value="Bifocal" ${data && data.lens_type === 'Bifocal' ? 'selected' : ''}>Bifocal</option>
-                <option value="Progressive" ${data && data.lens_type === 'Progressive' ? 'selected' : ''}>Progressive</option>
-                <option value="Reading" ${data && data.lens_type === 'Reading' ? 'selected' : ''}>Reading</option>
-                <option value="Photochromic" ${data && data.lens_type === 'Photochromic' ? 'selected' : ''}>Photochromic</option>
-                <option value="Blue Light" ${data && data.lens_type === 'Blue Light' ? 'selected' : ''}>Blue Light</option>
+              <select id="formLensType" onchange="toggleCustomInput('Lens')">
+                <option value="" ${!currentLens ? 'selected' : ''}>Select...</option>
+                ${lensOptions.map(opt => `<option value="${opt}" ${currentLens === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                <option value="Other" ${isCustomLens ? 'selected' : ''}>Other</option>
               </select>
+              <input type="text" id="formLensTypeOther" placeholder="Specify Lens Type" style="display: ${isCustomLens ? 'block' : 'none'}; margin-top: 8px;" value="${isCustomLens ? currentLens : ''}">
             </div>
             <div class="form-group full-width">
               <label for="formFrameType">Frame Type *</label>
-              <select id="formFrameType">
-                <option value="" ${data && !data.frame_type ? 'selected' : ''}>Select...</option>
-                <option value="Full Rim" ${data && data.frame_type === 'Full Rim' ? 'selected' : ''}>Full Rim</option>
-                <option value="Half Rim" ${data && data.frame_type === 'Half Rim' ? 'selected' : ''}>Half Rim</option>
-                <option value="Rimless" ${data && data.frame_type === 'Rimless' ? 'selected' : ''}>Rimless</option>
+              <select id="formFrameType" onchange="toggleCustomInput('Frame')">
+                <option value="" ${!currentFrame ? 'selected' : ''}>Select...</option>
+                ${frameOptions.map(opt => `<option value="${opt}" ${currentFrame === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                <option value="Other" ${isCustomFrame ? 'selected' : ''}>Other</option>
               </select>
+              <input type="text" id="formFrameTypeOther" placeholder="Specify Frame Type" style="display: ${isCustomFrame ? 'block' : 'none'}; margin-top: 8px;" value="${isCustomFrame ? currentFrame : ''}">
             </div>
             <div class="form-group full-width">
               <label for="formDescription">Description *</label>
               <textarea id="formDescription" rows="3">${data ? (data.description || '') : ''}</textarea>
+              <span id="descMsg" class="val-msg"></span>
             </div>
             <div class="form-group full-width">
-              <label for="formImage">Product Image ${!data ? '*' : '(Leave empty to keep current)'}</label>
+              <label for="formImage">Main Cover Image * (Required) ${data ? '<small style="color:#666; font-weight:normal;">(Leave empty to keep current)</small>' : ''}</label>
               <div class="form-image-preview">
                 <input type="file" id="formImage" accept="image/png, image/jpeg, image/gif">
+                <span id="fileMsg" class="val-msg" style="margin-top:-10px;"></span>
                 <img id="formImagePreview" 
                      src="${imgSrc}" 
                      alt="Preview" 
@@ -1548,6 +1801,9 @@ if (table === 'products') {
                      onerror="this.style.display='none';"> 
               </div>
             </div>
+            
+            ${galleryHTML}
+
           </div>
         `;
         
@@ -1563,13 +1819,10 @@ if (table === 'products') {
         
         // --- 1. SMART DEFAULT DATE LOGIC (Find next available date) ---
         let targetDate = new Date();
-        targetDate.setDate(targetDate.getDate() + 1); // Start checking from tomorrow
+        targetDate.setDate(targetDate.getDate() + 1); 
         let dateStr = targetDate.toISOString().split('T')[0];
 
-        // Loop to find next free date (limit to 60 days to prevent infinite loop)
         let safetyCounter = 0;
-        // If we are ADDING (no data), skip all closed dates. 
-        // If EDITING (data exists), we don't need to auto-find next available, we show the current one.
         if (!data) {
             while (closureDates.includes(dateStr) && safetyCounter < 60) {
                 targetDate.setDate(targetDate.getDate() + 1);
@@ -1578,21 +1831,19 @@ if (table === 'products') {
             }
         }
 
-        // Set Defaults
         const defaultDate = data ? data.schedule_date : dateStr; 
         const defaultTimeFrom = (data && data.time_from) ? data.time_from : "08:00";
         const defaultTimeTo = (data && data.time_to) ? data.time_to : "18:00";
         const defaultReason = (data && data.reason) ? data.reason : "";
 
-        // --- MODIFIED SCHEDULE FORM FIELDS ---
         fieldsHTML = `
           <div class="form-grid">
             <div class="form-group full-width">
               <label for="formScheduleDate">Closure Date *</label>
               <input type="text" id="formScheduleDate" required 
-                      value="${defaultDate}" 
-                      placeholder="Select date to close..."
-                      readonly="readonly"> 
+                     value="${defaultDate}" 
+                     placeholder="Select date to close..."
+                     readonly="readonly"> 
               <div id="date-helper-message"></div>
             </div>
 
@@ -1603,12 +1854,13 @@ if (table === 'products') {
             </div>
             <div class="form-group">
               <label for="formTimeTo">Time To</label>
-              <input type="time" id="formTimeTo" value="${defaultTimeTo}">
+              <input type="time" id="formTimeTo" value="${defaultTimeTo}" onchange="validateScheduleTime()">
             </div>
             
             <div class="form-group full-width">
                 <label for="formReason">Reason for Closure *</label>
                 <textarea id="formReason" rows="3" placeholder="e.g., Holiday, Maintenance, etc.">${defaultReason}</textarea>
+                <span id="reasonMsg" class="val-msg"></span>
             </div>
           </div>
         `;
@@ -1624,10 +1876,12 @@ if (table === 'products') {
           <div class="form-group">
             <label for="formServiceName">Service Name *</label>
             <input type="text" id="formServiceName" required value="${data ? data.service_name : ''}">
+            <span id="nameMsg" class="val-msg"></span>
           </div>
-          <div class="form-group">
+          <div class="form-group" style="margin-top: 15px;">
             <label for="formDescription">Description *</label>
             <textarea id="formDescription" rows="3">${data ? (data.description || '') : ''}</textarea>
+            <span id="descMsg" class="val-msg"></span>
           </div>
         `;
         
@@ -1650,16 +1904,13 @@ if (table === 'products') {
             originalDate = data ? data.schedule_date : null;
 
             if (data) {
-                // If editing, disable all closures EXCEPT the current one (so you can keep it or move it)
                 disableDates = [...closureDates].filter(d => d !== originalDate);
             } else {
-                // If adding, disable all known closures
                 disableDates = [...closureDates];
             }
         }
 
         if (dateInputId) {
-             // Calculate default date logic again for Flatpickr config
              let targetDate = new Date();
              targetDate.setDate(targetDate.getDate() + 1);
              let defaultDateStr = targetDate.toISOString().split('T')[0];
@@ -1678,10 +1929,11 @@ if (table === 'products') {
             currentFlatpickrInstance = flatpickr(dateInputId, {
                 minDate: "today", 
                 dateFormat: "Y-m-d",
-                disable: disableDates, // <--- THIS DISABLES THE CLOSED DATES
+                disable: disableDates, 
                 defaultDate: defaultDateStr, 
                 onChange: function(selectedDates, dateStr, instance) {
-                    validateScheduleTime(); // Check time when date changes
+                    formState.date = !!dateStr;
+                    validateScheduleTime(); 
                 },
                 onDayCreate: function(d, dateStr, fp, dayElem) {
                     const date = dayElem.dateObj.toISOString().split('T')[0];
@@ -1709,44 +1961,78 @@ if (table === 'products') {
               }
             });
           }
+
+          const galleryInput = document.getElementById('formGalleryImages');
+          if (galleryInput) {
+              galleryInput.addEventListener('change', function(e) {
+                  const previewContainer = document.getElementById('newGalleryPreview');
+                  previewContainer.innerHTML = '';
+                  Array.from(e.target.files).forEach(file => {
+                      const reader = new FileReader();
+                      reader.onload = function(evt) {
+                          previewContainer.innerHTML += `<img src="${evt.target.result}" style="width: 70px; height: 70px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; opacity: 0.7;" title="New image to be added">`;
+                      }
+                      reader.readAsDataURL(file);
+                  });
+              });
+          }
         }
+
+        // --- ATTACH REAL TIME VALIDATION LOGIC ---
+        attachRealTimeValidation();
+
       }, 100);
     }
     
-    // --- NEW FUNCTION: PREVENT PAST TIME SELECTION ---
+    // --- TIME VALIDATION LOGIC ---
     function validateScheduleTime() {
         const dateInput = document.getElementById('formScheduleDate');
-        const timeInput = document.getElementById('formTimeFrom');
+        const timeFrom = document.getElementById('formTimeFrom');
+        const timeTo = document.getElementById('formTimeTo');
         const errorMsg = document.getElementById('timeFromError');
         
-        if (!dateInput || !timeInput || !timeInput.value) return true;
+        if (!dateInput || !timeFrom || !timeTo) return true;
 
-        const selectedDate = new Date(dateInput.value);
-        const today = new Date();
-        
-        // Reset check
-        timeInput.style.borderColor = '#dde3ea';
+        timeFrom.style.borderColor = '#dde3ea';
+        timeTo.style.borderColor = '#dde3ea';
         if(errorMsg) errorMsg.style.display = 'none';
 
-        // Check if selected date is TODAY (compare date strings to ignore time part)
-        if (selectedDate.toDateString() === today.toDateString()) {
-            const currentHour = today.getHours();
-            const currentMinute = today.getMinutes();
-            
-            const [selectedHour, selectedMinute] = timeInput.value.split(':').map(Number);
-            
-            // If selected time is less than current time
-            if (selectedHour < currentHour || (selectedHour === currentHour && selectedMinute < currentMinute)) {
-                timeInput.style.borderColor = '#dc3545';
+        formState.time = true;
+
+        if (!timeFrom.value && !timeTo.value) {
+            validateWholeForm();
+            return true; // Empty means whole day, valid.
+        }
+
+        if (timeFrom.value && timeTo.value) {
+            if (timeFrom.value >= timeTo.value) {
+                timeTo.style.borderColor = '#dc2626';
                 if(errorMsg) {
                     errorMsg.style.display = 'block';
-                    errorMsg.innerText = "Cannot select a time that has already passed.";
+                    errorMsg.innerText = "Time To must be later than Time From.";
                 }
-                timeInput.value = ""; // Clear invalid time
-                return false;
+                formState.time = false;
+            }
+            
+            const selectedDate = new Date(dateInput.value);
+            const today = new Date();
+            
+            if (selectedDate.toDateString() === today.toDateString()) {
+                const currentHour = today.getHours();
+                const currentMinute = today.getMinutes();
+                const [selectedHour, selectedMinute] = timeFrom.value.split(':').map(Number);
+                
+                if (selectedHour < currentHour || (selectedHour === currentHour && selectedMinute < currentMinute)) {
+                    timeFrom.style.borderColor = '#dc2626';
+                    if(errorMsg) {
+                        errorMsg.style.display = 'block';
+                        errorMsg.innerText = "Cannot select a time that has already passed.";
+                    }
+                    formState.time = false;
+                }
             }
         }
-        return true;
+        validateWholeForm();
     }
 
     function closeFormModal() {
@@ -1775,10 +2061,20 @@ if (table === 'products') {
         const description = document.getElementById('formDescription').value.trim();
         const gender = document.getElementById('formGender').value;
         const brand = document.getElementById('formBrand').value.trim();
-        const lens_type = document.getElementById('formLensType').value;
-        const frame_type = document.getElementById('formFrameType').value;
+        
+        let lens_type = document.getElementById('formLensType').value;
+        if (lens_type === 'Other') {
+            lens_type = document.getElementById('formLensTypeOther').value.trim();
+        }
+
+        let frame_type = document.getElementById('formFrameType').value;
+        if (frame_type === 'Other') {
+            frame_type = document.getElementById('formFrameTypeOther').value.trim();
+        }
+
         const currentImage = document.getElementById('formCurrentImage').value;
         const imageFile = document.getElementById('formImage').files[0];
+
         let errors = [];
         if (!name) errors.push('Product Name');
         if (!brand) errors.push('Brand');
@@ -1793,19 +2089,33 @@ if (table === 'products') {
             showToast(`Please fill in all fields: ${errors.join(', ')}`, 'error');
             return; 
         }
+
         formData.append('product_name', name);
         formData.append('description', description);
         formData.append('gender', gender);
         formData.append('brand', brand);
         formData.append('lens_type', lens_type);
         formData.append('frame_type', frame_type);
+        
         if (id) {
           formData.append('product_id', id);
           formData.append('current_image', currentImage);
+
+          const removedGallery = document.getElementById('formRemovedGallery');
+          if (removedGallery) formData.append('removed_gallery', removedGallery.value);
         }
+        
         if (imageFile) {
           formData.append('image', imageFile);
         }
+
+        const galleryInput = document.getElementById('formGalleryImages');
+        if (galleryInput && galleryInput.files.length > 0) {
+            for (let i = 0; i < galleryInput.files.length; i++) {
+                formData.append('gallery_images[]', galleryInput.files[i]);
+            }
+        }
+
        } else if (table === 'schedule') {
     // --- MODIFIED SAVE LOGIC FOR CLOSURE ONLY ---
     const schedule_date = document.getElementById('formScheduleDate').value;
@@ -1832,13 +2142,16 @@ if (table === 'products') {
             return;
         }
         
-        // --- ADDED VALIDATION (7AM to 6PM) ---
-        // Convert times to compare
-        const openTime = "07:00";
+        // --- FIXED VALIDATION FOR "18:00:00" ---
+        // Extract only the HH:mm part to ignore seconds that the browser might attach
+        const safeTimeFrom = time_from.substring(0, 5);
+        const safeTimeTo = time_to.substring(0, 5);
+        
+        const openTime = "08:00";
         const closeTime = "18:00"; // 6PM
 
-        if (time_from < openTime || time_from > closeTime || time_to < openTime || time_to > closeTime) {
-             showToast('Store hours are only 7:00 AM to 6:00 PM.', 'error');
+        if (safeTimeFrom < openTime || safeTimeFrom > closeTime || safeTimeTo < openTime || safeTimeTo > closeTime) {
+             showToast('Store hours are only 8:00 AM to 6:00 PM.', 'error');
              return;
         }
 
@@ -1879,7 +2192,7 @@ if (table === 'products') {
         }
       }
       
-      const saveBtn = document.querySelector('.btn-save');
+      const saveBtn = document.getElementById('btnSave');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
       
@@ -1961,31 +2274,10 @@ if (table === 'products') {
         document.getElementById('imageZoomOverlay').classList.remove('show');
     }
     
+    // IMAGE ZOOM OVERLAY ONLY (Clicking background closes zoom modal only)
     document.addEventListener('click', function(e){
-      const detailOverlay = document.getElementById('detailOverlay');
-      const formOverlay = document.getElementById('formOverlay');
-      const removeOverlay = document.getElementById('removeOverlay');
       const zoomOverlay = document.getElementById('imageZoomOverlay');
-      
-      if (detailOverlay && detailOverlay.classList.contains('show') && e.target === detailOverlay) {
-        closeDetailModal();
-      }
-      if (formOverlay && formOverlay.classList.contains('show') && e.target === formOverlay) {
-        closeFormModal();
-      }
-      if (removeOverlay && removeOverlay.classList.contains('show') && e.target === removeOverlay) {
-        closeRemoveModal();
-      }
       if (zoomOverlay && zoomOverlay.classList.contains('show') && e.target === zoomOverlay) {
-        closeZoomModal();
-      }
-    });
-    
-    document.addEventListener('keydown', function(e){ 
-      if (e.key === 'Escape') {
-        closeDetailModal();
-        closeFormModal();
-        closeRemoveModal();
         closeZoomModal();
       }
     });
@@ -1994,6 +2286,8 @@ if (table === 'products') {
     (function(){
       const form = document.getElementById('filtersForm');
       const brand = document.getElementById('brandFilter'); 
+      const monthSelect = document.getElementById('monthFilter'); 
+      const yearSelect = document.getElementById('yearFilter'); 
       const search = document.getElementById('searchInput');
       
       let filterTimer = null;
@@ -2033,9 +2327,9 @@ if (table === 'products') {
             });
       }
       
-      if (brand) {
-          brand.addEventListener('change', updateContent);
-      }
+      if (brand) brand.addEventListener('change', updateContent);
+      if (monthSelect) monthSelect.addEventListener('change', updateContent);
+      if (yearSelect) yearSelect.addEventListener('change', updateContent);
       
       if (search) {
         search.addEventListener('input', function(){

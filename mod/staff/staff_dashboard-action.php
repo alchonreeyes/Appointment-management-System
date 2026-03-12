@@ -12,7 +12,6 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
-    // Return unauthorized JSON if it's an AJAX request, else redirect
     if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
         echo json_encode(['success' => false, 'message' => 'Unauthorized']);
         exit;
@@ -281,9 +280,8 @@ if ($result_services && $result_services->num_rows > 0) {
 }
 
 // ======================================================================
-// 8. RECENT LIST (FIXED: WITH DECRYPTION LOOP)
+// 8. RECENT LIST
 // ======================================================================
-// We need to JOIN with 'users' table in case 'full_name' in appointments is empty
 $sql_recent = "SELECT a.full_name, ser.service_name, a.appointment_date, a.appointment_time, s.status_name, u.full_name as user_full_name
                FROM appointments a
                LEFT JOIN services ser ON a.service_id = ser.service_id
@@ -300,18 +298,12 @@ $recentAppointments = [];
 if ($result_recent) {
     while ($row = $result_recent->fetch_assoc()) {
         
-        // --- FIX: DECRYPTION LOGIC WITH FALLBACK ---
-        // 1. Try appointment 'full_name'
-        // 2. If empty, try 'user_full_name'
-        // 3. Decrypt whatever we find
-        
         if (empty($row['full_name'])) {
             $encryptedName = !empty($row['user_full_name']) ? $row['user_full_name'] : '';
         } else {
             $encryptedName = $row['full_name'];
         }
         
-        // Decrypt the name for display
         $row['full_name'] = !empty($encryptedName) ? decrypt_data($encryptedName) : 'N/A';
         
         $recentAppointments[] = $row;

@@ -1,4 +1,4 @@
-<!-- GLOBAL STYLES FOR STAFF DASHBOARD -->
+<!-- GLOBAL STYLES FOR ADMIN DASHBOARD -->
 <style>
     * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     body { background:#f8f9fa; color:#223; }
@@ -93,10 +93,11 @@
     <nav id="main-nav">
         <!-- We use PHP to check filename for 'active' class -->
         <?php $cur = basename($_SERVER['PHP_SELF']); ?>
-        <a href="staff_dashboard.php" class="<?= $cur == 'staff_dashboard.php' ? 'active' : '' ?>">🏠 Dashboard</a>
+        <a href="admin_dashboard.php" class="<?= $cur == 'admin_dashboard.php' ? 'active' : '' ?>">🏠 Dashboard</a>
         <a href="appointment.php" class="<?= $cur == 'appointment.php' ? 'active' : '' ?>">📅 Appointments</a>
         <a href="patient_record.php" class="<?= $cur == 'patient_record.php' ? 'active' : '' ?>">📘 Patient Record</a>
         <a href="product.php" class="<?= ($cur == 'product.php') ? 'active' : '' ?>">💊 Product & Services</a>
+        <a href="account.php" class="<?= $cur == 'account.php' ? 'active' : '' ?>">👤 Account</a>
         <a href="profile.php" class="<?= $cur == 'profile.php' ? 'active' : '' ?>">🔍 Profile</a>
     </nav>
 </header>

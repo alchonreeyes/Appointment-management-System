@@ -401,8 +401,28 @@ if ($closure) {
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
+        // ADD THIS right after execute inside your foreach loop:
+$new_appt_id = $pdo->lastInsertId();
+if (!empty($_POST['custom_fields']) && is_array($_POST['custom_fields'])) {
+    $ins_resp = $pdo->prepare("INSERT INTO appointment_custom_responses (appointment_id, field_id, response_value) VALUES (?, ?, ?)");
+    foreach ($_POST['custom_fields'] as $field_id => $response_value) {
+        $ins_resp->execute([$new_appt_id, intval($field_id), trim($response_value)]);
     }
-
+}
+    }
+    // ADD THIS before $pdo->commit();
+// Save custom form field responses to appointment_custom_responses
+if (!empty($_POST['custom_fields']) && is_array($_POST['custom_fields'])) {
+    $ins_response = $pdo->prepare("
+        INSERT INTO appointment_custom_responses (appointment_id, field_id, response_value)
+        VALUES (?, ?, ?)
+    ");
+    // $pdo->lastInsertId() gives the last inserted appointment_id
+    $last_appt_id = $pdo->lastInsertId();
+    foreach ($_POST['custom_fields'] as $field_id => $response_value) {
+        $ins_response->execute([$last_appt_id, intval($field_id), trim($response_value)]);
+    }
+}
     // ✅ COMMIT: Release all locks
     $pdo->commit();
     $_SESSION['last_appointment_time'] = time();

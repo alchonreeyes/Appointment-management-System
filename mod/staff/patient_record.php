@@ -1,6 +1,6 @@
 <?php
 // =======================================================
-// UPDATED: Patient Records (FIXED DECRYPTION ISSUES)
+// UPDATED: Patient Records (FIXED PAST APPOINTMENT MODAL)
 // =======================================================
 
 // Start session
@@ -22,6 +22,18 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'staff') {
         header('Location: ../../public/login.php');
     }
     exit;
+}
+
+// =======================================================
+// FETCH ALL SERVICES FOR DYNAMIC DROPDOWN
+// =======================================================
+$servicesList = [];
+$servicesQuery = "SELECT service_id, service_name FROM services ORDER BY service_id ASC";
+$servicesResult = $conn->query($servicesQuery);
+if ($servicesResult) {
+    while ($row = $servicesResult->fetch_assoc()) {
+        $servicesList[] = $row;
+    }
 }
 
 // =======================================================
@@ -65,21 +77,21 @@ if (isset($_POST['action'])) {
             // CRITICAL FIX: DECRYPTION LOGIC
             // ========================================================================
             
-            // 1. FULL NAME (Fix: Decrypt the fallback value too!)
+            // 1. FULL NAME
             if (empty($appt['full_name'])) {
                 $appt['full_name'] = !empty($appt['user_full_name']) ? decrypt_data($appt['user_full_name']) : 'N/A';
             } else {
                 $appt['full_name'] = decrypt_data($appt['full_name']);
             }
 
-            // 2. PHONE NUMBER (Fix: Decrypt the fallback value too!)
+            // 2. PHONE NUMBER
             if (empty($appt['phone_number']) && !empty($appt['user_phone_number'])) {
                 $appt['phone_number'] = decrypt_data($appt['user_phone_number']);
             } else {
                 $appt['phone_number'] = decrypt_data($appt['phone_number'] ?? '');
             }
 
-            // 3. AGE (Decrypt everything before calculating)
+            // 3. AGE
             $birth_date_val = decrypt_data($appt['birth_date'] ?? ''); 
             $client_age_val = decrypt_data($appt['client_age'] ?? '');
             $appt_age_val   = decrypt_data($appt['age'] ?? ''); 
@@ -180,9 +192,12 @@ $whereClauses = ["1=1"];
 $params = [];
 $paramTypes = "";
 
-if ($viewFilter === 'eye_exam') { $whereClauses[] = "a.service_id = 11"; }
-elseif ($viewFilter === 'ishihara') { $whereClauses[] = "a.service_id = 13"; }
-elseif ($viewFilter === 'medical') { $whereClauses[] = "a.service_id = 12"; }
+// Dynamic Filter from DB
+if ($viewFilter !== 'all' && !empty($viewFilter)) {
+    $whereClauses[] = "a.service_id = ?";
+    $params[] = $viewFilter;
+    $paramTypes .= "s";
+}
 
 if ($dateFilter !== 'All' && !empty($dateFilter)) {
     $whereClauses[] = "DATE(a.appointment_date) = ?";
@@ -283,7 +298,7 @@ $js_highlight_dates = json_encode($highlight_dates);
 <style>
 /* --- Styles --- */
 * { margin:0; padding:0; box-sizing:border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-body { background:#f8f9fa; color:#223; padding-bottom: 40px; }
+body { background:#f8f9fa; color:#223; padding-bottom: 40px; overflow-x: hidden; max-width: 100vw; }
 .vertical-bar { position:fixed; left:0; top:0; width:55px; height:100vh; background:linear-gradient(180deg,#991010 0%,#6b1010 100%); z-index:1000; }
 .vertical-bar .circle { width:70px; height:70px; background:#b91313; border-radius:50%; position:absolute; left:-8px; top:45%; transform:translateY(-50%); border:4px solid #5a0a0a; }
 
@@ -354,7 +369,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 /* TABLE */
 .table-container { background: #fff; border-radius: 10px; border: 1px solid #e6e9ee; padding: 0; overflow-x: auto; margin-bottom: 20px; }
-.custom-table { width: 100%; border-collapse: collapse; min-width: 900px; table-layout: fixed; }
+.custom-table { width: 100%; border-collapse: collapse; min-width: 800px; table-layout: fixed; }
 .custom-table th { background: #f1f5f9; color: #4a5568; font-weight: 700; font-size: 13px; text-transform: uppercase; padding: 16px; text-align: left; border-bottom: 2px solid #e2e8f0; white-space: nowrap; }
 .custom-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; color: #334155; font-size: 14px; vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .custom-table tbody tr:hover { background: #f8f9fb; }
@@ -372,10 +387,17 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 
 @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
 
-.detail-card { max-width: 96%; background: #fff; border-radius: 16px; padding: 0; box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; width: 700px; }
+.detail-card { 
+    max-width: 96%; background: #fff; border-radius: 16px; padding: 0; 
+    box-shadow: 0 20px 60px rgba(8, 15, 30, 0.25); animation: slideUp .3s ease; 
+    width: 700px; 
+    max-height: 85vh; /* Prevents overflow off screen */
+    display: flex;
+    flex-direction: column;
+}
 @keyframes slideUp { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
 
-.detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; }
+.detail-header { background: linear-gradient(135deg, #991010 0%, #6b1010 100%); padding: 24px 28px; border-radius: 16px 16px 0 0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
 .detail-title { font-weight: 800; color: #fff; font-size: 22px; display: flex; align-items: center; gap: 10px; }
 .detail-id { background: rgba(255, 255, 255, 0.2); color: #fff; padding: 6px 14px; border-radius: 20px; font-weight: 700; font-size: 14px; }
 .detail-title:before { content: '📋'; font-size: 24px; }
@@ -385,13 +407,18 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
 .badge.pending { background: #fff4e6; color: #a66300; border: 2px solid #ffd280; }
 .badge.confirmed { background: #dcfce7; color: #16a34a; border: 2px solid #86efac; }
 
-.detail-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; }
+.detail-actions { padding: 20px 28px; background: #f8f9fb; border-radius: 0 0 16px 16px; display: flex; gap: 10px; justify-content: flex-end; border-top: 1px solid #e8ecf0; flex-shrink: 0; }
 .btn-small { padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 14px; transition: all .2s; }
 .btn-small:hover { transform: translateY(-1px); }
 .btn-close { background: #fff; color: #4a5568; border: 2px solid #e2e8f0; }
 
 .detail-content { padding: 0; }
-#detailModalBody, #historyDetailModalBody { padding: 24px 28px; max-height: 70vh; overflow-y: auto; font-size: 15px; }
+#detailModalBody, #historyDetailModalBody { 
+    padding: 24px 28px; 
+    font-size: 15px; 
+    overflow-y: auto; /* Allow scrolling inside the modal */
+}
+
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .detail-row { background: #f8f9fb; padding: 12px 14px; border-radius: 8px; border: 1px solid #e8ecf0; }
 .detail-row.full-width { grid-column: 1 / -1; }
@@ -485,10 +512,15 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
       <div class="filters">
       
         <div class="filters-left-group">
-            <button type="button" class="btn-filter <?= empty($viewFilter) || $viewFilter === 'all' ? 'active' : '' ?>" onclick="updateFilter('view', 'all')">All Records</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'eye_exam' ? 'active' : '' ?>" onclick="updateFilter('view', 'eye_exam')">Eye Exam</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'ishihara' ? 'active' : '' ?>" onclick="updateFilter('view', 'ishihara')">Ishihara Test</button>
-            <button type="button" class="btn-filter <?= $viewFilter === 'medical' ? 'active' : '' ?>" onclick="updateFilter('view', 'medical')">Medical Certificate</button>
+            
+            <select id="serviceFilter" title="Filter by Service" onchange="updateFilter('view', this.value)">
+                <option value="all" <?= $viewFilter === 'all' ? 'selected' : '' ?>>All Services</option>
+                <?php foreach ($servicesList as $srv): ?>
+                    <option value="<?= htmlspecialchars($srv['service_id']) ?>" <?= $viewFilter == $srv['service_id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($srv['service_name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
             
             <div style="display:flex; gap:8px; align-items:center;">
                 <select id="dateMode" title="Filter by date">
@@ -684,30 +716,46 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         }, { once: true });
     }
     
-    const detailLabels = {
-        'full_name': 'Patient Name', 'staff_name': 'Staff Assigned',
-        'age': 'Age', 'gender': 'Gender', 'phone_number': 'Phone Number',
-        'occupation': 'Occupation', 'suffix': 'Suffix', 'symptoms': 'Symptoms',
-        'concern': 'Concern', 'wear_glasses': 'Wears Glasses', 'notes': 'Notes',
-        'service_name': 'Service Provided', 'status_name': 'Status',
-        'appointment_date': 'Appointment Date', 'appointment_time': 'Appointment Time',
-        'certificate_purpose': 'Certificate Purpose', 'certificate_other': 'Other Certificate',
-        'ishihara_test_type': 'Ishihara Test Type', 'ishihara_purpose': 'Ishihara Purpose',
-        'color_issues': 'Color Issues', 'previous_color_issues': 'Previous Color Issues',
-        'ishihara_notes': 'Ishihara Notes', 'ishihara_reason': 'Ishihara Reason'
+    // --- EXACT LABELS MAPPED FROM APPOINTMENT.PHP ---
+    const appointmentLabels = {
+        'appointment_id': 'Appointment ID',
+        'client_id': 'Patient I.D.',
+        'full_name': 'Patient Name',
+        'status_name': 'Status',
+        'service_name': 'Service',
+        'staff_name': 'Assigned Staff',
+        'appointment_date': 'Date',
+        'appointment_time': 'Time',
+        'reason_cancel': 'Reason for Cancellation',
+        'age': 'Age',
+        'gender': 'Gender',
+        'phone_number': 'Phone Number',
+        'occupation': 'Occupation',
+        'concern': 'Concern',
+        'symptoms': 'Symptoms',
+        'wear_glasses': 'Wears Glasses',
+        'certificate_purpose': 'Certificate Purpose',
+        'certificate_other': 'Other Certificate',
+        'ishihara_test_type': 'Ishihara Test Type',
+        'ishihara_purpose': 'Ishihara Purpose',
+        'color_issues': 'Color Issues',
+        'previous_color_issues': 'Previous Color Issues',
+        'ishihara_notes': 'Ishihara Notes',
+        'ishihara_reason': 'Ishihara Reason',
+        'notes': 'Additional Notes'
     };
 
-    // --- MODAL FIELDS ---
-    const patientFields = ['full_name', 'age', 'gender', 'phone_number'];
+    // The order the fields should appear in the Past Details modal
+    const appointmentFields = Object.keys(appointmentLabels);
 
-    const appointmentFields = [
-        'full_name', 'staff_name',
-        'service_name', 'status_name', 
-        'appointment_date', 'appointment_time',
-        'suffix', 'concern', 'symptoms', 'wear_glasses', 'notes', 
-        'certificate_purpose', 'certificate_other', 'ishihara_test_type',
-        'ishihara_purpose', 'color_issues', 'previous_color_issues', 'ishihara_notes', 'ishihara_reason'
-    ];
+    // Specific fields just for the Patient Detail overview
+    const patientFields = ['full_name', 'age', 'gender', 'phone_number'];
+    const patientLabels = {
+        'full_name': 'Patient Name',
+        'age': 'Age',
+        'gender': 'Gender',
+        'phone_number': 'Phone Number'
+    };
 
     function viewHistoryDetails(id) {
         showActionLoader('Fetching past detail...');
@@ -728,18 +776,30 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             const modalBody = document.getElementById('historyDetailModalBody');
             modalBody.innerHTML = ''; 
             
+            // EXACT SAME LOGIC AS APPOINTMENT.PHP
             let contentHtml = '<div class="detail-grid">';
             for (const key of appointmentFields) {
+                // If field exists, is not null, not empty, and not strictly '0'
                 if (d.hasOwnProperty(key) && d[key] !== null && d[key] !== '' && d[key] !== '0') {
                     let value = d[key];
-                    const label = detailLabels[key] || key;
+                    const label = appointmentLabels[key];
                     let rowClass = 'detail-row';
-                    if (['notes', 'concern', 'symptoms', 'ishihara_notes'].includes(key)) { rowClass += ' full-width'; }
                     
-                    if (key === 'appointment_date') { value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); }
-                    else if (key === 'appointment_time') { value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); }
-                    else if (key === 'status_name') { value = `<span class="badge ${value.toLowerCase()}">${value}</span>`; }
-                    else { value = `<b>${value}</b>`; }
+                    if (['notes', 'concern', 'symptoms', 'ishihara_notes', 'reason_cancel'].includes(key)) { 
+                        rowClass += ' full-width'; 
+                    }
+                    
+                    if (key === 'appointment_date') { 
+                        value = new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }); 
+                    } else if (key === 'appointment_time') { 
+                        value = new Date('1970-01-01T' + value).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }); 
+                    } else if (key === 'status_name') { 
+                        value = `<span class="badge ${value.toLowerCase()}">${value}</span>`; 
+                    } else if (key === 'reason_cancel') { 
+                        value = `<div style="background:#fee2e2; padding:8px; border-radius:4px; color:#dc2626; font-weight:bold;">${value}</div>`; 
+                    } else { 
+                        value = `<b>${value}</b>`; 
+                    }
                     
                     contentHtml += `<div class="${rowClass}"><span class="detail-label">${label}</span><div class="detail-value">${value}</div></div>`;
                 }
@@ -758,14 +818,12 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
     }
 
     function closeHistoryDetailModal() {
-        
         const overlay = document.getElementById('historyDetailOverlay');
         overlay.classList.remove('show');
         overlay.setAttribute('aria-hidden','true');
     }
 
     function viewDetails(id) {
-        
         showActionLoader('Fetching details...'); 
         fetch('patient_record.php', { 
             method: 'POST',
@@ -786,12 +844,10 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
             
             let contentHtml = '<div class="detail-grid">';
             for (const key of patientFields) {
-                // FIXED: REMOVED STRICT CHECKS SO EMPTY FIELDS SHOW AS "N/A"
-                // This lets you see the row instead of it disappearing
                 let value = d[key];
                 if (value === null || value === '') { value = 'N/A'; }
                 
-                const label = detailLabels[key] || key;
+                const label = patientLabels[key];
                 contentHtml += `<div class="detail-row"><span class="detail-label">${label}</span><div class="detail-value"><b>${value}</b></div></div>`;
             }
             contentHtml += '</div>';
@@ -835,13 +891,7 @@ button.btn { padding:9px 12px; border-radius:8px; border:none; cursor:pointer; f
         overlay.setAttribute('aria-hidden','true');
     }
     
-    document.addEventListener('click', function(e){
-        const detailOverlay = document.getElementById('detailOverlay');
-        const historyOverlay = document.getElementById('historyDetailOverlay');
-        if (detailOverlay?.classList.contains('show') && e.target === detailOverlay) closeDetailModal();
-        if (historyOverlay?.classList.contains('show') && e.target === historyOverlay) closeHistoryDetailModal();
-    });
-    
+    // REMOVED Background Click-to-Close
     document.addEventListener('keydown', function(e){
         if (e.key === 'Escape') {
             const detailModal = document.getElementById('detailOverlay');
